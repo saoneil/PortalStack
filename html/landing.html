@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <head>
+    <title>event view</title>
+    <style>
+      table, th, td { border: 1px solid black; border-collapse: collapse; padding: 8px; }
+    </style>
+  </head>
+
+  <h2>Your scoring systems:</h2><br>
+  <p>
+    Please select one to continue:
+  </p>
+  <table id="grid"></table>
+
+
+
+
+  <script>
+    fetch('/api/grid-data')
+      .then(res => res.json())
+      .then(data => {
+        const table = document.getElementById('grid');
+        if (data.length === 0) {
+          table.innerHTML = '<tr><td>No data</td></tr>';
+          return;
+        }
+
+        const headers = Object.keys(data[0]);
+        const headerRow = document.createElement('tr');
+        headers.forEach(h => {
+          const th = document.createElement('th');
+          th.textContent = h;
+          headerRow.appendChild(th);
+        });
+        table.appendChild(headerRow);
+
+        data.forEach(row => {
+          const tr = document.createElement('tr');
+          headers.forEach(h => {
+            const td = document.createElement('td');
+            if (h === 'App URL') {
+              const a = document.createElement('a');
+              a.href = row[h];
+              a.textContent = row['App Instance Name'] || 'app link';
+              a.target = '_blank';
+              td.appendChild(a);
+            } else {
+              td.textContent = row[h];
+            }
+            tr.appendChild(td);
+          });
+          table.appendChild(tr);
+        });
+
+      });
+  </script>
+
+
+
+  <br><br><br><br><br><br><br><br>
+  <form action="/logout" method="get">
+    <button type="submit">Logout</button>
+  </form>
+</body>
+</html>
