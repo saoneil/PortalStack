@@ -129,7 +129,7 @@ app.post('/signup', async (req, res) => {
         res.send('Registration failed.');
         return;
       }
-      res.send('Registration successful. <a href="/">Login here</a>');
+      res.sendFile(path.join(__dirname, 'html', 'registration_successful.html'));
     });
   } catch (err) {
     console.error(err);

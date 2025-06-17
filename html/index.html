@@ -1,26 +1,55 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>welcome!</title>
+  <link rel="stylesheet" href="/css/index.css">
 </head>
 <body>
-  <h2>welcome!</h2><br>
-  <h4>
-    login:
-  </h4>
-  <form action="/index" method="post">
-    <input type="text" name="client" placeholder="client name" required><br>
-    <input type="text" name="username" placeholder="username" required><br>
-    <input type="password" name="password" placeholder="password" required><br>
-    <br>
-    <button type="submit">login</button>
-  </form>
+  <div class="center-container">
+    <form class="form" action="/index" method="post" autocomplete="off">
+      <div class="control">
+        <h1><center><font size="+3">club portal</font size="+3"></center></h1>
+      </div>
 
-  
-  
-  <br><br><br><br><br><br><br><br>
-  <form action="/signup" method="get" style="margin-top: 20px;">
-    <button type="submit">sign up</button>
-  </form>
+      <div class="control block-cube block-input">
+        <input type="text" name="client" placeholder="client name" required />
+        <div class="bg-top"><div class="bg-inner"></div></div>
+        <div class="bg-right"><div class="bg-inner"></div></div>
+        <div class="bg"><div class="bg-inner"></div></div>
+      </div>
+
+      <div class="control block-cube block-input">
+        <input type="text" name="username" placeholder="username" required />
+        <div class="bg-top"><div class="bg-inner"></div></div>
+        <div class="bg-right"><div class="bg-inner"></div></div>
+        <div class="bg"><div class="bg-inner"></div></div>
+      </div>
+
+      <div class="control block-cube block-input">
+        <input type="password" name="password" placeholder="password" required />
+        <div class="bg-top"><div class="bg-inner"></div></div>
+        <div class="bg-right"><div class="bg-inner"></div></div>
+        <div class="bg"><div class="bg-inner"></div></div>
+      </div>
+
+      <button class="btn block-cube block-cube-hover" type="submit">
+        <div class="bg-top"><div class="bg-inner"></div></div>
+        <div class="bg-right"><div class="bg-inner"></div></div>
+        <div class="bg"><div class="bg-inner"></div></div>
+        <div class="text">login</div>
+      </button>
+    </form>
+
+    <form class="form" action="/signup" method="get">
+      <button class="btn block-cube block-cube-hover" type="submit">
+        <div class="bg-top"><div class="bg-inner"></div></div>
+        <div class="bg-right"><div class="bg-inner"></div></div>
+        <div class="bg"><div class="bg-inner"></div></div>
+        <div class="text">sign up</div>
+      </button>
+    </form>
+  </div>
 </body>
 </html>

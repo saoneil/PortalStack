@@ -1,0 +1,138 @@
+body {
+  background-color: #212121;
+  color: #fff;
+  font-family: monospace, serif;
+  padding: 40px;
+  letter-spacing: 0.05em;
+}
+
+.heading {
+  font-size: 24px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+p {
+  text-align: center;
+  color: #ccc;
+  margin-bottom: 30px;
+}
+
+table {
+  margin: 0 auto;
+  border-collapse: collapse;
+  width: 80%;
+  background: #2a2a2a;
+  border: 1px solid rgba(0,212,255,0.4);
+  box-shadow: 0 0 10px rgba(0,212,255,0.3);
+}
+
+th, td {
+  padding: 12px 18px;
+  border: 1px solid rgba(255,255,255,0.1);
+  text-align: left;
+}
+
+th {
+  background: rgba(0,212,255,0.15);
+  font-weight: bold;
+  color: #00d4ff;
+}
+
+td a {
+  color: #00d4ff;
+  text-decoration: none;
+}
+
+td a:hover {
+  text-decoration: underline;
+}
+
+/* Reuse login button styles if defined elsewhere */
+.btn {
+  width: 200px;
+  display: block;
+  padding: 12px 16px;
+  background: transparent;
+  outline: none;
+  border: 0;
+  color: #fff;
+  letter-spacing: 0.1em;
+  font-weight: bold;
+  font-family: monospace;
+  font-size: 16px;
+  margin: 40px auto 0;
+  cursor: pointer;
+}
+
+.block-cube {
+  position: relative;
+}
+
+.block-cube .bg-top,
+.block-cube .bg-right,
+.block-cube .bg {
+  position: absolute;
+  background: linear-gradient(90deg, rgba(2,0,36,1) 0%, rgba(52,9,121,1) 37%, rgba(0,212,255,1) 94%);
+}
+
+.block-cube .bg-top {
+  height: 10px;
+  bottom: 100%;
+  left: 5px;
+  right: -5px;
+  transform: skew(-45deg, 0);
+}
+
+.block-cube .bg-right {
+  top: -5px;
+  bottom: 5px;
+  width: 10px;
+  left: 100%;
+  transform: skew(0, -45deg);
+  z-index: 0;
+}
+
+.block-cube .bg {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+.block-cube .bg-inner {
+  background: #212121;
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  right: 2px;
+  transition: all 0.2s ease-in-out;
+}
+
+.block-cube .text {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+}
+
+.block-cube-hover:hover .bg .bg-inner,
+.block-cube-hover:focus .bg .bg-inner {
+  top: 100%;
+}
+
+.logout-form {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+@media (max-width: 600px) {
+  table {
+    width: 100%;
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}

@@ -1,20 +1,27 @@
 <!DOCTYPE html>
 <html>
-<body>
-  <head>
-    <title>event view</title>
-    <style>
-      table, th, td { border: 1px solid black; border-collapse: collapse; padding: 8px; }
-    </style>
-  </head>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>client view</title>
+  <link rel="stylesheet" href="css/landing.css">
+</head>
 
-  <h2>Your scoring systems:</h2><br>
-  <p>
-    Please select one to continue:
-  </p>
+<body>
+
+  <!-- <h2 class="heading">please select a scoring system to continue:</h2> -->
+  <p>select a scoring system:</p>
   <table id="grid"></table>
 
-
+  
+  <form action="/logout" method="get" class="logout-form">
+    <button class="btn block-cube block-cube-hover" type="submit">
+      <div class="bg-top"><div class="bg-inner"></div></div>
+      <div class="bg-right"><div class="bg-inner"></div></div>
+      <div class="bg"><div class="bg-inner"></div></div>
+      <div class="text">Logout</div>
+    </button>
+  </form>
 
 
   <script>
@@ -53,15 +60,8 @@
           });
           table.appendChild(tr);
         });
-
       });
   </script>
 
-
-
-  <br><br><br><br><br><br><br><br>
-  <form action="/logout" method="get">
-    <button type="submit">Logout</button>
-  </form>
 </body>
 </html>

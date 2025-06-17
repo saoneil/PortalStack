@@ -1,0 +1,129 @@
+*, ::after, ::before {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #212121;
+  color: #fff;
+  font-family: monospace, serif;
+  letter-spacing: 0.05em;
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+}
+
+.center-wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  text-align: center;
+}
+
+p {
+  font-size: 14px;
+  color: #ddd;
+}
+
+.signup-form {
+  width: 100%;
+  max-width: 260px;
+  margin: 10px auto;
+  padding-top: 10px;
+}
+
+.signup-form .control {
+  margin-bottom: 20px;
+}
+
+.signup-form input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-family: monospace, serif;
+  font-size: 15px;
+  position: relative;
+  z-index: 2;
+}
+
+.signup-form input:focus,
+.signup-form input:hover {
+  outline: none;
+}
+
+.signup-form .block-cube {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.signup-form .block-cube .bg-top {
+  position: absolute;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.5);
+  bottom: 100%;
+  left: 4px;
+  right: -4px;
+  transform: skew(-45deg, 0);
+}
+
+.signup-form .block-cube .bg-right {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.5);
+  top: -4px;
+  bottom: 4px;
+  width: 8px;
+  left: 100%;
+  transform: skew(0, -45deg);
+  z-index: 0;
+}
+
+.signup-form .block-cube .bg {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.signup-form .block-cube .bg-inner {
+  background: #212121;
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  right: 2px;
+  transition: all 0.2s ease-in-out;
+}
+
+.signup-form .btn {
+  width: 100%;
+  display: block;
+  padding: 12px;
+  font-size: 15px;
+  /* background: transparent; */
+  background: linear-gradient(90deg, rgba(2,0,36,1) 0%, rgba(52,9,121,1) 37%, rgba(0,212,255,1) 94%);
+  border: 0;
+  color: #fff;
+  font-family: monospace;
+  letter-spacing: 0.1em;
+  font-weight: bold;
+  position: relative;
+  z-index: 2;
+  cursor: pointer;
+}
+
+.signup-form .block-cube-hover:hover .bg .bg-inner,
+.signup-form .block-cube-hover:focus .bg .bg-inner {
+  top: 100%;
+  background: linear-gradient(90deg, rgba(2,0,36,1) 0%, rgba(52,9,121,1) 37%, rgba(0,212,255,1) 94%);
+}
+
+.text {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+}

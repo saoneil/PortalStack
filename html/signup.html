@@ -1,16 +1,54 @@
-<p>
-  you will need to be assigned a client name:
-</p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="css/signup.css" />
+  <title>Sign Up</title>
+</head>
+<body>
+  <div class="center-wrapper">
+    <h1><center>register</center></h1>
+    <p>you need to be assigned a client name before registering your email/password:</p>
 
+    <form class="signup-form" action="/signup" method="post">
+      <div class="control block-cube">
+        <input type="text" name="client" placeholder="assigned client name" required />
+        <div class="bg-top"><div class="bg-inner"></div></div>
+        <div class="bg-right"><div class="bg-inner"></div></div>
+        <div class="bg"><div class="bg-inner"></div></div>
+      </div>
 
+      <div class="control block-cube">
+        <input type="text" name="username" placeholder="enter username/email" required />
+        <div class="bg-top"><div class="bg-inner"></div></div>
+        <div class="bg-right"><div class="bg-inner"></div></div>
+        <div class="bg"><div class="bg-inner"></div></div>
+      </div>
 
+      <div class="control block-cube">
+        <input type="password" name="password" placeholder="choose password" required />
+        <div class="bg-top"><div class="bg-inner"></div></div>
+        <div class="bg-right"><div class="bg-inner"></div></div>
+        <div class="bg"><div class="bg-inner"></div></div>
+      </div>
 
-<br><br><br><br>
-<form action="/signup" method="post">
-    <input type="text" name="client" placeholder="Client Name" required><br>
-    <input type="text" name="username" placeholder="Username/Email" required><br>
-    <input type="password" name="password" placeholder="Password" required><br>
-    <br><br><br><br>
-    <button type="submit">Register</button>
-  </form>
-  
+      <button class="btn block-cube block-cube-hover" type="submit">
+        <div class="bg-top"><div class="bg-inner"></div></div>
+        <div class="bg-right"><div class="bg-inner"></div></div>
+        <div class="bg"><div class="bg-inner"></div></div>
+        <div class="text">register</div>
+      </button>
+    </form>
+
+    <form class="signup-form" action="/" method="get">
+      <button class="btn block-cube block-cube-hover" type="submit">
+        <div class="bg-top"><div class="bg-inner"></div></div>
+        <div class="bg-right"><div class="bg-inner"></div></div>
+        <div class="bg"><div class="bg-inner"></div></div>
+        <div class="text">back to log-in</div>
+      </button>
+    </form>
+  </div>
+</body>
+</html>
