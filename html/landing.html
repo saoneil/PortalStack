@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>client view</title>
   <link rel="stylesheet" href="css/landing.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 
 <body>
@@ -12,6 +13,14 @@
   <!-- <h2 class="heading">please select a scoring system to continue:</h2> -->
   <p>select a scoring system:</p>
   <table id="grid"></table>
+
+  <div id="qrOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:9999;">
+    <div id="qrContainer" style="background:#fff; padding:20px; border-radius:8px; position:relative;">
+      <button onclick="document.getElementById('qrOverlay').style.display='none'" style="position:absolute; top:10px; right:10px;">✕</button>
+      <!-- <div id="qrCode"></div> -->
+      <div id="qrCode" style="display:flex; flex-wrap:wrap; justify-content:center;"></div>
+    </div>
+  </div>
 
   
   <form action="/logout" method="get" class="logout-form">
@@ -53,9 +62,38 @@
               a.textContent = row['App Instance Name'] || 'app link';
               a.target = '_blank';
               td.appendChild(a);
-            } else {
+            } else if (h === 'Extra Links') {
+              const linkField = row[h];
+              if (linkField) {
+                const links = linkField.split(',').map(l => l.trim()).filter(l => l);
+                if (links.length > 0) {
+                  const btn = document.createElement('button');
+                  btn.textContent = 'Show QRs';
+                  btn.onclick = () => {
+                    const qrCodeDiv = document.getElementById('qrCode');
+                    qrCodeDiv.innerHTML = ''; // Clear previous
+
+                    links.forEach(link => {
+                      const qrDiv = document.createElement('div');
+                      qrDiv.style.margin = '10px';
+                      new QRCode(qrDiv, {
+                        text: link,
+                        width: 200,
+                        height: 200,
+                        correctLevel: QRCode.CorrectLevel.L
+                      });
+                      qrCodeDiv.appendChild(qrDiv);
+                    });
+                    document.getElementById('qrOverlay').style.display = 'flex';
+                  };
+                  td.appendChild(btn);
+                }
+              }
+            }
+            else {
               td.textContent = row[h];
             }
+
             tr.appendChild(td);
           });
           table.appendChild(tr);
