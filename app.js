@@ -14,6 +14,7 @@ const app = express();
 app.set('trust proxy', 1); // trust first proxy
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/css', express.static(path.join(__dirname, 'css')));
+app.use('/images', express.static(path.join(__dirname, 'images')));
 
 
 
