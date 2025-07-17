@@ -76,16 +76,31 @@
                     const qrCodeDiv = document.getElementById('qrCode');
                     qrCodeDiv.innerHTML = ''; // Clear previous
 
-                    links.forEach(link => {
+                    links.forEach((link, idx) => {
+                      const container = document.createElement('div');
+                      container.style.display = 'flex';
+                      container.style.flexDirection = 'column';
+                      container.style.alignItems = 'center';
+                      container.style.margin = '30px';
+
+                      const label = document.createElement('div');
+                      label.textContent = `Umpire ${idx + 1}`;
+                      label.style.marginBottom = '10px';
+                      label.style.fontWeight = 'bold';
+                      label.style.color = 'black';
+                      label.style.fontSize = '30px';
+
                       const qrDiv = document.createElement('div');
-                      qrDiv.style.margin = '10px';
                       new QRCode(qrDiv, {
                         text: link,
-                        width: 200,
-                        height: 200,
+                        width: 225,
+                        height: 225,
                         correctLevel: QRCode.CorrectLevel.L
                       });
-                      qrCodeDiv.appendChild(qrDiv);
+
+                      container.appendChild(label);
+                      container.appendChild(qrDiv);
+                      qrCodeDiv.appendChild(container);
                     });
                     document.getElementById('qrOverlay').style.display = 'flex';
                   };
