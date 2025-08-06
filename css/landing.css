@@ -139,10 +139,11 @@ td a:hover {
 }
 
 .logout-form {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  text-align: center;
+  margin: 80px auto 40px;
+  width: 200px;
+  position: relative;
+  bottom: 0;
 }
 
 @media (max-width: 600px) {
