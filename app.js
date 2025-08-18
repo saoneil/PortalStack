@@ -15,6 +15,7 @@ app.set('trust proxy', 1); // trust first proxy
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/css', express.static(path.join(__dirname, 'css')));
 app.use('/images', express.static(path.join(__dirname, 'images')));
+app.use('/html', express.static(path.join(__dirname, 'html')));
 
 
 
@@ -163,6 +164,18 @@ app.get('/api/grid-data', requireLogin, (req, res) => {
       return res.status(500).json({ error: 'Database error' });
     }
     res.json(results[0]); // assuming single result set
+  });
+});
+
+// API endpoint to list release notes HTML files
+app.get('/api/release-notes-list', (req, res) => {
+  const notesDir = path.join(__dirname, 'html', 'release_notes');
+  fs.readdir(notesDir, (err, files) => {
+    if (err) {
+      return res.json([]);
+    }
+    const htmlFiles = files.filter(f => f.endsWith('.html'));
+    res.json(htmlFiles);
   });
 });
 

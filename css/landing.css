@@ -146,6 +146,87 @@ td a:hover {
   bottom: 0;
 }
 
+/* Release Notes Section */
+#release-notes-section {
+  margin-top: 60px;
+  text-align: center;
+}
+#openReleaseNotesBtn {
+  padding: 12px 24px;
+  font-size: 18px;
+  background: rgba(0,212,255,0.15);
+  color: #00d4ff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 0 10px #00d4ff33;
+  transition: background 0.2s, color 0.2s;
+}
+#openReleaseNotesBtn:hover {
+  background: rgba(0,212,255,0.25);
+  color: #fff;
+}
+#releaseNotesOverlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background: rgba(0,0,0,0.7);
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+}
+#releaseNotesOverlay.active {
+  display: flex;
+}
+#releaseNotesOverlay > div {
+  background: rgba(33,33,33,0.95); /* was 0.4, now more transparent */
+  padding: 32px 40px;
+  border-radius: 16px;
+  min-width: 320px;
+  max-width: 90vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 0 40px #00d4ff55;
+}
+#releaseNotesOverlay h2 {
+  color: #00d4ff;
+  text-align: center;
+  margin-bottom: 24px;
+}
+#releaseNotesList {
+  list-style: none;
+  padding: 0;
+  text-align: left;
+}
+#releaseNotesList a {
+  color: #00d4ff;
+  font-size: 20px;
+  display: block;
+  margin-bottom: 16px;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+#releaseNotesList a:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+#releaseNotesOverlay button[onclick] {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 28px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+#releaseNotesOverlay button[onclick]:hover {
+  color: #00d4ff;
+}
+
 @media (max-width: 600px) {
   table {
     width: 100%;
