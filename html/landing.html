@@ -26,17 +26,39 @@
   </div>
 
   <div id="release-notes-section" style="text-align:center; margin-top:60px;">
-    <button id="openReleaseNotesBtn" style="padding:12px 24px; font-size:18px; background:rgba(0,212,255,0.15); color:#00d4ff; border:none; border-radius:8px; cursor:pointer;">release notes/user guide</button>
+    <button id="openReleaseNotesBtn" style="padding:12px 24px; font-size:18px; background:rgba(0,212,255,0.15); color:#00d4ff; border:none; border-radius:8px; cursor:pointer; margin-right:16px;">release notes/user guide</button>
+    <button id="openPricingBtn" style="padding:12px 24px; font-size:18px; background:rgba(0,212,255,0.15); color:#00d4ff; border:none; border-radius:8px; cursor:pointer; margin-right:16px;">pricing</button>
+    <button id="openPaymentsBtn" style="padding:12px 24px; font-size:18px; background:rgba(0,212,255,0.15); color:#00d4ff; border:none; border-radius:8px; cursor:pointer;">payments</button>
   </div>
 
   <div id="releaseNotesOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:10000;">
-    <div style="background:rgba(33,33,33,0.95); padding:32px 40px; border-radius:16px; min-width:320px; max-width:90vw; max-height:80vh; overflow-y:auto; position:relative; box-shadow:0 0 40px #00d4ff55;">
+    <div style="background:rgba(33,33,33,0.95); padding:32px 40px; border-radius:16px; min-width:320px; max-width:90vw; max-height:80vh; overflow-y:auto; position:relative; box-shadow:0 0 40px #00d4ff55; display:flex; flex-direction:column; align-items:center; justify-content:center;">
       <button onclick="document.getElementById('releaseNotesOverlay').style.display='none'" style="position:absolute; top:16px; right:16px; background:none; border:none; color:#fff; font-size:28px; cursor:pointer;">✕</button>
-      <h2 class="heading"><u>release notes</u></h2>
-      <ul id="releaseNotesList" style="list-style:none; padding:0; text-align:left;"></ul>
+      <h2 class="heading" style="color:#fff;">release notes</h2>
+      <ul id="releaseNotesList" style="list-style:disc; padding:0; text-align:center; margin:0 auto; display:inline-block;"></ul>
     </div>
   </div>
   
+  <div id="pricingOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:10000;">
+    <div style="background:rgba(33,33,33,0.95); padding:32px 40px; border-radius:16px; min-width:1000px; max-width:1000px; max-height:80vh; overflow-y:auto; position:relative; box-shadow:0 0 40px #00d4ff55;">
+      <button onclick="document.getElementById('pricingOverlay').style.display='none'" style="position:absolute; top:16px; right:16px; background:none; border:none; color:#fff; font-size:28px; cursor:pointer;">✕</button>
+      <!-- <h2 class="heading"><u>pricing</u></h2> -->
+      <div style="display:flex; justify-content:center; margin-top:24px; gap:16px;">
+        <button id="pricingEnglishBtn" style="padding:8px 18px; font-size:16px; background:#00d4ff; color:#222; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">English</button>
+        <button id="pricingSpanishBtn" style="padding:8px 18px; font-size:16px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Español</button>
+      </div>
+      <div id="pricingEnglish" style="margin-top:32px; color:#fff; font-size:18px;"></div>
+      <div id="pricingSpanish" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
+    </div>
+  </div>
+
+  <div id="paymentsOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:10000;">
+    <div style="background:rgba(33,33,33,0.95); padding:32px 40px; border-radius:16px; min-width:1000px; max-width:1000px; max-height:80vh; overflow-y:auto; position:relative; box-shadow:0 0 40px #00d4ff55;">
+      <button onclick="document.getElementById('paymentsOverlay').style.display='none'" style="position:absolute; top:16px; right:16px; background:none; border:none; color:#fff; font-size:28px; cursor:pointer;">✕</button>
+      <div id="paymentsContent" style="margin-top:32px; color:#fff; font-size:18px;"></div>
+    </div>
+  </div>
+
   <form action="/logout" method="get" class="logout-form">
     <button class="btn block-cube block-cube-hover" type="submit">
       <div class="bg-top"><div class="bg-inner"></div></div>
@@ -141,14 +163,16 @@
           } else {
             files.forEach(file => {
               const li = document.createElement('li');
+              li.style.textAlign = 'center';
+              li.style.margin = '0 auto 16px auto';
+              li.style.listStyle = 'disc';
               const a = document.createElement('a');
               a.href = 'html/release_notes/' + file;
               a.textContent = file.replace('.html', '').replace(/_/g, ' ');
               a.target = '_blank';
               a.style.color = '#00d4ff';
               a.style.fontSize = '20px';
-              a.style.display = 'block';
-              a.style.marginBottom = '16px';
+              a.style.display = 'inline-block';
               li.appendChild(a);
               list.appendChild(li);
             });
@@ -159,6 +183,61 @@
           const list = document.getElementById('releaseNotesList');
           list.innerHTML = '<li style="color:#ccc;">No release notes found.</li>';
           document.getElementById('releaseNotesOverlay').style.display = 'flex';
+        });
+    };
+
+    // Pricing Popup Logic
+    function loadPricingContent(lang) {
+      const targetDiv = lang === 'en' ? document.getElementById('pricingEnglish') : document.getElementById('pricingSpanish');
+      fetch('html/pricing/pricing_' + lang + '.html')
+        .then(res => res.text())
+        .then(html => {
+          // Extract only the <body> content
+          const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+          targetDiv.innerHTML = bodyMatch ? bodyMatch[1] : html;
+        });
+    }
+    document.getElementById('openPricingBtn').onclick = function() {
+      document.getElementById('pricingOverlay').style.display = 'flex';
+      document.getElementById('pricingEnglish').style.display = '';
+      document.getElementById('pricingSpanish').style.display = 'none';
+      document.getElementById('pricingEnglishBtn').style.background = '#00d4ff';
+      document.getElementById('pricingEnglishBtn').style.color = '#222';
+      document.getElementById('pricingSpanishBtn').style.background = 'transparent';
+      document.getElementById('pricingSpanishBtn').style.color = '#00d4ff';
+      loadPricingContent('en');
+    };
+    document.getElementById('pricingEnglishBtn').onclick = function() {
+      document.getElementById('pricingEnglish').style.display = '';
+      document.getElementById('pricingSpanish').style.display = 'none';
+      this.style.background = '#00d4ff';
+      this.style.color = '#222';
+      this.style.border = 'none';
+      document.getElementById('pricingSpanishBtn').style.background = 'transparent';
+      document.getElementById('pricingSpanishBtn').style.color = '#00d4ff';
+      document.getElementById('pricingSpanishBtn').style.border = '1px solid #00d4ff';
+      loadPricingContent('en');
+    };
+    document.getElementById('pricingSpanishBtn').onclick = function() {
+      document.getElementById('pricingEnglish').style.display = 'none';
+      document.getElementById('pricingSpanish').style.display = '';
+      this.style.background = '#00d4ff';
+      this.style.color = '#222';
+      this.style.border = 'none';
+      document.getElementById('pricingEnglishBtn').style.background = 'transparent';
+      document.getElementById('pricingEnglishBtn').style.color = '#00d4ff';
+      document.getElementById('pricingEnglishBtn').style.border = '1px solid #00d4ff';
+      loadPricingContent('es');
+    };
+
+    // Payments Popup Logic
+    document.getElementById('openPaymentsBtn').onclick = function() {
+      document.getElementById('paymentsOverlay').style.display = 'flex';
+      fetch('html/payments/payments.html')
+        .then(res => res.text())
+        .then(html => {
+          const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+          document.getElementById('paymentsContent').innerHTML = bodyMatch ? bodyMatch[1] : html;
         });
     };
   </script>
