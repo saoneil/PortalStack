@@ -14,8 +14,10 @@
   </div>
 
   <!-- <h2 class="heading">please select a scoring system to continue:</h2> -->
-  <p>select a scoring system:</p>
-  <table id="grid"></table>
+  <div class="scoring-system-text">select a scoring system:</div>
+  <div class="scoring-table-container">
+    <table id="grid"></table>
+  </div>
 
   <div id="qrOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:9999;">
     <div id="qrContainer" style="background:#fff; padding:20px; border-radius:8px; position:relative;">
@@ -26,7 +28,7 @@
   </div>
 
   <div id="release-notes-section" style="text-align:center; margin-top:60px;">
-    <button id="openReleaseNotesBtn" class="action-btn" style="margin-right:16px;">release notes/user guide</button>
+    <button id="openReleaseNotesBtn" class="action-btn" style="margin-right:16px; display:none;">release notes/user guide</button>
     <button id="openPricingBtn" class="action-btn" style="margin-right:16px;">pricing</button>
     <button id="openPaymentsBtn" class="action-btn">payments</button>
   </div>
@@ -79,7 +81,7 @@
           return;
         }
 
-        const headers = Object.keys(data[0]);
+        const headers = Object.keys(data[0]).filter(h => h !== 'App Instance Name');
         const headerRow = document.createElement('tr');
         headers.forEach(h => {
           const th = document.createElement('th');
@@ -140,6 +142,9 @@
                   td.appendChild(btn);
                 }
               }
+            }
+            else if (h === 'Active') {
+              td.textContent = row[h] === 1 || row[h] === '1' ? 'Yes' : 'No';
             }
             else {
               td.textContent = row[h];
