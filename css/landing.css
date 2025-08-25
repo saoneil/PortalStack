@@ -150,8 +150,18 @@ td a:hover {
 #release-notes-section {
   margin-top: 60px;
   text-align: center;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
 }
-#openReleaseNotesBtn {
+#release-notes-section button {
+  min-width: 180px;
+  margin-bottom: 0;
+}
+#openReleaseNotesBtn,
+#openPricingBtn,
+#openPaymentsBtn {
   padding: 12px 24px;
   font-size: 18px;
   background: rgba(0,212,255,0.15);
@@ -161,10 +171,17 @@ td a:hover {
   cursor: pointer;
   box-shadow: 0 0 10px #00d4ff33;
   transition: background 0.2s, color 0.2s;
+  min-width: 180px;
+  margin-bottom: 0;
 }
-#openReleaseNotesBtn:hover {
+#openReleaseNotesBtn:hover,
+#openPricingBtn:hover,
+#openPaymentsBtn:hover {
   background: rgba(0,212,255,0.25);
   color: #fff;
+}
+#release-notes-section button:last-child {
+  margin-right: 0 !important;
 }
 #releaseNotesOverlay {
   display: none;
@@ -233,5 +250,30 @@ td a:hover {
     display: block;
     overflow-x: auto;
     white-space: nowrap;
+  }
+  #release-notes-section {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+  }
+  #release-notes-section button {
+    width: 92vw;
+    min-width: unset;
+    font-size: 16px;
+    margin-bottom: 0;
+    padding: 12px 0;
+    margin-right: 0 !important;
+    margin-left: 0 !important;
+    display: block;
+    text-align: center;
+  }
+  #releaseNotesOverlay > div,
+  #pricingOverlay > div,
+  #paymentsOverlay > div {
+    min-width: 0 !important;
+    max-width: 98vw !important;
+    padding: 16px 4vw !important;
+    box-sizing: border-box;
   }
 }
