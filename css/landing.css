@@ -73,6 +73,62 @@ th, thead th {
   }
 }
 
+/* Table link styling */
+table a {
+  color: #00d4ff !important;
+  text-decoration: none;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+table a:hover {
+  color: #fff !important;
+  text-decoration: underline;
+  text-shadow: 0 0 8px #00d4ff;
+}
+
+table a:visited {
+  color: #00d4ff !important;
+}
+
+/* Ensure all table links have consistent hover behavior */
+table td a:hover,
+table th a:hover {
+  color: #fff !important;
+  text-decoration: underline !important;
+  text-shadow: 0 0 8px #00d4ff !important;
+}
+
+/* Show QRs button styling */
+table button {
+  background: #333;
+  color: #00d4ff;
+  border: 2px solid #00d4ff;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  font-weight: bold;
+  font-family: monospace, serif;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 8px 2px #00d4ff44;
+}
+
+table button:hover {
+  background: #00d4ff;
+  color: #222;
+  box-shadow: 0 0 16px 4px #00d4ff66;
+  transform: translateY(-1px);
+}
+
+/* Desktop styling for Show QRs buttons */
+@media (min-width: 769px) {
+  table button {
+    font-size: 16px;
+    padding: 10px 20px;
+  }
+}
+
 .action-btn {
   background: #333;
   color: #aaa;
