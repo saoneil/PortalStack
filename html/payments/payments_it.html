@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Pagamenti</title>
+  
+</head>
+<body>
+  <style>
+    .payments-wrapper { max-width: 1000px; margin: 0 auto; }
+    .payments-subtitle { text-align:center; color:#ccc; margin: 8px 0 24px 0; font-size: 16px; }
+    .payment-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+    .payment-card {
+      background: #2b2b2b;
+      border: 1px solid #00d4ff55;
+      border-radius: 10px;
+      padding: 16px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+    .payment-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px #00d4ff33; border-color: #00d4ffaa; }
+    .payment-title { font-size: 18px; color: #fff; margin: 0 0 8px 0; }
+    .payment-tag { display:inline-block; font-size: 12px; color:#00d4ff; border:1px solid #00d4ff66; border-radius: 999px; padding: 2px 8px; margin-bottom: 8px; }
+    .payment-desc { font-size: 14px; color:#bbb; margin: 0 0 16px 0; min-height: 36px; }
+    .payment-action {
+      display: inline-block;
+      text-align: center;
+      background: #ffd140;
+      color: #111;
+      text-decoration: none;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+    .payment-action:hover { filter: brightness(0.95); }
+
+    @media (max-width: 1100px) { .payment-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 600px)  { 
+      .payment-grid { grid-template-columns: 1fr; }
+      .payment-action, .paypal-button { width: 100%; }
+      .paypal-button, .payment-action { white-space: normal; line-height: 1.2; }
+    }
+
+    /* Subscriptions layout */
+    .subscription-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .subscription-title { font-size: 20px; color:#fff; margin: 0 0 6px 0; }
+    .subscription-actions { display:flex; gap:12px; flex-wrap:wrap; }
+    .discount-badge { font-size: 12px; color:#00d4ff; margin-left: 6px; }
+    /* PayPal-styled buttons for subscriptions */
+    .paypal-button {
+      background: #ffd140;
+      color: #111;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-decoration: none;
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      font-weight: 700;
+      box-shadow: 0 2px 0 #c9a31a;
+      white-space: nowrap;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+    .paypal-button:hover { filter: brightness(0.95); }
+    .paypal-word { display:inline-flex; gap:2px; align-items:center; }
+    .paypal-word .pay { color: #001c64; }
+    .paypal-word .pal { color: #0070e0; }
+    .paypal-logo { height: 16px; width: auto; margin-right: 6px; }
+    .subscription-actions { width: 100%; box-sizing: border-box; }
+    .subscription-actions .paypal-button { flex: 1 1 auto; min-width: 0; }
+    .paypal-logo { height: 16px; width: auto; margin-right: 6px; flex-shrink: 0; }
+    .section-heading { color:#00d4ff; font-weight:700; margin: 8px 0 12px 0; font-size: 18px; }
+    @media (max-width: 1100px) { .subscription-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 600px)  { .subscription-actions { flex-direction: column; } }
+  </style>
+
+  <div class="payments-wrapper">
+    <h1><center>pagamenti</center></h1>
+    <div class="payments-subtitle">** nota che le istanze saranno disponibili entro 48 ore dall'acquisto **</div>
+
+    <div class="section-heading"><center>abbonamenti</center></div>
+    <div class="subscription-grid">
+      <div class="payment-card">
+        <div>
+          <div class="subscription-title">abbonamento club</div>
+          <p class="payment-desc">scegli un ciclo di fatturazione per il piano club</p>
+        </div>
+        <div class="subscription-actions">
+          <a class="paypal-button" href="https://www.paypal.com/webapps/billing/plans/subscribe?plan_id=P-3SX09611CF132153YNDNVW5Y" target="_blank" rel="noopener noreferrer"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"><span class="paypal-word"><span class="pay">Pay</span><span class="pal">Pal</span></span> — Mensile</a>
+          <a class="paypal-button" href="https://www.paypal.com/webapps/billing/plans/subscribe?plan_id=P-8L961653DD368650MNDNVX5Q" target="_blank" rel="noopener noreferrer"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"><span class="paypal-word"><span class="pay">Pay</span><span class="pal">Pal</span></span> — Annuale</a>
+        </div>
+      </div>
+
+      <div class="payment-card">
+        <div>
+          <div class="subscription-title">abbonamento organizzatore</div>
+          <p class="payment-desc">scegli un ciclo di fatturazione per il piano organizzatore</p>
+        </div>
+        <div class="subscription-actions">
+          <a class="paypal-button" href="https://www.paypal.com/webapps/billing/plans/subscribe?plan_id=P-63D48453377935614NDNVY3Q" target="_blank" rel="noopener noreferrer"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"><span class="paypal-word"><span class="pay">Pay</span><span class="pal">Pal</span></span> — Mensile</a>
+          <a class="paypal-button" href="https://www.paypal.com/webapps/billing/plans/subscribe?plan_id=P-2UX54115DY587734SNDNVZ2I" target="_blank" rel="noopener noreferrer"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"><span class="paypal-word"><span class="pay">Pay</span><span class="pal">Pal</span></span> — Annuale</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-heading"><center>pagamenti una tantum</center></div>
+    <div class="payment-grid">
+      <!-- Unlimited passes (Subscriber first) -->
+      <div class="payment-card">
+        <div>
+          <div class="payment-title">pass evento illimitato (abbonati)</div>
+          <div class="payment-tag">abbonati</div>
+          <p class="payment-desc">accesso illimitato agli eventi per gli abbonati attivi di PMA Score</p>
+        </div>
+        <a class="payment-action" href="https://www.paypal.com/ncp/payment/KAZVAY7VT6Y9N" target="_blank" rel="noopener noreferrer"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"><span class="paypal-word"><span class="pay">Pay</span><span class="pal">Pal</span></span></a>
+      </div>
+
+      <div class="payment-card">
+        <div>
+          <div class="payment-title">istanza extra (abbonati)</div>
+          <div class="payment-tag">abbonati</div>
+          <p class="payment-desc">aggiungi un'istanza aggiuntiva al tuo piano di abbonamento esistente</p>
+        </div>
+        <a class="payment-action" href="https://www.paypal.com/ncp/payment/N73R9PNA4ZUSU" target="_blank" rel="noopener noreferrer"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"><span class="paypal-word"><span class="pay">Pay</span><span class="pal">Pal</span></span></a>
+      </div>
+
+      <div class="payment-card">
+        <div>
+          <div class="payment-title">pass evento illimitato</div>
+          <p class="payment-desc">accesso illimitato agli eventi per i non abbonati</p>
+        </div>
+        <a class="payment-action" href="https://www.paypal.com/ncp/payment/6FGYWDMSQSEZ8" target="_blank" rel="noopener noreferrer"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"><span class="paypal-word"><span class="pay">Pay</span><span class="pal">Pal</span></span></a>
+      </div>      
+
+      <div class="payment-card">
+        <div>
+          <div class="payment-title">istanza extra</div>
+          <p class="payment-desc">acquista un'istanza extra per i non abbonati</p>
+        </div>
+        <a class="payment-action" href="https://www.paypal.com/ncp/payment/8TKGTZMNLLD52" target="_blank" rel="noopener noreferrer"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"><span class="paypal-word"><span class="pay">Pay</span><span class="pal">Pal</span></span></a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -10,30 +10,45 @@
     th, td { padding: 8px 12px; }
     th { border-bottom:1px solid #00d4ff; text-align:left; }
     td { border-bottom:1px solid #333; }
+    .subscriber-row { background-color: rgba(0, 212, 255, 0.1); }
+    .non-subscriber-row { background-color: rgba(255, 165, 0, 0.1); }
     b { color: #00d4ff; }
+    
+    /* Mobile responsive styles */
+    @media (max-width: 768px) {
+      body { padding: 20px 10px; overflow-x: hidden; }
+      table { width: 100%; max-width: none; margin: 16px 0; font-size: 14px; table-layout: fixed; }
+      th, td { padding: 6px 8px; word-wrap: break-word; overflow-wrap: break-word; }
+      th:nth-child(1), td:nth-child(1) { width: 25%; }
+      th:nth-child(2), td:nth-child(2) { width: 20%; }
+      th:nth-child(3), td:nth-child(3) { width: 55%; }
+      h1 { font-size: 24px; }
+      #pricingDescription { font-size: 14px; margin: 8px auto 16px auto; }
+    }
+    
+    @media (max-width: 480px) {
+      body { padding: 15px 5px; overflow-x: hidden; }
+      table { font-size: 11px; table-layout: fixed; }
+      th, td { padding: 4px 6px; word-wrap: break-word; overflow-wrap: break-word; }
+      th:nth-child(1), td:nth-child(1) { width: 25%; }
+      th:nth-child(2), td:nth-child(2) { width: 20%; }
+      th:nth-child(3), td:nth-child(3) { width: 55%; }
+      h1 { font-size: 18px; }
+      #pricingDescription { font-size: 12px; }
+    }
   </style>
 </head>
 <body>
-  <h1><center>Pricing ($USD)</center></h1><br>
-  <b><center>Description</center></b>
-  <div id="pricingDescription" style="margin: 12px auto 24px auto; max-width: 600px; color: #fff; text-align: center; font-size: 17px; min-height: 32px;">Instance = One private copy of a patterns <strong>OR</strong> sparring application, your choice.</div>
-  <b><center>Subscriptions</center></b><br>
-  <table>
-    <tr><th>Plan</th><th>Price</th><th>Features</th></tr>
-    <tr><td>Club Plan</td><td>$25/month or $240/year</td><td>Unlimited monthly access to 2 instances, ideal for training & small events.</td></tr>
-    <tr><td>Organizer Plan</td><td>$60/month or $600/year</td><td>Unlimited monthly access to 6 instances, multi-ring support for small-medium tournaments, priority support, training.</td></tr>
-  </table><br><br>
-  <b><center>Subscriber Add-On Options</center></b><br>
-  <table>
-    <tr><th>Add-On</th><th>Price</th><th>Description</th></tr>
-    <tr><td>Extra Instance</td><td>$30/day</td><td>Add additional scoring instances for tournaments or special events.</td></tr>
-    <tr><td>Unlimited Event Pass</td><td>$250/day</td><td>Unlimited additional scoring instances for a single event — ideal for larger tournaments or multi-ring setups.</td></tr>
-  </table><br><br>
-  <b><center>Non-Subscriber Pricing</center></b><br>
+  <h1><center>Pricing ($USD)</center></h1>
+  <div id="pricingDescription" style="margin: 12px auto 24px auto; max-width: 600px; color: #fff; text-align: center; font-size: 17px; min-height: 32px;">Instance = patterns <strong>OR</strong> sparring application, your choice.</div>
   <table>
     <tr><th>Option</th><th>Price</th><th>Description</th></tr>
-    <tr><td>Single Instance</td><td>$50/day</td><td>Pay per scoring instance for non-members. Ideal for training or small events, if you don't want a membership.</td></tr>
-    <tr><td>Unlimited Event Pass</td><td>$350/day</td><td>Unlimited instances, ideal for larger tournaments or multi-ring setups, if you don't want a membership.</td></tr>
+    <tr class="subscriber-row"><td><strong>Club Plan</strong></td><td>$25/month or $240/year</td><td>Unlimited access to 2 instances, ideal for training & small events.</td></tr>
+    <tr class="subscriber-row"><td><strong>Organizer Plan</strong></td><td>$60/month or $600/year</td><td>Unlimited access to 6 instances, priority support, training, ideal for medium-sized tournaments/events.</td></tr>
+    <tr class="subscriber-row"><td><strong>Extra Instance (Subscribers)</strong></td><td>$30/event</td><td>Add additional scoring instances for tournaments or special events.</td></tr>
+    <tr class="subscriber-row"><td><strong>Unlimited Event Pass (Subscribers)</strong></td><td>$250/event</td><td>Unlimited additional scoring instances for a single event — ideal for larger tournaments or multi-ring setups.</td></tr>
+    <tr class="non-subscriber-row"><td><strong>Single Instance (Non-Subscribers)</strong></td><td>$50/event</td><td>Pay per scoring instance for non-members. Ideal for training or small events, if you don't want a membership.</td></tr>
+    <tr class="non-subscriber-row"><td><strong>Unlimited Event Pass (Non-Subscribers)</strong></td><td>$350/event</td><td>Unlimited instances, ideal for larger tournaments/events or multi-ring setups, if you don't want a membership.</td></tr>
   </table>
 </body>
 </html>

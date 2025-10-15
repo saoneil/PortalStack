@@ -6,6 +6,23 @@
   <title>client view</title>
   <link rel="stylesheet" href="css/landing.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    /* Ensure pricing tables fit on mobile regardless of embedded content language */
+    #pricingOverlay table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    #pricingOverlay th, #pricingOverlay td { padding: 8px 10px; word-break: break-word; overflow-wrap: anywhere; }
+    #pricingOverlay h1 { font-size: 24px; }
+    #pricingOverlay #pricingDescription { font-size: 14px; }
+    @media (max-width: 768px) {
+      #pricingOverlay th, #pricingOverlay td { padding: 6px 8px; }
+      .lang-row { margin-top: 32px !important; }
+    }
+    @media (max-width: 480px) {
+      #pricingOverlay th, #pricingOverlay td { padding: 4px 6px; font-size: 12px; }
+      #pricingOverlay h1 { font-size: 18px; }
+      #pricingOverlay #pricingDescription { font-size: 12px; }
+      .lang-row { margin-top: 40px !important; }
+    }
+  </style>
 </head>
 
 <body>
@@ -42,22 +59,51 @@
   </div>
   
   <div id="pricingOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:10000;">
-    <div style="background:rgba(33,33,33,0.95); padding:32px 40px; border-radius:16px; min-width:1000px; max-width:1000px; max-height:80vh; overflow-y:auto; position:relative; box-shadow:0 0 40px #00d4ff55;">
+    <div style="background:rgba(33,33,33,0.95); padding:32px 40px; border-radius:16px; width:95vw; max-width:1000px; max-height:80vh; overflow-y:auto; position:relative; box-shadow:0 0 40px #00d4ff55;">
       <button onclick="document.getElementById('pricingOverlay').style.display='none'" style="position:absolute; top:16px; right:16px; background:none; border:none; color:#fff; font-size:28px; cursor:pointer;">✕</button>
       <!-- <h2 class="heading"><u>pricing</u></h2> -->
-      <div style="display:flex; justify-content:center; margin-top:24px; gap:16px;">
-        <button id="pricingEnglishBtn" style="padding:8px 18px; font-size:16px; background:#00d4ff; color:#222; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">English</button>
-        <button id="pricingSpanishBtn" style="padding:8px 18px; font-size:16px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Español</button>
+      <div class="lang-row" style="display:flex; justify-content:center; margin-top:24px; gap:8px; flex-wrap:wrap;">
+        <button id="pricingEnglishBtn" style="padding:8px 16px; font-size:14px; background:#00d4ff; color:#222; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">English</button>
+        <button id="pricingSpanishBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Español</button>
+        <button id="pricingFrenchBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Français</button>
+        <button id="pricingItalianBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Italiano</button>
+        <button id="pricingJapaneseBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">日本語</button>
+        <button id="pricingPolishBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Polski</button>
+        <button id="pricingDutchBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Nederlands</button>
+        <button id="pricingMalayBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Bahasa Melayu</button>
       </div>
       <div id="pricingEnglish" style="margin-top:32px; color:#fff; font-size:18px;"></div>
       <div id="pricingSpanish" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
+      <div id="pricingFrench" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
+      <div id="pricingItalian" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
+      <div id="pricingJapanese" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
+      <div id="pricingPolish" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
+      <div id="pricingDutch" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
+      <div id="pricingMalay" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
     </div>
   </div>
 
   <div id="paymentsOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:10000;">
-    <div style="background:rgba(33,33,33,0.95); padding:32px 40px; border-radius:16px; min-width:1000px; max-width:1000px; max-height:80vh; overflow-y:auto; position:relative; box-shadow:0 0 40px #00d4ff55;">
+    <div style="background:rgba(33,33,33,0.95); padding:32px 40px; border-radius:16px; width:95vw; max-width:1000px; max-height:80vh; overflow-y:auto; position:relative; box-shadow:0 0 40px #00d4ff55;">
       <button onclick="document.getElementById('paymentsOverlay').style.display='none'" style="position:absolute; top:16px; right:16px; background:none; border:none; color:#fff; font-size:28px; cursor:pointer;">✕</button>
-      <div id="paymentsContent" style="margin-top:32px; color:#fff; font-size:18px;"></div>
+      <div class="lang-row" style="display:flex; justify-content:center; margin-top:24px; gap:8px; flex-wrap:wrap;">
+        <button id="paymentsEnglishBtn" style="padding:8px 16px; font-size:14px; background:#00d4ff; color:#222; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">English</button>
+        <button id="paymentsSpanishBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Español</button>
+        <button id="paymentsFrenchBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Français</button>
+        <button id="paymentsItalianBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Italiano</button>
+        <button id="paymentsJapaneseBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">日本語</button>
+        <button id="paymentsPolishBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Polski</button>
+        <button id="paymentsDutchBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Nederlands</button>
+        <button id="paymentsMalayBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Bahasa Melayu</button>
+      </div>
+      <div id="paymentsEnglish" style="margin-top:32px; color:#fff; font-size:18px;"></div>
+      <div id="paymentsSpanish" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
+      <div id="paymentsFrench" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
+      <div id="paymentsItalian" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
+      <div id="paymentsJapanese" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
+      <div id="paymentsPolish" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
+      <div id="paymentsDutch" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
+      <div id="paymentsMalay" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
     </div>
   </div>
 
@@ -193,7 +239,17 @@
 
     // Pricing Popup Logic
     function loadPricingContent(lang) {
-      const targetDiv = lang === 'en' ? document.getElementById('pricingEnglish') : document.getElementById('pricingSpanish');
+      const langMap = {
+        'en': 'pricingEnglish',
+        'es': 'pricingSpanish', 
+        'fr': 'pricingFrench',
+        'it': 'pricingItalian',
+        'ja': 'pricingJapanese',
+        'pl': 'pricingPolish',
+        'nl': 'pricingDutch',
+        'ms': 'pricingMalay'
+      };
+      const targetDiv = document.getElementById(langMap[lang]);
       fetch('html/pricing/pricing_' + lang + '.html')
         .then(res => res.text())
         .then(html => {
@@ -202,49 +258,129 @@
           targetDiv.innerHTML = bodyMatch ? bodyMatch[1] : html;
         });
     }
+    function switchPricingLanguage(lang) {
+      // Hide all pricing content divs
+      const allDivs = ['pricingEnglish', 'pricingSpanish', 'pricingFrench', 'pricingItalian', 'pricingJapanese', 'pricingPolish', 'pricingDutch', 'pricingMalay'];
+      allDivs.forEach(divId => {
+        document.getElementById(divId).style.display = 'none';
+      });
+      
+      // Reset all button styles
+      const allButtons = ['pricingEnglishBtn', 'pricingSpanishBtn', 'pricingFrenchBtn', 'pricingItalianBtn', 'pricingJapaneseBtn', 'pricingPolishBtn', 'pricingDutchBtn', 'pricingMalayBtn'];
+      allButtons.forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        btn.style.background = 'transparent';
+        btn.style.color = '#00d4ff';
+        btn.style.border = '1px solid #00d4ff';
+      });
+      
+      // Show selected content and style selected button
+      const langMap = {
+        'en': { div: 'pricingEnglish', btn: 'pricingEnglishBtn' },
+        'es': { div: 'pricingSpanish', btn: 'pricingSpanishBtn' },
+        'fr': { div: 'pricingFrench', btn: 'pricingFrenchBtn' },
+        'it': { div: 'pricingItalian', btn: 'pricingItalianBtn' },
+        'ja': { div: 'pricingJapanese', btn: 'pricingJapaneseBtn' },
+        'pl': { div: 'pricingPolish', btn: 'pricingPolishBtn' },
+        'nl': { div: 'pricingDutch', btn: 'pricingDutchBtn' },
+        'ms': { div: 'pricingMalay', btn: 'pricingMalayBtn' }
+      };
+      
+      document.getElementById(langMap[lang].div).style.display = '';
+      const activeBtn = document.getElementById(langMap[lang].btn);
+      activeBtn.style.background = '#00d4ff';
+      activeBtn.style.color = '#222';
+      activeBtn.style.border = 'none';
+      
+      loadPricingContent(lang);
+    }
+
     document.getElementById('openPricingBtn').onclick = function() {
       document.getElementById('pricingOverlay').style.display = 'flex';
-      document.getElementById('pricingEnglish').style.display = '';
-      document.getElementById('pricingSpanish').style.display = 'none';
-      document.getElementById('pricingEnglishBtn').style.background = '#00d4ff';
-      document.getElementById('pricingEnglishBtn').style.color = '#222';
-      document.getElementById('pricingSpanishBtn').style.background = 'transparent';
-      document.getElementById('pricingSpanishBtn').style.color = '#00d4ff';
-      loadPricingContent('en');
+      switchPricingLanguage('en');
     };
-    document.getElementById('pricingEnglishBtn').onclick = function() {
-      document.getElementById('pricingEnglish').style.display = '';
-      document.getElementById('pricingSpanish').style.display = 'none';
-      this.style.background = '#00d4ff';
-      this.style.color = '#222';
-      this.style.border = 'none';
-      document.getElementById('pricingSpanishBtn').style.background = 'transparent';
-      document.getElementById('pricingSpanishBtn').style.color = '#00d4ff';
-      document.getElementById('pricingSpanishBtn').style.border = '1px solid #00d4ff';
-      loadPricingContent('en');
-    };
-    document.getElementById('pricingSpanishBtn').onclick = function() {
-      document.getElementById('pricingEnglish').style.display = 'none';
-      document.getElementById('pricingSpanish').style.display = '';
-      this.style.background = '#00d4ff';
-      this.style.color = '#222';
-      this.style.border = 'none';
-      document.getElementById('pricingEnglishBtn').style.background = 'transparent';
-      document.getElementById('pricingEnglishBtn').style.color = '#00d4ff';
-      document.getElementById('pricingEnglishBtn').style.border = '1px solid #00d4ff';
-      loadPricingContent('es');
-    };
+    
+    document.getElementById('pricingEnglishBtn').onclick = function() { switchPricingLanguage('en'); };
+    document.getElementById('pricingSpanishBtn').onclick = function() { switchPricingLanguage('es'); };
+    document.getElementById('pricingFrenchBtn').onclick = function() { switchPricingLanguage('fr'); };
+    document.getElementById('pricingItalianBtn').onclick = function() { switchPricingLanguage('it'); };
+    document.getElementById('pricingJapaneseBtn').onclick = function() { switchPricingLanguage('ja'); };
+    document.getElementById('pricingPolishBtn').onclick = function() { switchPricingLanguage('pl'); };
+    document.getElementById('pricingDutchBtn').onclick = function() { switchPricingLanguage('nl'); };
+    document.getElementById('pricingMalayBtn').onclick = function() { switchPricingLanguage('ms'); };
 
     // Payments Popup Logic
-    document.getElementById('openPaymentsBtn').onclick = function() {
-      document.getElementById('paymentsOverlay').style.display = 'flex';
-      fetch('html/payments/payments.html')
+    function loadPaymentsContent(lang) {
+      const langMap = {
+        'en': 'paymentsEnglish',
+        'es': 'paymentsSpanish', 
+        'fr': 'paymentsFrench',
+        'it': 'paymentsItalian',
+        'ja': 'paymentsJapanese',
+        'pl': 'paymentsPolish',
+        'nl': 'paymentsDutch',
+        'ms': 'paymentsMalay'
+      };
+      const targetDiv = document.getElementById(langMap[lang]);
+      fetch('html/payments/payments_' + lang + '.html')
         .then(res => res.text())
         .then(html => {
+          // Extract only the <body> content
           const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-          document.getElementById('paymentsContent').innerHTML = bodyMatch ? bodyMatch[1] : html;
+          targetDiv.innerHTML = bodyMatch ? bodyMatch[1] : html;
         });
+    }
+    
+    function switchPaymentsLanguage(lang) {
+      // Hide all payments content divs
+      const allDivs = ['paymentsEnglish', 'paymentsSpanish', 'paymentsFrench', 'paymentsItalian', 'paymentsJapanese', 'paymentsPolish', 'paymentsDutch', 'paymentsMalay'];
+      allDivs.forEach(divId => {
+        document.getElementById(divId).style.display = 'none';
+      });
+      
+      // Reset all button styles
+      const allButtons = ['paymentsEnglishBtn', 'paymentsSpanishBtn', 'paymentsFrenchBtn', 'paymentsItalianBtn', 'paymentsJapaneseBtn', 'paymentsPolishBtn', 'paymentsDutchBtn', 'paymentsMalayBtn'];
+      allButtons.forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        btn.style.background = 'transparent';
+        btn.style.color = '#00d4ff';
+        btn.style.border = '1px solid #00d4ff';
+      });
+      
+      // Show selected content and style selected button
+      const langMap = {
+        'en': { div: 'paymentsEnglish', btn: 'paymentsEnglishBtn' },
+        'es': { div: 'paymentsSpanish', btn: 'paymentsSpanishBtn' },
+        'fr': { div: 'paymentsFrench', btn: 'paymentsFrenchBtn' },
+        'it': { div: 'paymentsItalian', btn: 'paymentsItalianBtn' },
+        'ja': { div: 'paymentsJapanese', btn: 'paymentsJapaneseBtn' },
+        'pl': { div: 'paymentsPolish', btn: 'paymentsPolishBtn' },
+        'nl': { div: 'paymentsDutch', btn: 'paymentsDutchBtn' },
+        'ms': { div: 'paymentsMalay', btn: 'paymentsMalayBtn' }
+      };
+      
+      document.getElementById(langMap[lang].div).style.display = '';
+      const activeBtn = document.getElementById(langMap[lang].btn);
+      activeBtn.style.background = '#00d4ff';
+      activeBtn.style.color = '#222';
+      activeBtn.style.border = 'none';
+      
+      loadPaymentsContent(lang);
+    }
+
+    document.getElementById('openPaymentsBtn').onclick = function() {
+      document.getElementById('paymentsOverlay').style.display = 'flex';
+      switchPaymentsLanguage('en');
     };
+    
+    document.getElementById('paymentsEnglishBtn').onclick = function() { switchPaymentsLanguage('en'); };
+    document.getElementById('paymentsSpanishBtn').onclick = function() { switchPaymentsLanguage('es'); };
+    document.getElementById('paymentsFrenchBtn').onclick = function() { switchPaymentsLanguage('fr'); };
+    document.getElementById('paymentsItalianBtn').onclick = function() { switchPaymentsLanguage('it'); };
+    document.getElementById('paymentsJapaneseBtn').onclick = function() { switchPaymentsLanguage('ja'); };
+    document.getElementById('paymentsPolishBtn').onclick = function() { switchPaymentsLanguage('pl'); };
+    document.getElementById('paymentsDutchBtn').onclick = function() { switchPaymentsLanguage('nl'); };
+    document.getElementById('paymentsMalayBtn').onclick = function() { switchPaymentsLanguage('ms'); };
   </script>
 
 </body>
