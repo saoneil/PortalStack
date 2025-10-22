@@ -61,7 +61,8 @@ app.use(session({
 const loginLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
   max: 5,
-  message: 'Too many login attempts. Please try again in 10 minutes'
+  message: 'Too many login attempts. Please try again in 10 minutes',
+  skipSuccessfulRequests: true
 });
 
 // auth middleware
@@ -94,22 +95,24 @@ app.post('/index', loginLimiter, (req, res) => {
   db.query(sql, [client, username], async (err, results) => {
     if (err) {
       console.error(err);
-      return res.send('Login failed. Try again.');
+      return res.status(500).send('Login failed. Try again.');
     }
 
     if (!results[0].length) {
-      return res.send('Invalid credentials for this client');
+      return res.status(401).send('Invalid credentials for this client');
     }
 
     const user = results[0][0];
 
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) {
-      return res.send('Invalid credentials for this client');
+      return res.status(401).send('Invalid credentials for this client');
     }
 
     req.session.loggedIn = true;
     req.session.clientId = user.client_id;
+    // Store the client name provided during login for display purposes
+    req.session.clientName = client;
     res.redirect('/landing');
   });
 });
@@ -164,6 +167,14 @@ app.get('/api/grid-data', requireLogin, (req, res) => {
       return res.status(500).json({ error: 'Database error' });
     }
     res.json(results[0]); // assuming single result set
+  });
+});
+
+// profile endpoint to return current client's profile info
+app.get('/api/profile', requireLogin, (req, res) => {
+  res.json({
+    clientName: req.session.clientName || null,
+    clientId: req.session.clientId || null
   });
 });
 

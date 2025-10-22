@@ -30,6 +30,10 @@
     <img src="/images/PMA_Score_8.png" alt="render_error" class="header-image">
   </div>
 
+  <div id="profileLabel" style="text-align:center; color:#fff; font-size:28px; font-weight:bold; margin-top:24px; display:none; text-shadow: 0 0 10px #00d4ff55, 0 0 20px #00d4ff55;">
+    Client: <span id="profileClientName" style="color:#00d4ff; text-shadow: 0 0 10px #00d4ff88, 0 0 20px #00d4ff55;"></span>
+  </div>
+
   <!-- <h2 class="heading">please select a scoring system to continue:</h2> -->
   <div class="scoring-system-text">select a scoring system:</div>
   <div class="scoring-table-container">
@@ -118,6 +122,17 @@
 
 
   <script>
+    // Populate Profile label
+    fetch('/api/profile')
+      .then(res => res.json())
+      .then(profile => {
+        if (profile && profile.clientName) {
+          document.getElementById('profileClientName').textContent = profile.clientName;
+          document.getElementById('profileLabel').style.display = 'block';
+        }
+      })
+      .catch(() => {});
+
     fetch('/api/grid-data')
       .then(res => res.json())
       .then(data => {
