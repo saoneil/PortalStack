@@ -45,13 +45,47 @@ h1 {
   color: #fff;
   font-family: monospace, serif;
   letter-spacing: 0.05em;
-  font-size: 16px;
+  font-size: 18px;
+  font-weight: 600;
+  text-shadow: 0 0 6px rgba(0, 212, 255, 0.35);
+  caret-color: #00d4ff;
 }
 
 .form input:hover,
 .form input:focus {
   outline: none;
   border: 0;
+}
+
+.form input:hover {
+  text-shadow: 0 0 4px rgba(0, 212, 255, 0.2);
+}
+
+.form input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+}
+
+/* Reduce brightness behind text on hover/focus to keep contrast strong */
+.block-cube.block-input input:hover ~ .bg .bg-inner,
+.block-cube.block-input input:focus ~ .bg .bg-inner {
+  top: 0; /* keep inner panel in place instead of sliding out */
+  background: #1b1b1b; /* darker inner to avoid bright wash under text */
+}
+
+/* Tone down the outer highlight on hover/focus */
+.block-cube.block-input:hover .bg-top,
+.block-cube.block-input:hover .bg-right,
+.block-cube.block-input:hover .bg,
+.block-cube.block-input:focus .bg-top,
+.block-cube.block-input:focus .bg-right,
+.block-cube.block-input:focus .bg {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+/* Reduce text glow when focused to avoid blending */
+.form input:focus {
+  text-shadow: 0 0 3px rgba(0, 212, 255, 0.15);
 }
 
 .form .btn {
@@ -161,4 +195,13 @@ h1 {
 .block-cube-hover:hover .bg .bg-inner,
 .block-cube-hover:focus .bg .bg-inner {
   top: 100%;
+}
+
+/* Secondary button variant: subtle distinction for external-return action */
+.form .btn.btn-secondary .bg-top,
+.form .btn.btn-secondary .bg {
+  background: linear-gradient(90deg, rgba(0,212,255,1) 0%, rgba(52,9,121,1) 37%, rgba(2,0,36,1) 94%);
+}
+.form .btn.btn-secondary .bg-right {
+  background: rgba(52,9,121,1);
 }
