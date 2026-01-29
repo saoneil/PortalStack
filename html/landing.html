@@ -30,8 +30,15 @@
     <img src="/images/PMA_Score_8.png" alt="render_error" class="header-image">
   </div>
 
-  <div id="profileLabel" style="text-align:center; color:#fff; font-size:28px; font-weight:bold; margin-top:24px; display:none; text-shadow: 0 0 10px #00d4ff55, 0 0 20px #00d4ff55;">
-    Client: <span id="profileClientName" style="color:#00d4ff; text-shadow: 0 0 10px #00d4ff88, 0 0 20px #00d4ff55;"></span>
+  <div id="clientHeader" style="display:flex; justify-content:center; align-items:center; gap:10px; margin-top:24px;">
+    <button id="openPricingPaymentsBtn" class="action-btn ellipsis-btn"><span class="ellipsis-text">&nbsp;&nbsp;&nbsp;</span></button>
+    <div id="profileLabel" style="text-align:center; color:#fff; font-size:28px; font-weight:bold; display:none; text-shadow: 0 0 10px #00d4ff55, 0 0 20px #00d4ff55;">
+      Client: <span id="profileClientName" style="color:#00d4ff; text-shadow: 0 0 10px #00d4ff88, 0 0 20px #00d4ff55;"></span>
+    </div>
+  </div>
+
+  <div id="release-notes-section" style="text-align:center; margin-top:16px;">
+    <button id="openReleaseNotesBtn" class="action-btn" style="margin-right:16px; display:none;">release notes/user guide</button>
   </div>
 
   <!-- <h2 class="heading">please select a scoring system to continue:</h2> -->
@@ -48,17 +55,19 @@
     </div>
   </div>
 
-  <div id="release-notes-section" style="text-align:center; margin-top:60px;">
-    <button id="openReleaseNotesBtn" class="action-btn" style="margin-right:16px; display:none;">release notes/user guide</button>
-    <button id="openPricingBtn" class="action-btn" style="margin-right:16px;">pricing</button>
-    <button id="openPaymentsBtn" class="action-btn">payments</button>
-  </div>
-
   <div id="releaseNotesOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:10000;">
     <div style="background:rgba(33,33,33,0.95); padding:32px 40px; border-radius:16px; min-width:320px; max-width:90vw; max-height:80vh; overflow-y:auto; position:relative; box-shadow:0 0 40px #00d4ff55; display:flex; flex-direction:column; align-items:center; justify-content:center;">
       <button onclick="document.getElementById('releaseNotesOverlay').style.display='none'" style="position:absolute; top:16px; right:16px; background:none; border:none; color:#fff; font-size:28px; cursor:pointer;">✕</button>
       <h2 class="heading" style="color:#fff;">release notes</h2>
       <ul id="releaseNotesList" style="list-style:disc; padding:0; text-align:center; margin:0 auto; display:inline-block;"></ul>
+    </div>
+  </div>
+
+  <div id="pricingPaymentsOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:10000;">
+    <div style="background:rgba(33,33,33,0.95); padding:32px 40px; border-radius:16px; min-width:320px; max-width:90vw; position:relative; box-shadow:0 0 40px #00d4ff55; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;">
+      <button id="closePricingPaymentsOverlayBtn" style="position:absolute; top:16px; right:16px; background:none; border:none; color:#fff; font-size:28px; cursor:pointer;">✕</button>
+      <button id="modalPricingBtn" class="action-btn" style="min-width:180px;">pricing</button>
+      <button id="modalPaymentsBtn" class="action-btn" style="min-width:180px;">payments</button>
     </div>
   </div>
   
@@ -310,10 +319,10 @@
       loadPricingContent(lang);
     }
 
-    document.getElementById('openPricingBtn').onclick = function() {
+    function openPricingOverlay() {
       document.getElementById('pricingOverlay').style.display = 'flex';
       switchPricingLanguage('en');
-    };
+    }
     
     document.getElementById('pricingEnglishBtn').onclick = function() { switchPricingLanguage('en'); };
     document.getElementById('pricingSpanishBtn').onclick = function() { switchPricingLanguage('es'); };
@@ -383,9 +392,27 @@
       loadPaymentsContent(lang);
     }
 
-    document.getElementById('openPaymentsBtn').onclick = function() {
+    function openPaymentsOverlay() {
       document.getElementById('paymentsOverlay').style.display = 'flex';
       switchPaymentsLanguage('en');
+    }
+
+    document.getElementById('openPricingPaymentsBtn').onclick = function() {
+      document.getElementById('pricingPaymentsOverlay').style.display = 'flex';
+    };
+
+    document.getElementById('closePricingPaymentsOverlayBtn').onclick = function() {
+      document.getElementById('pricingPaymentsOverlay').style.display = 'none';
+    };
+
+    document.getElementById('modalPricingBtn').onclick = function() {
+      document.getElementById('pricingPaymentsOverlay').style.display = 'none';
+      openPricingOverlay();
+    };
+
+    document.getElementById('modalPaymentsBtn').onclick = function() {
+      document.getElementById('pricingPaymentsOverlay').style.display = 'none';
+      openPaymentsOverlay();
     };
     
     document.getElementById('paymentsEnglishBtn').onclick = function() { switchPaymentsLanguage('en'); };

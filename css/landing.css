@@ -147,6 +147,23 @@ table button:hover {
   box-shadow: 0 0 16px 4px #00d4ff66;
 }
 
+.ellipsis-btn {
+  width: 31px;
+  height: 27px;
+  padding: 0;
+  margin: 0;
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ellipsis-text {
+  display: block;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
 #release-notes-section {
   display: flex;
   justify-content: center;
@@ -280,7 +297,8 @@ table button:hover {
   
   /* Mobile-friendly pricing and payments overlays */
   #pricingOverlay > div,
-  #paymentsOverlay > div {
+  #paymentsOverlay > div,
+  #pricingPaymentsOverlay > div {
     min-width: 90vw !important;
     max-width: 95vw !important;
     max-height: 90vh !important;
@@ -289,7 +307,8 @@ table button:hover {
   }
   
   #pricingOverlay button,
-  #paymentsOverlay button {
+  #paymentsOverlay button,
+  #pricingPaymentsOverlay button {
     font-size: 24px;
     padding: 8px 12px;
     background: #333;
