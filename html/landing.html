@@ -85,6 +85,10 @@
         <button id="pricingDutchBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Nederlands</button>
         <button id="pricingMalayBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Bahasa Melayu</button>
       </div>
+      <div class="lang-row" style="display:flex; justify-content:center; margin-top:16px; gap:8px; flex-wrap:wrap;">
+        <button id="pricingNonSubscriberBtn" style="padding:8px 16px; font-size:14px; background:#00d4ff; color:#222; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">Non-Subscribers</button>
+        <button id="pricingSubscriberBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Subscribers</button>
+      </div>
       <div id="pricingEnglish" style="margin-top:32px; color:#fff; font-size:18px;"></div>
       <div id="pricingSpanish" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
       <div id="pricingFrench" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
@@ -108,6 +112,10 @@
         <button id="paymentsPolishBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Polski</button>
         <button id="paymentsDutchBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Nederlands</button>
         <button id="paymentsMalayBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Bahasa Melayu</button>
+      </div>
+      <div class="lang-row" style="display:flex; justify-content:center; margin-top:16px; gap:8px; flex-wrap:wrap;">
+        <button id="paymentsNonSubscriberBtn" style="padding:8px 16px; font-size:14px; background:#00d4ff; color:#222; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">Non-Subscribers</button>
+        <button id="paymentsSubscriberBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Subscribers</button>
       </div>
       <div id="paymentsEnglish" style="margin-top:32px; color:#fff; font-size:18px;"></div>
       <div id="paymentsSpanish" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
@@ -274,13 +282,72 @@
         'ms': 'pricingMalay'
       };
       const targetDiv = document.getElementById(langMap[lang]);
-      fetch('html/pricing/pricing_' + lang + '.html')
+      return fetch('html/pricing/pricing_' + lang + '.html')
         .then(res => res.text())
         .then(html => {
           // Extract only the <body> content
           const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
           targetDiv.innerHTML = bodyMatch ? bodyMatch[1] : html;
         });
+    }
+
+    function updatePricingFilterLabels(lang) {
+      const labelMap = {
+        'en': { non: 'Non-Subscribers', sub: 'Subscribers' },
+        'es': { non: 'No suscriptores', sub: 'Suscriptores' },
+        'fr': { non: 'Non-abonnés', sub: 'Abonnés' },
+        'it': { non: 'Non iscritti', sub: 'Iscritti' },
+        'ja': { non: '非加入者', sub: '加入者' },
+        'pl': { non: 'Nieabonenci', sub: 'Abonenci' },
+        'nl': { non: 'Niet-abonnees', sub: 'Abonnees' },
+        'ms': { non: 'Bukan Pelanggan', sub: 'Pelanggan' }
+      };
+      const labels = labelMap[lang] || labelMap.en;
+      document.getElementById('pricingNonSubscriberBtn').textContent = labels.non;
+      document.getElementById('pricingSubscriberBtn').textContent = labels.sub;
+    }
+
+    let pricingFilter = 'non';
+
+    function applyPricingFilter(filter) {
+      const pricingContainers = ['pricingEnglish', 'pricingSpanish', 'pricingFrench', 'pricingItalian', 'pricingJapanese', 'pricingPolish', 'pricingDutch', 'pricingMalay'];
+      pricingContainers.forEach(containerId => {
+        const container = document.getElementById(containerId);
+        if (!container || container.style.display === 'none') {
+          return;
+        }
+        const subscriberRows = container.querySelectorAll('.subscriber-row');
+        const nonSubscriberRows = container.querySelectorAll('.non-subscriber-row');
+        if (filter === 'non') {
+          subscriberRows.forEach(row => row.style.display = 'none');
+          nonSubscriberRows.forEach(row => row.style.display = '');
+        } else {
+          subscriberRows.forEach(row => row.style.display = '');
+          nonSubscriberRows.forEach(row => row.style.display = 'none');
+        }
+      });
+    }
+
+    function setPricingFilter(filter) {
+      pricingFilter = filter;
+      const nonBtn = document.getElementById('pricingNonSubscriberBtn');
+      const subBtn = document.getElementById('pricingSubscriberBtn');
+      if (filter === 'non') {
+        nonBtn.style.background = '#00d4ff';
+        nonBtn.style.color = '#222';
+        nonBtn.style.border = 'none';
+        subBtn.style.background = 'transparent';
+        subBtn.style.color = '#00d4ff';
+        subBtn.style.border = '1px solid #00d4ff';
+      } else {
+        subBtn.style.background = '#00d4ff';
+        subBtn.style.color = '#222';
+        subBtn.style.border = 'none';
+        nonBtn.style.background = 'transparent';
+        nonBtn.style.color = '#00d4ff';
+        nonBtn.style.border = '1px solid #00d4ff';
+      }
+      applyPricingFilter(filter);
     }
     function switchPricingLanguage(lang) {
       // Hide all pricing content divs
@@ -316,11 +383,15 @@
       activeBtn.style.color = '#222';
       activeBtn.style.border = 'none';
       
-      loadPricingContent(lang);
+      updatePricingFilterLabels(lang);
+      return loadPricingContent(lang).then(() => {
+        setPricingFilter(pricingFilter);
+      });
     }
 
     function openPricingOverlay() {
       document.getElementById('pricingOverlay').style.display = 'flex';
+      pricingFilter = 'non';
       switchPricingLanguage('en');
     }
     
@@ -332,8 +403,12 @@
     document.getElementById('pricingPolishBtn').onclick = function() { switchPricingLanguage('pl'); };
     document.getElementById('pricingDutchBtn').onclick = function() { switchPricingLanguage('nl'); };
     document.getElementById('pricingMalayBtn').onclick = function() { switchPricingLanguage('ms'); };
+    document.getElementById('pricingNonSubscriberBtn').onclick = function() { setPricingFilter('non'); };
+    document.getElementById('pricingSubscriberBtn').onclick = function() { setPricingFilter('sub'); };
 
     // Payments Popup Logic
+    let paymentsFilter = 'non';
+
     function loadPaymentsContent(lang) {
       const langMap = {
         'en': 'paymentsEnglish',
@@ -346,13 +421,77 @@
         'ms': 'paymentsMalay'
       };
       const targetDiv = document.getElementById(langMap[lang]);
-      fetch('html/payments/payments_' + lang + '.html')
+      return fetch('html/payments/payments_' + lang + '.html')
         .then(res => res.text())
         .then(html => {
           // Extract only the <body> content
           const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
           targetDiv.innerHTML = bodyMatch ? bodyMatch[1] : html;
         });
+    }
+
+    function updatePaymentsFilterLabels(lang) {
+      const labelMap = {
+        'en': { non: 'Non-Subscribers', sub: 'Subscribers' },
+        'es': { non: 'No suscriptores', sub: 'Suscriptores' },
+        'fr': { non: 'Non-abonnés', sub: 'Abonnés' },
+        'it': { non: 'Non iscritti', sub: 'Iscritti' },
+        'ja': { non: '非加入者', sub: '加入者' },
+        'pl': { non: 'Nieabonenci', sub: 'Abonenci' },
+        'nl': { non: 'Niet-abonnees', sub: 'Abonnees' },
+        'ms': { non: 'Bukan Pelanggan', sub: 'Pelanggan' }
+      };
+      const labels = labelMap[lang] || labelMap.en;
+      document.getElementById('paymentsNonSubscriberBtn').textContent = labels.non;
+      document.getElementById('paymentsSubscriberBtn').textContent = labels.sub;
+    }
+
+    function applyPaymentsFilter(filter) {
+      const paymentsContainers = ['paymentsEnglish', 'paymentsSpanish', 'paymentsFrench', 'paymentsItalian', 'paymentsJapanese', 'paymentsPolish', 'paymentsDutch', 'paymentsMalay'];
+      paymentsContainers.forEach(containerId => {
+        const container = document.getElementById(containerId);
+        if (!container || container.style.display === 'none') {
+          return;
+        }
+        const subscriberSections = container.querySelectorAll('.subscriber-section, .subscriber-option');
+        const nonSubscriberOptions = container.querySelectorAll('.non-subscriber-option');
+        const paymentGrid = container.querySelector('.payment-grid');
+        if (filter === 'non') {
+          subscriberSections.forEach(item => item.style.display = 'none');
+          nonSubscriberOptions.forEach(item => item.style.display = '');
+          if (paymentGrid) {
+            paymentGrid.classList.add('compact');
+          }
+        } else {
+          subscriberSections.forEach(item => item.style.display = '');
+          nonSubscriberOptions.forEach(item => item.style.display = 'none');
+          if (paymentGrid) {
+            paymentGrid.classList.add('compact');
+          }
+        }
+      });
+    }
+    
+    function setPaymentsFilter(filter) {
+      paymentsFilter = filter;
+      const nonBtn = document.getElementById('paymentsNonSubscriberBtn');
+      const subBtn = document.getElementById('paymentsSubscriberBtn');
+      if (filter === 'non') {
+        nonBtn.style.background = '#00d4ff';
+        nonBtn.style.color = '#222';
+        nonBtn.style.border = 'none';
+        subBtn.style.background = 'transparent';
+        subBtn.style.color = '#00d4ff';
+        subBtn.style.border = '1px solid #00d4ff';
+      } else {
+        subBtn.style.background = '#00d4ff';
+        subBtn.style.color = '#222';
+        subBtn.style.border = 'none';
+        nonBtn.style.background = 'transparent';
+        nonBtn.style.color = '#00d4ff';
+        nonBtn.style.border = '1px solid #00d4ff';
+      }
+      applyPaymentsFilter(filter);
     }
     
     function switchPaymentsLanguage(lang) {
@@ -389,11 +528,15 @@
       activeBtn.style.color = '#222';
       activeBtn.style.border = 'none';
       
-      loadPaymentsContent(lang);
+      updatePaymentsFilterLabels(lang);
+      return loadPaymentsContent(lang).then(() => {
+        setPaymentsFilter(paymentsFilter);
+      });
     }
 
     function openPaymentsOverlay() {
       document.getElementById('paymentsOverlay').style.display = 'flex';
+      paymentsFilter = 'non';
       switchPaymentsLanguage('en');
     }
 
@@ -423,6 +566,8 @@
     document.getElementById('paymentsPolishBtn').onclick = function() { switchPaymentsLanguage('pl'); };
     document.getElementById('paymentsDutchBtn').onclick = function() { switchPaymentsLanguage('nl'); };
     document.getElementById('paymentsMalayBtn').onclick = function() { switchPaymentsLanguage('ms'); };
+    document.getElementById('paymentsNonSubscriberBtn').onclick = function() { setPaymentsFilter('non'); };
+    document.getElementById('paymentsSubscriberBtn').onclick = function() { setPaymentsFilter('sub'); };
   </script>
 
 </body>

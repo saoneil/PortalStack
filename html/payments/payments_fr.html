@@ -14,6 +14,9 @@
       grid-template-columns: repeat(4, 1fr);
       gap: 16px;
     }
+    .payment-grid.compact {
+      grid-template-columns: repeat(2, 1fr);
+    }
     .payment-card {
       background: #2b2b2b;
       border: 1px solid #00d4ff55;
@@ -100,9 +103,10 @@
     <h1><center>paiements</center></h1>
     <div class="payments-subtitle">** notez que les instances seront disponibles dans les 48 heures suivant l'achat **</div>
 
-    <div class="section-heading"><center>abonnements</center></div>
-    <div class="subscription-grid">
-      <div class="payment-card">
+    <div class="subscriber-section">
+      <div class="section-heading"><center>abonnements</center></div>
+      <div class="subscription-grid">
+        <div class="payment-card">
         <div>
           <div class="subscription-title">abonnement club</div>
           <p class="payment-desc">choisissez un cycle de facturation pour le plan club</p>
@@ -113,7 +117,7 @@
         </div>
       </div>
 
-      <div class="payment-card">
+        <div class="payment-card">
         <div>
           <div class="subscription-title">abonnement organisateur</div>
           <p class="payment-desc">choisissez un cycle de facturation pour le plan organisateur</p>
@@ -122,13 +126,14 @@
           <a class="paypal-button" href="https://www.paypal.com/webapps/billing/plans/subscribe?plan_id=P-63D48453377935614NDNVY3Q" target="_blank" rel="noopener noreferrer"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"><span class="paypal-word"><span class="pay">Pay</span><span class="pal">Pal</span></span> — Mensuel</a>
           <a class="paypal-button" href="https://www.paypal.com/webapps/billing/plans/subscribe?plan_id=P-2UX54115DY587734SNDNVZ2I" target="_blank" rel="noopener noreferrer"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"><span class="paypal-word"><span class="pay">Pay</span><span class="pal">Pal</span></span> — Annuel</a>
         </div>
+        </div>
       </div>
     </div>
 
     <div class="section-heading"><center>paiements uniques</center></div>
     <div class="payment-grid">
       <!-- Unlimited passes (Subscriber first) -->
-      <div class="payment-card">
+      <div class="payment-card subscriber-option">
         <div>
           <div class="payment-title">passe événement illimité (abonnés)</div>
           <div class="payment-tag">abonnés</div>
@@ -137,7 +142,7 @@
         <a class="payment-action" href="https://www.paypal.com/ncp/payment/KAZVAY7VT6Y9N" target="_blank" rel="noopener noreferrer"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"><span class="paypal-word"><span class="pay">Pay</span><span class="pal">Pal</span></span></a>
       </div>
 
-      <div class="payment-card">
+      <div class="payment-card subscriber-option">
         <div>
           <div class="payment-title">instance supplémentaire (abonnés)</div>
           <div class="payment-tag">abonnés</div>
@@ -146,7 +151,7 @@
         <a class="payment-action" href="https://www.paypal.com/ncp/payment/N73R9PNA4ZUSU" target="_blank" rel="noopener noreferrer"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"><span class="paypal-word"><span class="pay">Pay</span><span class="pal">Pal</span></span></a>
       </div>
 
-      <div class="payment-card">
+      <div class="payment-card non-subscriber-option">
         <div>
           <div class="payment-title">passe événement illimité</div>
           <p class="payment-desc">accès illimité aux événements pour les non-abonnés</p>
@@ -154,7 +159,7 @@
         <a class="payment-action" href="https://www.paypal.com/ncp/payment/6FGYWDMSQSEZ8" target="_blank" rel="noopener noreferrer"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"><span class="paypal-word"><span class="pay">Pay</span><span class="pal">Pal</span></span></a>
       </div>      
 
-      <div class="payment-card">
+      <div class="payment-card non-subscriber-option">
         <div>
           <div class="payment-title">instance supplémentaire</div>
           <p class="payment-desc">achetez une instance supplémentaire pour les non-abonnés</p>
