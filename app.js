@@ -13,6 +13,7 @@ const path = require('path');
 const app = express();
 app.set('trust proxy', 1); // trust first proxy
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
 app.use('/css', express.static(path.join(__dirname, 'css')));
 app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use('/html', express.static(path.join(__dirname, 'html')));
@@ -37,6 +38,15 @@ db.connect(err => {
   }
   console.log('Connected to MySQL');
 });
+
+// Helper to insert a log record
+function insertLog(userId, interactionLog, ipAddress) {
+  const sql = 'INSERT INTO app_log (user_id, log_datetime, interaction_log, ip_address) VALUES (?, NOW(), ?, ?)';
+  const logJson = typeof interactionLog === 'string' ? interactionLog : JSON.stringify(interactionLog);
+  db.query(sql, [userId || null, logJson, ipAddress || null], (err) => {
+    if (err) console.error('Logging error:', err);
+  });
+}
 
 // mysql session store
 const sessionStore = new MySQLStore({
@@ -113,6 +123,9 @@ app.post('/index', loginLimiter, (req, res) => {
     req.session.clientId = user.client_id;
     // Store the client name provided during login for display purposes
     req.session.clientName = client;
+    req.session.username = username;
+
+    insertLog(username, { action: 'login', client: client, username: username }, req.ip);
     res.redirect('/landing');
   });
 });
@@ -134,6 +147,7 @@ app.post('/signup', async (req, res) => {
         res.send('Registration failed.');
         return;
       }
+      insertLog(username, { action: 'signup', client: client, username: username }, req.ip);
       res.sendFile(path.join(__dirname, 'html', 'registration_successful.html'));
     });
   } catch (err) {
@@ -147,6 +161,9 @@ app.get('/landing', requireLogin, (req, res) => {
 });
 
 app.get('/logout', (req, res) => {
+  const username = req.session.username || null;
+  const clientName = req.session.clientName || null;
+  insertLog(username, { action: 'logout', client: clientName }, req.ip);
   req.session.destroy(() => {
     res.redirect('/');
   });
@@ -176,6 +193,14 @@ app.get('/api/profile', requireLogin, (req, res) => {
     clientName: req.session.clientName || null,
     clientId: req.session.clientId || null
   });
+});
+
+// API endpoint to log client-side interactions
+app.post('/api/log', (req, res) => {
+  const userId = (req.session && req.session.username) || req.body.userId || null;
+  const interaction = req.body.interaction || {};
+  insertLog(userId, interaction, req.ip);
+  res.json({ ok: true });
 });
 
 // API endpoint to list release notes HTML files

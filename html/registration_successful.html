@@ -48,7 +48,24 @@
 </head>
 <body>
   <div class="center-wrapper">
-    <p>registration successful. <a href="/" class="login-link">Login here</a></p>
+    <p>registration successful. <a id="loginLink" href="/" class="login-link">Login here</a></p>
   </div>
+
+  <script>
+    function logInteraction(action, details) {
+      var payload = { interaction: Object.assign({ action: action, page: 'registration_successful' }, details || {}) };
+      fetch('/api/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(function() {});
+    }
+
+    logInteraction('page_view', { description: 'Registration successful page loaded' });
+
+    document.getElementById('loginLink').addEventListener('click', function() {
+      logInteraction('navigate_login_after_registration', { description: 'User clicked Login here after registration' });
+    });
+  </script>
 </body>
 </html>

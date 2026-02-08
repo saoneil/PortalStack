@@ -11,7 +11,7 @@
     <h1><center>register</center></h1>
     <p>you need to be assigned a client name before registering your email/password:</p>
 
-    <form class="signup-form" action="/signup" method="post">
+    <form id="registerForm" class="signup-form" action="/signup" method="post">
       <div class="control block-cube">
         <input type="text" name="client" placeholder="assigned client name" required />
         <div class="bg-top"><div class="bg-inner"></div></div>
@@ -41,7 +41,7 @@
       </button>
     </form>
 
-    <form class="signup-form" action="/" method="get">
+    <form id="backToLoginForm" class="signup-form" action="/" method="get">
       <button class="btn block-cube block-cube-hover" type="submit">
         <div class="bg-top"><div class="bg-inner"></div></div>
         <div class="bg-right"><div class="bg-inner"></div></div>
@@ -50,5 +50,28 @@
       </button>
     </form>
   </div>
+
+  <script>
+    function logInteraction(action, details) {
+      var payload = { interaction: Object.assign({ action: action, page: 'signup' }, details || {}) };
+      fetch('/api/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(function() {});
+    }
+
+    logInteraction('page_view', { description: 'Signup page loaded' });
+
+    document.getElementById('registerForm').addEventListener('submit', function() {
+      var client = this.querySelector('[name="client"]').value;
+      var username = this.querySelector('[name="username"]').value;
+      logInteraction('register_attempt', { client: client, username: username });
+    });
+
+    document.getElementById('backToLoginForm').addEventListener('submit', function() {
+      logInteraction('navigate_back_to_login', { description: 'User clicked back to login from signup' });
+    });
+  </script>
 </body>
 </html>

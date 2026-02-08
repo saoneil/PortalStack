@@ -8,7 +8,7 @@
 </head>
 <body>
   <div class="center-container">
-    <form class="form" action="/index" method="post" autocomplete="off">
+    <form id="loginForm" class="form" action="/index" method="post" autocomplete="off">
       <div class="control">
         <h1><center><font size="+3">club portal</font size="+3"></center></h1>
       </div>
@@ -42,7 +42,7 @@
       </button>
     </form>
 
-    <form class="form" action="/signup" method="get">
+    <form id="signupNavForm" class="form" action="/signup" method="get">
       <button class="btn block-cube block-cube-hover" type="submit">
         <div class="bg-top"><div class="bg-inner"></div></div>
         <div class="bg-right"><div class="bg-inner"></div></div>
@@ -51,7 +51,7 @@
       </button>
     </form>
 
-    <form class="form" action="https://performancema.herokuapp.com/ess" method="get">
+    <form id="returnPmaForm" class="form" action="https://performancema.herokuapp.com/ess" method="get">
       <button class="btn btn-secondary block-cube block-cube-hover" type="submit">
         <div class="bg-top"><div class="bg-inner"></div></div>
         <div class="bg-right"><div class="bg-inner"></div></div>
@@ -60,5 +60,32 @@
       </button>
     </form>
   </div>
+
+  <script>
+    function logInteraction(action, details) {
+      var payload = { interaction: Object.assign({ action: action, page: 'index' }, details || {}) };
+      fetch('/api/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(function() {});
+    }
+
+    logInteraction('page_view', { description: 'Login page loaded' });
+
+    document.getElementById('loginForm').addEventListener('submit', function() {
+      var client = this.querySelector('[name="client"]').value;
+      var username = this.querySelector('[name="username"]').value;
+      logInteraction('login_attempt', { client: client, username: username });
+    });
+
+    document.getElementById('signupNavForm').addEventListener('submit', function() {
+      logInteraction('navigate_signup', { description: 'User clicked sign up button' });
+    });
+
+    document.getElementById('returnPmaForm').addEventListener('submit', function() {
+      logInteraction('navigate_return_pma', { description: 'User clicked Return to PMA button' });
+    });
+  </script>
 </body>
 </html>

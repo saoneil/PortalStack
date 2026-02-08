@@ -128,7 +128,7 @@
     </div>
   </div>
 
-  <form action="/logout" method="get" class="logout-form">
+  <form id="logoutForm" action="/logout" method="get" class="logout-form">
     <button class="btn block-cube block-cube-hover" type="submit">
       <div class="bg-top"><div class="bg-inner"></div></div>
       <div class="bg-right"><div class="bg-inner"></div></div>
@@ -139,6 +139,19 @@
 
 
   <script>
+    // Logging helper: sends interaction data to the server
+    function logInteraction(action, details) {
+      const payload = { interaction: Object.assign({ action: action, page: 'landing' }, details || {}) };
+      fetch('/api/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(() => {});
+    }
+
+    // Log landing page view
+    logInteraction('page_view', { description: 'Landing page loaded' });
+
     // Populate Profile label
     fetch('/api/profile')
       .then(res => res.json())
@@ -159,26 +172,36 @@
           return;
         }
 
-        const headers = Object.keys(data[0]).filter(h => h !== 'App Instance Name');
+        // Only show columns that contain [DISPLAY] in the name
+        const displayPrefix = '[DISPLAY]: ';
+        const headers = Object.keys(data[0]).filter(h => h.includes('[DISPLAY]'));
         const headerRow = document.createElement('tr');
         headers.forEach(h => {
           const th = document.createElement('th');
-          th.textContent = h;
+          th.textContent = h.replace(displayPrefix, '');
           headerRow.appendChild(th);
         });
         table.appendChild(headerRow);
 
         data.forEach(row => {
           const tr = document.createElement('tr');
+          const appName = row['[DISPLAY]: App Instance Name'] || 'unknown';
+          const appId = row['app_instance_id'] || null;
+
           headers.forEach(h => {
             const td = document.createElement('td');
-            if (h === 'App URL') {
+            const label = h.replace(displayPrefix, '');
+
+            if (label === 'App URL') {
               const a = document.createElement('a');
               a.href = row[h];
-              a.textContent = row['App Instance Name'] || 'app link';
+              a.textContent = appName !== 'unknown' ? appName : 'app link';
               a.target = '_blank';
+              a.addEventListener('click', function() {
+                logInteraction('app_click', { app_instance_id: appId, app_name: appName });
+              });
               td.appendChild(a);
-            } else if (h === 'Extra Links') {
+            } else if (label === 'Extra Links') {
               const linkField = row[h];
               if (linkField) {
                 const links = linkField.split(',').map(l => l.trim()).filter(l => l);
@@ -186,6 +209,7 @@
                   const btn = document.createElement('button');
                   btn.textContent = 'Show QRs';
                   btn.onclick = () => {
+                    logInteraction('show_qr_codes', { app_instance_id: appId, app_name: appName, link_count: links.length });
                     const qrCodeDiv = document.getElementById('qrCode');
                     qrCodeDiv.innerHTML = ''; // Clear previous
 
@@ -221,7 +245,7 @@
                 }
               }
             }
-            else if (h === 'Active') {
+            else if (label === 'Active') {
               td.textContent = row[h] === 1 || row[h] === '1' ? 'Yes' : 'No';
             }
             else {
@@ -236,6 +260,7 @@
 
     // Release Notes Popup Logic
     document.getElementById('openReleaseNotesBtn').onclick = function() {
+      logInteraction('open_release_notes', { description: 'Opened release notes overlay' });
       fetch('/api/release-notes-list')
         .then(res => res.json())
         .then(files => {
@@ -390,21 +415,22 @@
     }
 
     function openPricingOverlay() {
+      logInteraction('open_pricing', { description: 'Opened pricing overlay' });
       document.getElementById('pricingOverlay').style.display = 'flex';
       pricingFilter = 'non';
       switchPricingLanguage('en');
     }
     
-    document.getElementById('pricingEnglishBtn').onclick = function() { switchPricingLanguage('en'); };
-    document.getElementById('pricingSpanishBtn').onclick = function() { switchPricingLanguage('es'); };
-    document.getElementById('pricingFrenchBtn').onclick = function() { switchPricingLanguage('fr'); };
-    document.getElementById('pricingItalianBtn').onclick = function() { switchPricingLanguage('it'); };
-    document.getElementById('pricingJapaneseBtn').onclick = function() { switchPricingLanguage('ja'); };
-    document.getElementById('pricingPolishBtn').onclick = function() { switchPricingLanguage('pl'); };
-    document.getElementById('pricingDutchBtn').onclick = function() { switchPricingLanguage('nl'); };
-    document.getElementById('pricingMalayBtn').onclick = function() { switchPricingLanguage('ms'); };
-    document.getElementById('pricingNonSubscriberBtn').onclick = function() { setPricingFilter('non'); };
-    document.getElementById('pricingSubscriberBtn').onclick = function() { setPricingFilter('sub'); };
+    document.getElementById('pricingEnglishBtn').onclick = function() { logInteraction('pricing_language', { language: 'en' }); switchPricingLanguage('en'); };
+    document.getElementById('pricingSpanishBtn').onclick = function() { logInteraction('pricing_language', { language: 'es' }); switchPricingLanguage('es'); };
+    document.getElementById('pricingFrenchBtn').onclick = function() { logInteraction('pricing_language', { language: 'fr' }); switchPricingLanguage('fr'); };
+    document.getElementById('pricingItalianBtn').onclick = function() { logInteraction('pricing_language', { language: 'it' }); switchPricingLanguage('it'); };
+    document.getElementById('pricingJapaneseBtn').onclick = function() { logInteraction('pricing_language', { language: 'ja' }); switchPricingLanguage('ja'); };
+    document.getElementById('pricingPolishBtn').onclick = function() { logInteraction('pricing_language', { language: 'pl' }); switchPricingLanguage('pl'); };
+    document.getElementById('pricingDutchBtn').onclick = function() { logInteraction('pricing_language', { language: 'nl' }); switchPricingLanguage('nl'); };
+    document.getElementById('pricingMalayBtn').onclick = function() { logInteraction('pricing_language', { language: 'ms' }); switchPricingLanguage('ms'); };
+    document.getElementById('pricingNonSubscriberBtn').onclick = function() { logInteraction('pricing_filter', { filter: 'non-subscriber' }); setPricingFilter('non'); };
+    document.getElementById('pricingSubscriberBtn').onclick = function() { logInteraction('pricing_filter', { filter: 'subscriber' }); setPricingFilter('sub'); };
 
     // Payments Popup Logic
     let paymentsFilter = 'non';
@@ -535,16 +561,19 @@
     }
 
     function openPaymentsOverlay() {
+      logInteraction('open_payments', { description: 'Opened payments overlay' });
       document.getElementById('paymentsOverlay').style.display = 'flex';
       paymentsFilter = 'non';
       switchPaymentsLanguage('en');
     }
 
     document.getElementById('openPricingPaymentsBtn').onclick = function() {
+      logInteraction('open_pricing_payments_menu', { description: 'Opened pricing/payments menu' });
       document.getElementById('pricingPaymentsOverlay').style.display = 'flex';
     };
 
     document.getElementById('closePricingPaymentsOverlayBtn').onclick = function() {
+      logInteraction('close_pricing_payments_menu', { description: 'Closed pricing/payments menu' });
       document.getElementById('pricingPaymentsOverlay').style.display = 'none';
     };
 
@@ -558,16 +587,21 @@
       openPaymentsOverlay();
     };
     
-    document.getElementById('paymentsEnglishBtn').onclick = function() { switchPaymentsLanguage('en'); };
-    document.getElementById('paymentsSpanishBtn').onclick = function() { switchPaymentsLanguage('es'); };
-    document.getElementById('paymentsFrenchBtn').onclick = function() { switchPaymentsLanguage('fr'); };
-    document.getElementById('paymentsItalianBtn').onclick = function() { switchPaymentsLanguage('it'); };
-    document.getElementById('paymentsJapaneseBtn').onclick = function() { switchPaymentsLanguage('ja'); };
-    document.getElementById('paymentsPolishBtn').onclick = function() { switchPaymentsLanguage('pl'); };
-    document.getElementById('paymentsDutchBtn').onclick = function() { switchPaymentsLanguage('nl'); };
-    document.getElementById('paymentsMalayBtn').onclick = function() { switchPaymentsLanguage('ms'); };
-    document.getElementById('paymentsNonSubscriberBtn').onclick = function() { setPaymentsFilter('non'); };
-    document.getElementById('paymentsSubscriberBtn').onclick = function() { setPaymentsFilter('sub'); };
+    document.getElementById('paymentsEnglishBtn').onclick = function() { logInteraction('payments_language', { language: 'en' }); switchPaymentsLanguage('en'); };
+    document.getElementById('paymentsSpanishBtn').onclick = function() { logInteraction('payments_language', { language: 'es' }); switchPaymentsLanguage('es'); };
+    document.getElementById('paymentsFrenchBtn').onclick = function() { logInteraction('payments_language', { language: 'fr' }); switchPaymentsLanguage('fr'); };
+    document.getElementById('paymentsItalianBtn').onclick = function() { logInteraction('payments_language', { language: 'it' }); switchPaymentsLanguage('it'); };
+    document.getElementById('paymentsJapaneseBtn').onclick = function() { logInteraction('payments_language', { language: 'ja' }); switchPaymentsLanguage('ja'); };
+    document.getElementById('paymentsPolishBtn').onclick = function() { logInteraction('payments_language', { language: 'pl' }); switchPaymentsLanguage('pl'); };
+    document.getElementById('paymentsDutchBtn').onclick = function() { logInteraction('payments_language', { language: 'nl' }); switchPaymentsLanguage('nl'); };
+    document.getElementById('paymentsMalayBtn').onclick = function() { logInteraction('payments_language', { language: 'ms' }); switchPaymentsLanguage('ms'); };
+    document.getElementById('paymentsNonSubscriberBtn').onclick = function() { logInteraction('payments_filter', { filter: 'non-subscriber' }); setPaymentsFilter('non'); };
+    document.getElementById('paymentsSubscriberBtn').onclick = function() { logInteraction('payments_filter', { filter: 'subscriber' }); setPaymentsFilter('sub'); };
+
+    // Log logout button click (server also logs it, but this captures the client-side intent)
+    document.getElementById('logoutForm').addEventListener('submit', function() {
+      logInteraction('logout', { description: 'User clicked logout' });
+    });
   </script>
 
 </body>
