@@ -22,21 +22,26 @@ app.use('/html', express.static(path.join(__dirname, 'html')));
 
 
 
-// mysql DB connection
-const db = mysql.createConnection({
+// mysql DB connection pool (auto-reconnects, survives deadlocks)
+const db = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASS,
   database: process.env.DB_NAME,
   port: process.env.DB_PORT,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 });
 
-db.connect(err => {
+// verify pool connectivity at startup (non-fatal)
+db.getConnection((err, connection) => {
   if (err) {
-    console.error('MySQL connection error:', err);
-    process.exit(1);
+    console.error('MySQL initial connection error (will retry on next request):', err);
+  } else {
+    console.log('Connected to MySQL');
+    connection.release();
   }
-  console.log('Connected to MySQL');
 });
 
 // Helper to insert a log record
@@ -105,18 +110,18 @@ app.post('/index', loginLimiter, (req, res) => {
   db.query(sql, [client, username], async (err, results) => {
     if (err) {
       console.error(err);
-      return res.status(500).send('Login failed. Try again.');
+      return res.status(500).json({ error: 'A database error occurred. Please try again shortly.' });
     }
 
     if (!results[0].length) {
-      return res.status(401).send('Invalid credentials for this client');
+      return res.status(401).json({ error: 'Invalid credentials for this client' });
     }
 
     const user = results[0][0];
 
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) {
-      return res.status(401).send('Invalid credentials for this client');
+      return res.status(401).json({ error: 'Invalid credentials for this client' });
     }
 
     req.session.loggedIn = true;
@@ -126,7 +131,7 @@ app.post('/index', loginLimiter, (req, res) => {
     req.session.username = username;
 
     insertLog(username, { action: 'login', client: client, username: username }, req.ip);
-    res.redirect('/landing');
+    res.json({ success: true, redirect: '/landing' });
   });
 });
 
@@ -144,15 +149,14 @@ app.post('/signup', async (req, res) => {
     db.query(sql, [client, username, hashedPassword], (err, result) => {
       if (err) {
         console.error(err);
-        res.send('Registration failed.');
-        return;
+        return res.status(500).json({ error: 'A database error occurred. Please try again shortly.' });
       }
       insertLog(username, { action: 'signup', client: client, username: username }, req.ip);
-      res.sendFile(path.join(__dirname, 'html', 'registration_successful.html'));
+      res.json({ success: true, redirect: '/html/registration_successful.html' });
     });
   } catch (err) {
     console.error(err);
-    res.send('Error during registration.');
+    res.status(500).json({ error: 'An error occurred during registration. Please try again shortly.' });
   }
 });
 
@@ -222,6 +226,20 @@ app.get('/api/release-notes-list', (req, res) => {
 
 
 
+
+// Global Express error handler — returns JSON instead of crashing
+app.use((err, req, res, next) => {
+  console.error('Unhandled Express error:', err);
+  res.status(500).json({ error: 'An unexpected server error occurred. Please try again shortly.' });
+});
+
+// Prevent process crashes from unhandled errors
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception (process kept alive):', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection (process kept alive):', reason);
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

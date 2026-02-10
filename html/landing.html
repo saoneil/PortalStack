@@ -154,53 +154,65 @@
 
     // Populate Profile label
     fetch('/api/profile')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error('Server error');
+        return res.json();
+      })
       .then(profile => {
         if (profile && profile.clientName) {
           document.getElementById('profileClientName').textContent = profile.clientName;
           document.getElementById('profileLabel').style.display = 'block';
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        alert('Unable to load your profile. The database may be temporarily unavailable — please try refreshing the page.');
+      });
 
     fetch('/api/grid-data')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error('Server error');
+        return res.json();
+      })
       .then(data => {
         const table = document.getElementById('grid');
-        if (data.length === 0) {
+        if (!data || data.error || data.length === 0) {
           table.innerHTML = '<tr><td>No data</td></tr>';
           return;
         }
 
-        // Only show columns that contain [DISPLAY] in the name
-        const displayPrefix = '[DISPLAY]: ';
-        const headers = Object.keys(data[0]).filter(h => h.includes('[DISPLAY]'));
+        // Only show columns whose name starts with "DISPLAY_"
+        const displayPrefix = 'DISPLAY_';
+        const headers = Object.keys(data[0]).filter(h => h.startsWith(displayPrefix));
         const headerRow = document.createElement('tr');
         headers.forEach(h => {
           const th = document.createElement('th');
-          th.textContent = h.replace(displayPrefix, '');
+          th.textContent = h.substring(displayPrefix.length);
           headerRow.appendChild(th);
         });
         table.appendChild(headerRow);
 
         data.forEach(row => {
           const tr = document.createElement('tr');
-          const appName = row['[DISPLAY]: App Instance Name'] || 'unknown';
+          const appName = row['App Instance Name'] || 'unknown';
           const appId = row['app_instance_id'] || null;
 
           headers.forEach(h => {
             const td = document.createElement('td');
-            const label = h.replace(displayPrefix, '');
+            const label = h.substring(displayPrefix.length);
 
-            if (label === 'App URL') {
-              const a = document.createElement('a');
-              a.href = row[h];
-              a.textContent = appName !== 'unknown' ? appName : 'app link';
-              a.target = '_blank';
-              a.addEventListener('click', function() {
-                logInteraction('app_click', { app_instance_id: appId, app_name: appName });
-              });
-              td.appendChild(a);
+            if (label === 'App Instance Name') {
+              if (row[h]) {
+                const a = document.createElement('a');
+                a.href = row[h];
+                a.textContent = appName !== 'unknown' ? appName : 'app link';
+                a.target = '_blank';
+                a.addEventListener('click', function() {
+                  logInteraction('app_click', { app_instance_id: appId, app_name: appName });
+                });
+                td.appendChild(a);
+              } else {
+                td.textContent = appName;
+              }
             } else if (label === 'Extra Links') {
               const linkField = row[h];
               if (linkField) {
@@ -256,6 +268,11 @@
           });
           table.appendChild(tr);
         });
+      })
+      .catch(() => {
+        alert('Unable to load scoring systems. The database may be temporarily unavailable — please try refreshing the page.');
+        const table = document.getElementById('grid');
+        table.innerHTML = '<tr><td>Unable to load data</td></tr>';
       });
 
     // Release Notes Popup Logic
