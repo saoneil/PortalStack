@@ -84,6 +84,7 @@
         <button id="pricingPolishBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Polski</button>
         <button id="pricingDutchBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Nederlands</button>
         <button id="pricingMalayBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Bahasa Melayu</button>
+        <button id="pricingRussianBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Русский</button>
       </div>
       <div class="lang-row" style="display:flex; justify-content:center; margin-top:16px; gap:8px; flex-wrap:wrap;">
         <button id="pricingNonSubscriberBtn" style="padding:8px 16px; font-size:14px; background:#00d4ff; color:#222; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">Non-Subscribers</button>
@@ -97,6 +98,7 @@
       <div id="pricingPolish" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
       <div id="pricingDutch" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
       <div id="pricingMalay" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
+      <div id="pricingRussian" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
     </div>
   </div>
 
@@ -112,6 +114,7 @@
         <button id="paymentsPolishBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Polski</button>
         <button id="paymentsDutchBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Nederlands</button>
         <button id="paymentsMalayBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Bahasa Melayu</button>
+        <button id="paymentsRussianBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Русский</button>
       </div>
       <div class="lang-row" style="display:flex; justify-content:center; margin-top:16px; gap:8px; flex-wrap:wrap;">
         <button id="paymentsNonSubscriberBtn" style="padding:8px 16px; font-size:14px; background:#00d4ff; color:#222; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">Non-Subscribers</button>
@@ -125,6 +128,7 @@
       <div id="paymentsPolish" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
       <div id="paymentsDutch" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
       <div id="paymentsMalay" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
+      <div id="paymentsRussian" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
     </div>
   </div>
 
@@ -321,7 +325,8 @@
         'ja': 'pricingJapanese',
         'pl': 'pricingPolish',
         'nl': 'pricingDutch',
-        'ms': 'pricingMalay'
+        'ms': 'pricingMalay',
+        'ru': 'pricingRussian'
       };
       const targetDiv = document.getElementById(langMap[lang]);
       return fetch('html/pricing/pricing_' + lang + '.html')
@@ -342,7 +347,8 @@
         'ja': { non: '非加入者', sub: '加入者' },
         'pl': { non: 'Nieabonenci', sub: 'Abonenci' },
         'nl': { non: 'Niet-abonnees', sub: 'Abonnees' },
-        'ms': { non: 'Bukan Pelanggan', sub: 'Pelanggan' }
+        'ms': { non: 'Bukan Pelanggan', sub: 'Pelanggan' },
+        'ru': { non: 'Не подписчики', sub: 'Подписчики' }
       };
       const labels = labelMap[lang] || labelMap.en;
       document.getElementById('pricingNonSubscriberBtn').textContent = labels.non;
@@ -352,7 +358,7 @@
     let pricingFilter = 'non';
 
     function applyPricingFilter(filter) {
-      const pricingContainers = ['pricingEnglish', 'pricingSpanish', 'pricingFrench', 'pricingItalian', 'pricingJapanese', 'pricingPolish', 'pricingDutch', 'pricingMalay'];
+      const pricingContainers = ['pricingEnglish', 'pricingSpanish', 'pricingFrench', 'pricingItalian', 'pricingJapanese', 'pricingPolish', 'pricingDutch', 'pricingMalay', 'pricingRussian'];
       pricingContainers.forEach(containerId => {
         const container = document.getElementById(containerId);
         if (!container || container.style.display === 'none') {
@@ -393,13 +399,13 @@
     }
     function switchPricingLanguage(lang) {
       // Hide all pricing content divs
-      const allDivs = ['pricingEnglish', 'pricingSpanish', 'pricingFrench', 'pricingItalian', 'pricingJapanese', 'pricingPolish', 'pricingDutch', 'pricingMalay'];
+      const allDivs = ['pricingEnglish', 'pricingSpanish', 'pricingFrench', 'pricingItalian', 'pricingJapanese', 'pricingPolish', 'pricingDutch', 'pricingMalay', 'pricingRussian'];
       allDivs.forEach(divId => {
         document.getElementById(divId).style.display = 'none';
       });
       
       // Reset all button styles
-      const allButtons = ['pricingEnglishBtn', 'pricingSpanishBtn', 'pricingFrenchBtn', 'pricingItalianBtn', 'pricingJapaneseBtn', 'pricingPolishBtn', 'pricingDutchBtn', 'pricingMalayBtn'];
+      const allButtons = ['pricingEnglishBtn', 'pricingSpanishBtn', 'pricingFrenchBtn', 'pricingItalianBtn', 'pricingJapaneseBtn', 'pricingPolishBtn', 'pricingDutchBtn', 'pricingMalayBtn', 'pricingRussianBtn'];
       allButtons.forEach(btnId => {
         const btn = document.getElementById(btnId);
         btn.style.background = 'transparent';
@@ -416,7 +422,8 @@
         'ja': { div: 'pricingJapanese', btn: 'pricingJapaneseBtn' },
         'pl': { div: 'pricingPolish', btn: 'pricingPolishBtn' },
         'nl': { div: 'pricingDutch', btn: 'pricingDutchBtn' },
-        'ms': { div: 'pricingMalay', btn: 'pricingMalayBtn' }
+        'ms': { div: 'pricingMalay', btn: 'pricingMalayBtn' },
+        'ru': { div: 'pricingRussian', btn: 'pricingRussianBtn' }
       };
       
       document.getElementById(langMap[lang].div).style.display = '';
@@ -446,6 +453,7 @@
     document.getElementById('pricingPolishBtn').onclick = function() { logInteraction('pricing_language', { language: 'pl' }); switchPricingLanguage('pl'); };
     document.getElementById('pricingDutchBtn').onclick = function() { logInteraction('pricing_language', { language: 'nl' }); switchPricingLanguage('nl'); };
     document.getElementById('pricingMalayBtn').onclick = function() { logInteraction('pricing_language', { language: 'ms' }); switchPricingLanguage('ms'); };
+    document.getElementById('pricingRussianBtn').onclick = function() { logInteraction('pricing_language', { language: 'ru' }); switchPricingLanguage('ru'); };
     document.getElementById('pricingNonSubscriberBtn').onclick = function() { logInteraction('pricing_filter', { filter: 'non-subscriber' }); setPricingFilter('non'); };
     document.getElementById('pricingSubscriberBtn').onclick = function() { logInteraction('pricing_filter', { filter: 'subscriber' }); setPricingFilter('sub'); };
 
@@ -461,7 +469,8 @@
         'ja': 'paymentsJapanese',
         'pl': 'paymentsPolish',
         'nl': 'paymentsDutch',
-        'ms': 'paymentsMalay'
+        'ms': 'paymentsMalay',
+        'ru': 'paymentsRussian'
       };
       const targetDiv = document.getElementById(langMap[lang]);
       return fetch('html/payments/payments_' + lang + '.html')
@@ -482,7 +491,8 @@
         'ja': { non: '非加入者', sub: '加入者' },
         'pl': { non: 'Nieabonenci', sub: 'Abonenci' },
         'nl': { non: 'Niet-abonnees', sub: 'Abonnees' },
-        'ms': { non: 'Bukan Pelanggan', sub: 'Pelanggan' }
+        'ms': { non: 'Bukan Pelanggan', sub: 'Pelanggan' },
+        'ru': { non: 'Не подписчики', sub: 'Подписчики' }
       };
       const labels = labelMap[lang] || labelMap.en;
       document.getElementById('paymentsNonSubscriberBtn').textContent = labels.non;
@@ -490,7 +500,7 @@
     }
 
     function applyPaymentsFilter(filter) {
-      const paymentsContainers = ['paymentsEnglish', 'paymentsSpanish', 'paymentsFrench', 'paymentsItalian', 'paymentsJapanese', 'paymentsPolish', 'paymentsDutch', 'paymentsMalay'];
+      const paymentsContainers = ['paymentsEnglish', 'paymentsSpanish', 'paymentsFrench', 'paymentsItalian', 'paymentsJapanese', 'paymentsPolish', 'paymentsDutch', 'paymentsMalay', 'paymentsRussian'];
       paymentsContainers.forEach(containerId => {
         const container = document.getElementById(containerId);
         if (!container || container.style.display === 'none') {
@@ -539,13 +549,13 @@
     
     function switchPaymentsLanguage(lang) {
       // Hide all payments content divs
-      const allDivs = ['paymentsEnglish', 'paymentsSpanish', 'paymentsFrench', 'paymentsItalian', 'paymentsJapanese', 'paymentsPolish', 'paymentsDutch', 'paymentsMalay'];
+      const allDivs = ['paymentsEnglish', 'paymentsSpanish', 'paymentsFrench', 'paymentsItalian', 'paymentsJapanese', 'paymentsPolish', 'paymentsDutch', 'paymentsMalay', 'paymentsRussian'];
       allDivs.forEach(divId => {
         document.getElementById(divId).style.display = 'none';
       });
       
       // Reset all button styles
-      const allButtons = ['paymentsEnglishBtn', 'paymentsSpanishBtn', 'paymentsFrenchBtn', 'paymentsItalianBtn', 'paymentsJapaneseBtn', 'paymentsPolishBtn', 'paymentsDutchBtn', 'paymentsMalayBtn'];
+      const allButtons = ['paymentsEnglishBtn', 'paymentsSpanishBtn', 'paymentsFrenchBtn', 'paymentsItalianBtn', 'paymentsJapaneseBtn', 'paymentsPolishBtn', 'paymentsDutchBtn', 'paymentsMalayBtn', 'paymentsRussianBtn'];
       allButtons.forEach(btnId => {
         const btn = document.getElementById(btnId);
         btn.style.background = 'transparent';
@@ -562,7 +572,8 @@
         'ja': { div: 'paymentsJapanese', btn: 'paymentsJapaneseBtn' },
         'pl': { div: 'paymentsPolish', btn: 'paymentsPolishBtn' },
         'nl': { div: 'paymentsDutch', btn: 'paymentsDutchBtn' },
-        'ms': { div: 'paymentsMalay', btn: 'paymentsMalayBtn' }
+        'ms': { div: 'paymentsMalay', btn: 'paymentsMalayBtn' },
+        'ru': { div: 'paymentsRussian', btn: 'paymentsRussianBtn' }
       };
       
       document.getElementById(langMap[lang].div).style.display = '';
@@ -612,6 +623,7 @@
     document.getElementById('paymentsPolishBtn').onclick = function() { logInteraction('payments_language', { language: 'pl' }); switchPaymentsLanguage('pl'); };
     document.getElementById('paymentsDutchBtn').onclick = function() { logInteraction('payments_language', { language: 'nl' }); switchPaymentsLanguage('nl'); };
     document.getElementById('paymentsMalayBtn').onclick = function() { logInteraction('payments_language', { language: 'ms' }); switchPaymentsLanguage('ms'); };
+    document.getElementById('paymentsRussianBtn').onclick = function() { logInteraction('payments_language', { language: 'ru' }); switchPaymentsLanguage('ru'); };
     document.getElementById('paymentsNonSubscriberBtn').onclick = function() { logInteraction('payments_filter', { filter: 'non-subscriber' }); setPaymentsFilter('non'); };
     document.getElementById('paymentsSubscriberBtn').onclick = function() { logInteraction('payments_filter', { filter: 'subscriber' }); setPaymentsFilter('sub'); };
 

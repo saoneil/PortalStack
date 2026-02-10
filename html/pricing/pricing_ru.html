@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Pricing - Russian</title>
+  <style>
+    body { background: #222; color: #fff; font-family: monospace; padding: 40px; }
+    h1 { color: #00d4ff; }
+    table { width:90%; max-width:600px; margin:16px auto; color:#fff; border-collapse:collapse; }
+    th, td { padding: 8px 12px; }
+    th { border-bottom:1px solid #00d4ff; text-align:left; }
+    td { border-bottom:1px solid #333; }
+    .subscriber-row { background-color: rgba(0, 212, 255, 0.1); }
+    .non-subscriber-row { background-color: rgba(255, 165, 0, 0.1); }
+    b { color: #00d4ff; }
+    
+    /* Mobile responsive styles */
+    @media (max-width: 768px) {
+      body { padding: 20px 10px; overflow-x: hidden; }
+      table { width: 100%; max-width: none; margin: 16px 0; font-size: 14px; table-layout: fixed; }
+      th, td { padding: 6px 8px; word-wrap: break-word; overflow-wrap: break-word; }
+      th:nth-child(1), td:nth-child(1) { width: 25%; }
+      th:nth-child(2), td:nth-child(2) { width: 20%; }
+      th:nth-child(3), td:nth-child(3) { width: 55%; }
+      h1 { font-size: 24px; }
+      #pricingDescription { font-size: 14px; margin: 8px auto 16px auto; }
+    }
+    
+    @media (max-width: 480px) {
+      body { padding: 15px 5px; overflow-x: hidden; }
+      table { font-size: 11px; table-layout: fixed; }
+      th, td { padding: 4px 6px; word-wrap: break-word; overflow-wrap: break-word; }
+      th:nth-child(1), td:nth-child(1) { width: 25%; }
+      th:nth-child(2), td:nth-child(2) { width: 20%; }
+      th:nth-child(3), td:nth-child(3) { width: 55%; }
+      h1 { font-size: 18px; }
+      #pricingDescription { font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <h1><center>Цены ($USD)</center></h1>
+  <div id="pricingDescription" style="margin: 12px auto 24px auto; max-width: 600px; color: #fff; text-align: center; font-size: 17px; min-height: 32px;">Экземпляр = приложение для паттернов <strong>ИЛИ</strong> спарринга, на ваш выбор.</div>
+  <table>
+    <tr><th>Вариант</th><th>Цена</th><th>Описание</th></tr>
+    <tr class="subscriber-row"><td><strong>Клубный план</strong></td><td>$25/мес. или $240/год</td><td>Неограниченный доступ к 2 экземплярам, идеально для тренировок и небольших мероприятий.</td></tr>
+    <tr class="subscriber-row"><td><strong>План организатора</strong></td><td>$60/мес. или $600/год</td><td>Неограниченный доступ к 6 экземплярам, приоритетная поддержка, обучение, идеально для средних мероприятий.</td></tr>
+    <tr class="subscriber-row"><td><strong>Доп. экземпляр (подписчики)</strong></td><td>$30/мероприятие</td><td>Добавьте дополнительные экземпляры для турниров или специальных мероприятий.</td></tr>
+    <tr class="subscriber-row"><td><strong>Безлимитный пропуск (подписчики)</strong></td><td>$250/мероприятие</td><td>Неограниченное количество дополнительных экземпляров для одного мероприятия — идеально для крупных событий и конфигураций с несколькими рингами.</td></tr>
+    <tr class="non-subscriber-row"><td><strong>Один экземпляр (не подписчики)</strong></td><td>$50/мероприятие</td><td>Оплата за экземпляр для не подписчиков. Идеально для тренировок или небольших мероприятий.</td></tr>
+    <tr class="non-subscriber-row"><td><strong>Безлимитный пропуск (не подписчики)</strong></td><td>$350/мероприятие</td><td>Неограниченное количество экземпляров, идеально для крупных турниров/мероприятий или конфигураций с несколькими рингами.</td></tr>
+  </table>
+</body>
+</html>
