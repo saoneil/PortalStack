@@ -3,32 +3,32 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>welcome!</title>
+  <meta name="description" content="Secure client login for the PMA Club Portal. Authorized users only.">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Club Portal | Secure Login</title>
   <link rel="stylesheet" href="/css/index.css">
 </head>
 <body>
   <div class="center-container">
-    <form id="loginForm" class="form" action="/index" method="post" autocomplete="off">
-      <div class="control">
-        <h1><center><font size="+3">club portal</font size="+3"></center></h1>
-      </div>
+    <h1 class="portal-title">club portal</h1>
 
+    <form id="loginForm" class="form" action="/index" method="post" autocomplete="on">
       <div class="control block-cube block-input">
-        <input type="text" name="client" placeholder="client name" required />
+        <input id="login-client" type="text" name="client" placeholder="client name" required autocomplete="organization" aria-label="Assigned client name" />
         <div class="bg-top"><div class="bg-inner"></div></div>
         <div class="bg-right"><div class="bg-inner"></div></div>
         <div class="bg"><div class="bg-inner"></div></div>
       </div>
 
       <div class="control block-cube block-input">
-        <input type="text" name="username" placeholder="username" required />
+        <input id="login-username" type="text" name="username" placeholder="username" required autocomplete="username" aria-label="Username or email" />
         <div class="bg-top"><div class="bg-inner"></div></div>
         <div class="bg-right"><div class="bg-inner"></div></div>
         <div class="bg"><div class="bg-inner"></div></div>
       </div>
 
       <div class="control block-cube block-input">
-        <input type="password" name="password" placeholder="password" required />
+        <input id="login-password" type="password" name="password" placeholder="password" required autocomplete="current-password" aria-label="Password" />
         <div class="bg-top"><div class="bg-inner"></div></div>
         <div class="bg-right"><div class="bg-inner"></div></div>
         <div class="bg"><div class="bg-inner"></div></div>
@@ -59,53 +59,15 @@
         <div class="text">↩ Return to PMA</div>
       </button>
     </form>
+
+    <div class="trust-footer" aria-label="Legal and security information">
+      <p>Official PMA access portal for approved club clients. Never share credentials. 
+        If this page is unexpected, close it and contact your PMA administrator. 
+        By continuing, you agree to the <a href="/terms">Terms</a> 
+        and <a href="/privacy">Privacy Policy</a>.</p>
+    </div>
   </div>
 
-  <script>
-    function logInteraction(action, details) {
-      var payload = { interaction: Object.assign({ action: action, page: 'index' }, details || {}) };
-      fetch('/api/log', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      }).catch(function() {});
-    }
-
-    logInteraction('page_view', { description: 'Login page loaded' });
-
-    document.getElementById('loginForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      var form = this;
-      var client = form.querySelector('[name="client"]').value;
-      var username = form.querySelector('[name="username"]').value;
-      var password = form.querySelector('[name="password"]').value;
-      logInteraction('login_attempt', { client: client, username: username });
-
-      fetch('/index', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ client: client, username: username, password: password })
-      })
-      .then(function(res) { return res.json().then(function(data) { return { ok: res.ok, data: data }; }); })
-      .then(function(result) {
-        if (result.data.success && result.data.redirect) {
-          window.location.href = result.data.redirect;
-        } else {
-          alert(result.data.error || 'Login failed. Please try again.');
-        }
-      })
-      .catch(function() {
-        alert('Unable to reach the server. Please try again shortly.');
-      });
-    });
-
-    document.getElementById('signupNavForm').addEventListener('submit', function() {
-      logInteraction('navigate_signup', { description: 'User clicked sign up button' });
-    });
-
-    document.getElementById('returnPmaForm').addEventListener('submit', function() {
-      logInteraction('navigate_return_pma', { description: 'User clicked Return to PMA button' });
-    });
-  </script>
+  <script src="/js/index.js" defer></script>
 </body>
 </html>

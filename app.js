@@ -8,14 +8,50 @@ const rateLimit = require('express-rate-limit');
 const bcrypt = require('bcrypt');
 const fs = require('fs');
 const path = require('path');
+const helmet = require('helmet');
 
 
 const app = express();
 app.set('trust proxy', 1); // trust first proxy
+app.disable('x-powered-by');
+
+// Force HTTPS in production (needed for Heroku proxy deployments)
+app.use((req, res, next) => {
+  if (process.env.NODE_ENV === 'production' && !req.secure) {
+    return res.redirect(301, `https://${req.headers.host}${req.originalUrl}`);
+  }
+  next();
+});
+
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:'],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'", 'data:'],
+        objectSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+        formAction: ["'self'"],
+        baseUri: ["'self'"],
+        upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null
+      }
+    },
+    hsts: process.env.NODE_ENV === 'production'
+      ? { maxAge: 31536000, includeSubDomains: true, preload: true }
+      : false,
+    referrerPolicy: { policy: 'no-referrer' }
+  })
+);
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use('/css', express.static(path.join(__dirname, 'css')));
 app.use('/images', express.static(path.join(__dirname, 'images')));
+app.use('/js', express.static(path.join(__dirname, 'js')));
 app.use('/html', express.static(path.join(__dirname, 'html')));
 
 
@@ -61,12 +97,14 @@ const sessionStore = new MySQLStore({
 
 // session config
 app.use(session({
+  name: 'portal.sid',
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   store: sessionStore,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
     httpOnly: true,
     maxAge: 1000 * 60 * 60 * 24 // 1 day
   }
@@ -77,6 +115,14 @@ const loginLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
   max: 5,
   message: 'Too many login attempts. Please try again in 10 minutes',
+  skipSuccessfulRequests: true
+});
+
+// signup rate limiter
+const signupLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 5,
+  message: 'Too many registration attempts. Please try again in 10 minutes',
   skipSuccessfulRequests: true
 });
 
@@ -95,6 +141,13 @@ function requireLogin(req, res, next) {
 
 // basic routes
 app.get('/', (req, res) => {
+  res.set({
+    'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+    Pragma: 'no-cache',
+    Expires: '0',
+    'X-Robots-Tag': 'noindex, nofollow, noarchive',
+    'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; font-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+  });
   if (req.session.loggedIn) {
     res.redirect('/landing');
   } else {
@@ -136,10 +189,17 @@ app.post('/index', loginLimiter, (req, res) => {
 });
 
 app.get('/signup', (req, res) => {
+  res.set({
+    'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+    Pragma: 'no-cache',
+    Expires: '0',
+    'X-Robots-Tag': 'noindex, nofollow, noarchive',
+    'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; font-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+  });
   res.sendFile(path.join(__dirname, 'html', 'signup.html'));
 });
 
-app.post('/signup', async (req, res) => {
+app.post('/signup', signupLimiter, async (req, res) => {
   const { client, username, password } = req.body;
 
   try {
@@ -162,6 +222,14 @@ app.post('/signup', async (req, res) => {
 
 app.get('/landing', requireLogin, (req, res) => {
   res.sendFile(path.join(__dirname, 'html', 'landing.html'));
+});
+
+app.get('/privacy', (req, res) => {
+  res.sendFile(path.join(__dirname, 'html', 'privacy.html'));
+});
+
+app.get('/terms', (req, res) => {
+  res.sendFile(path.join(__dirname, 'html', 'terms.html'));
 });
 
 app.get('/logout', (req, res) => {

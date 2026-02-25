@@ -3,31 +3,36 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Secure registration for approved PMA Club Portal users.">
+  <meta name="robots" content="noindex, nofollow">
   <link rel="stylesheet" href="css/signup.css" />
-  <title>Sign Up</title>
+  <title>Club Portal | Sign Up</title>
 </head>
 <body>
   <div class="center-wrapper">
     <h1><center>register</center></h1>
-    <p>you need to be assigned a client name before registering your email/password:</p>
+    <p>official registration for pre-approved PMA club users:</p>
 
     <form id="registerForm" class="signup-form" action="/signup" method="post">
       <div class="control block-cube">
-        <input type="text" name="client" placeholder="assigned client name" required />
+        <label class="input-label" for="signup-client">assigned client name</label>
+        <input id="signup-client" type="text" name="client" placeholder="assigned client name" required autocomplete="organization" />
         <div class="bg-top"><div class="bg-inner"></div></div>
         <div class="bg-right"><div class="bg-inner"></div></div>
         <div class="bg"><div class="bg-inner"></div></div>
       </div>
 
       <div class="control block-cube">
-        <input type="text" name="username" placeholder="enter username/email" required />
+        <label class="input-label" for="signup-username">username or email</label>
+        <input id="signup-username" type="text" name="username" placeholder="enter username/email" required autocomplete="username" />
         <div class="bg-top"><div class="bg-inner"></div></div>
         <div class="bg-right"><div class="bg-inner"></div></div>
         <div class="bg"><div class="bg-inner"></div></div>
       </div>
 
       <div class="control block-cube">
-        <input type="password" name="password" placeholder="choose password" required />
+        <label class="input-label" for="signup-password">password (minimum 8 characters)</label>
+        <input id="signup-password" type="password" name="password" placeholder="choose password" required minlength="8" autocomplete="new-password" />
         <div class="bg-top"><div class="bg-inner"></div></div>
         <div class="bg-right"><div class="bg-inner"></div></div>
         <div class="bg"><div class="bg-inner"></div></div>
@@ -49,49 +54,15 @@
         <div class="text">back to log-in</div>
       </button>
     </form>
+
+    <div class="trust-footer" aria-label="Legal and security information">
+      <p>Registration is limited to pre-approved client accounts. 
+        If you were not invited to register, return to login and contact your PMA administrator. 
+        By registering, you agree to the <a href="/terms">Terms</a> 
+        and <a href="/privacy">Privacy Policy</a>.</p>
+    </div>
   </div>
 
-  <script>
-    function logInteraction(action, details) {
-      var payload = { interaction: Object.assign({ action: action, page: 'signup' }, details || {}) };
-      fetch('/api/log', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      }).catch(function() {});
-    }
-
-    logInteraction('page_view', { description: 'Signup page loaded' });
-
-    document.getElementById('registerForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      var form = this;
-      var client = form.querySelector('[name="client"]').value;
-      var username = form.querySelector('[name="username"]').value;
-      var password = form.querySelector('[name="password"]').value;
-      logInteraction('register_attempt', { client: client, username: username });
-
-      fetch('/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ client: client, username: username, password: password })
-      })
-      .then(function(res) { return res.json().then(function(data) { return { ok: res.ok, data: data }; }); })
-      .then(function(result) {
-        if (result.data.success && result.data.redirect) {
-          window.location.href = result.data.redirect;
-        } else {
-          alert(result.data.error || 'Registration failed. Please try again.');
-        }
-      })
-      .catch(function() {
-        alert('Unable to reach the server. Please try again shortly.');
-      });
-    });
-
-    document.getElementById('backToLoginForm').addEventListener('submit', function() {
-      logInteraction('navigate_back_to_login', { description: 'User clicked back to login from signup' });
-    });
-  </script>
+  <script src="/js/signup.js" defer></script>
 </body>
 </html>

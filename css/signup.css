@@ -49,6 +49,16 @@ p {
   z-index: 2;
 }
 
+.input-label {
+  display: block;
+  margin: 0 0 6px 2px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 11px;
+  text-transform: lowercase;
+  letter-spacing: 0.06em;
+  text-align: left;
+}
+
 .signup-form input:focus,
 .signup-form input:hover {
   outline: none;
@@ -126,4 +136,91 @@ p {
   position: relative;
   z-index: 2;
   text-align: center;
+}
+
+.trust-footer {
+  width: 100%;
+  max-width: 380px;
+  margin-top: 8px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.trust-footer p {
+  margin: 4px 0;
+}
+
+.trust-footer a {
+  color: #00d4ff;
+  text-decoration: none;
+}
+
+.trust-footer a:hover,
+.trust-footer a:focus {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  body {
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow: hidden;
+    padding: 0;
+  }
+
+  .center-wrapper {
+    width: 100%;
+    max-width: 360px;
+    margin: 0 auto;
+    padding: 12px 14px;
+    justify-content: center;
+  }
+
+  h1 {
+    font-size: 22px;
+    margin: 0 0 4px;
+  }
+
+  p {
+    font-size: 12px;
+    margin: 3px 0;
+  }
+
+  .signup-form {
+    max-width: 320px;
+    margin: 8px auto;
+    padding-top: 8px;
+  }
+
+  .signup-form .control {
+    margin-bottom: 16px;
+  }
+
+  .signup-form input {
+    padding: 12px 14px;
+    font-size: 16px;
+  }
+
+  .input-label {
+    font-size: 11px;
+    margin: 0 0 5px 2px;
+  }
+
+  .signup-form .btn {
+    padding: 12px 14px;
+    font-size: 15px;
+  }
+
+  .trust-footer {
+    max-width: 320px;
+    margin-top: 6px;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .trust-footer p {
+    margin: 3px 0;
+  }
 }

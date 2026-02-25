@@ -27,6 +27,11 @@ h1 {
   text-align: center;
 }
 
+.portal-title {
+  margin: 0 0 6px;
+  color: #fff;
+}
+
 .form {
   width: 100%;
   max-width: 300px;
@@ -204,4 +209,80 @@ h1 {
 }
 .form .btn.btn-secondary .bg-right {
   background: rgba(52,9,121,1);
+}
+
+.trust-footer {
+  width: 100%;
+  max-width: 300px;
+  margin-top: 12px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.trust-footer p {
+  margin: 4px 0;
+}
+
+.trust-footer a {
+  color: #00d4ff;
+  text-decoration: none;
+}
+
+.trust-footer a:hover,
+.trust-footer a:focus {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  body {
+    height: 100dvh;
+    min-height: 100dvh;
+    align-items: center;
+    overflow: hidden;
+    padding: 0;
+  }
+
+  .center-container {
+    width: 100%;
+    max-width: 360px;
+    padding: 12px 14px;
+    justify-content: center;
+  }
+
+  .form {
+    max-width: 320px;
+    padding: 16px 10px 10px;
+  }
+
+  .trust-footer {
+    max-width: 320px;
+    margin-top: 8px;
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  .portal-title {
+    font-size: 22px;
+    margin: 0 0 4px;
+  }
+
+  .form .control {
+    margin: 0 0 18px;
+  }
+
+  .form input {
+    padding: 12px 14px;
+    font-size: 16px;
+  }
+
+  .form .btn {
+    padding: 12px 14px;
+    font-size: 15px;
+  }
+
+  .trust-footer p {
+    margin: 3px 0;
+  }
 }
