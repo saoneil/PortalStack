@@ -39,6 +39,6 @@ document.getElementById('signupNavForm').addEventListener('submit', function() {
   logInteraction('navigate_signup', { description: 'User clicked sign up button' });
 });
 
-document.getElementById('returnPmaForm').addEventListener('submit', function() {
+document.getElementById('returnPmaLink').addEventListener('click', function() {
   logInteraction('navigate_return_pma', { description: 'User clicked Return to PMA button' });
 });

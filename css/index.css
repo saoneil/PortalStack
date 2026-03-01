@@ -101,6 +101,7 @@ h1 {
   outline: none;
   border: 0;
   color: #fff;
+  text-decoration: none;
   letter-spacing: 0.1em;
   font-weight: bold;
   font-family: monospace;
