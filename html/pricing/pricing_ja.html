@@ -6,22 +6,38 @@
   <style>
     body { background: #222; color: #fff; font-family: monospace; padding: 40px; }
     h1 { color: #00d4ff; }
-    table { width:90%; max-width:600px; margin:16px auto; color:#fff; border-collapse:collapse; }
+    table { width:95%; max-width:900px; margin:16px auto; color:#fff; border-collapse:collapse; table-layout:fixed; }
     th, td { padding: 8px 12px; }
     th { border-bottom:1px solid #00d4ff; text-align:left; }
     td { border-bottom:1px solid #333; }
-    .subscriber-row { background-color: rgba(0, 212, 255, 0.1); }
-    .non-subscriber-row { background-color: rgba(255, 165, 0, 0.1); }
+    th:nth-child(1), td:nth-child(1) { width: 22%; }
+    th:nth-child(2), td:nth-child(2) { width: 15%; }
+    th:nth-child(3), td:nth-child(3) { width: 45%; }
+    th:nth-child(4), td:nth-child(4) { width: 18%; text-align:center; }
+    tr:nth-child(even) { background-color: rgba(0, 212, 255, 0.08); }
     b { color: #00d4ff; }
+    .paypal-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 10px;
+      border: 1px solid #00d4ff;
+      border-radius: 6px;
+      text-decoration: none;
+      background: #ffd140;
+    }
+    .paypal-link:hover { filter: brightness(0.95); }
+    .paypal-logo { height: 16px; width: auto; display: block; }
     
     /* Mobile responsive styles */
     @media (max-width: 768px) {
       body { padding: 20px 10px; overflow-x: hidden; }
       table { width: 100%; max-width: none; margin: 16px 0; font-size: 14px; table-layout: fixed; }
       th, td { padding: 6px 8px; word-wrap: break-word; overflow-wrap: break-word; }
-      th:nth-child(1), td:nth-child(1) { width: 25%; }
-      th:nth-child(2), td:nth-child(2) { width: 20%; }
-      th:nth-child(3), td:nth-child(3) { width: 55%; }
+      th:nth-child(1), td:nth-child(1) { width: 24%; }
+      th:nth-child(2), td:nth-child(2) { width: 18%; }
+      th:nth-child(3), td:nth-child(3) { width: 42%; }
+      th:nth-child(4), td:nth-child(4) { width: 16%; }
       h1 { font-size: 24px; }
       #pricingDescription { font-size: 14px; margin: 8px auto 16px auto; }
     }
@@ -30,27 +46,24 @@
       body { padding: 15px 5px; overflow-x: hidden; }
       table { font-size: 11px; table-layout: fixed; }
       th, td { padding: 4px 6px; word-wrap: break-word; overflow-wrap: break-word; }
-      th:nth-child(1), td:nth-child(1) { width: 25%; }
-      th:nth-child(2), td:nth-child(2) { width: 20%; }
-      th:nth-child(3), td:nth-child(3) { width: 55%; }
+      th:nth-child(1), td:nth-child(1) { width: 24%; }
+      th:nth-child(2), td:nth-child(2) { width: 18%; }
+      th:nth-child(3), td:nth-child(3) { width: 42%; }
+      th:nth-child(4), td:nth-child(4) { width: 16%; }
       h1 { font-size: 18px; }
       #pricingDescription { font-size: 12px; }
     }
   </style>
 </head>
 <body>
-  <h1><center>料金 ($USD)</center></h1>
-  <div id="pricingDescription" style="margin: 12px auto 24px auto; max-width: 600px; color: #fff; text-align: center; font-size: 17px; min-height: 32px;">
-インスタンス = 型 <strong>または</strong> スパーリングアプリケーション、お選びください。
-  </div>
+  <h1><center>料金と支払い ($USD)</center></h1>
+  <div id="pricingDescription" style="margin: 12px auto 24px auto; max-width: 760px; color: #fff; text-align: center; font-size: 17px; min-height: 32px;">現在、PayPalはサブスクライバーのみ利用できます。</div>
   <table>
-    <tr><th>オプション</th><th>価格</th><th>説明</th></tr>
-    <tr class="subscriber-row"><td><strong>クラブプラン</strong></td><td>$25/月または$240/年</td><td>2インスタンスへの無制限アクセス、トレーニングと小規模イベントに最適。</td></tr>
-    <tr class="subscriber-row"><td><strong>オーガナイザープラン</strong></td><td>$60/月または$600/年</td><td>6インスタンスへの無制限アクセス、優先サポート、トレーニング、中規模イベントに最適。</td></tr>
-    <tr class="subscriber-row"><td><strong>追加インスタンス（購読者）</strong></td><td>$30/イベント</td><td>トーナメントや特別イベント用の追加スコアリングインスタンスを追加。</td></tr>
-    <tr class="subscriber-row"><td><strong>無制限イベントパス（購読者）</strong></td><td>$250/イベント</td><td>単一イベント用の無制限追加スコアリングインスタンス — 大規模イベントやマルチリング設定に最適。</td></tr>
-    <tr class="non-subscriber-row"><td><strong>単一インスタンス（非購読者）</strong></td><td>$50/イベント</td><td>非会員向けのスコアリングインスタンスをイベントごとに支払い。トレーニングや小規模イベントに最適。</td></tr>
-    <tr class="non-subscriber-row"><td><strong>無制限イベントパス（非購読者）</strong></td><td>$350/イベント</td><td>無制限インスタンス、大規模イベントやマルチリング設定に最適。</td></tr>
+    <tr><th>オプション</th><th>価格</th><th>説明</th><th>PayPal</th></tr>
+    <tr><td><strong>サブスクライバー</strong></td><td>$25/月</td><td>選択した2つのアプリケーションに24時間365日アクセス</td><td><a class="paypal-link" href="https://www.paypal.com/webapps/billing/plans/subscribe?plan_id=P-3SX09611CF132153YNDNVW5Y" target="_blank" rel="noopener noreferrer" title="subscriber"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr><td><strong>小規模イベント</strong></td><td>$100</td><td>単一イベントで最大4つのアプリケーションを利用可能</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/N73R9PNA4ZUSU" target="_blank" rel="noopener noreferrer" title="mini"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr><td><strong>大規模イベント</strong></td><td>$250</td><td>単一イベントで必要な数のアプリケーションを利用可能</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/KAZVAY7VT6Y9N" target="_blank" rel="noopener noreferrer" title="unlimited"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr><td><strong>登録サポート</strong></td><td>大規模イベント + $100</td><td>登録ホスティングとドロー/ディビジョン作成</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/6FGYWDMSQSEZ8" target="_blank" rel="noopener noreferrer" title="unlimited+"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
   </table>
 </body>
 </html>

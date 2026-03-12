@@ -164,6 +164,55 @@ table button:hover {
   transform: translateY(-1px);
 }
 
+.lang-select-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-top: 24px;
+  color: #00d4ff;
+  font-weight: bold;
+}
+
+#pricingLanguageSelect {
+  background: #222;
+  color: #00d4ff;
+  border: 1px solid #00d4ff;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-family: monospace, serif;
+  font-size: 14px;
+}
+
+#pricingLanguageSelect:focus {
+  outline: none;
+  box-shadow: 0 0 8px 2px #00d4ff66;
+}
+
+/* Ensure PayPal buttons stay very small in injected pricing content */
+#pricingOverlay .paypal-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 3px;
+  border: 1px solid #00d4ff;
+  border-radius: 4px;
+  background: #ffd140;
+  text-decoration: none;
+}
+
+#pricingOverlay .paypal-logo {
+  height: 40px;
+  width: auto;
+  display: block;
+}
+
+#pricingOverlay th,
+#pricingOverlay td {
+  text-align: center;
+  vertical-align: middle;
+}
+
 #release-notes-section {
   display: flex;
   justify-content: center;
@@ -296,9 +345,7 @@ table button:hover {
   }
   
   /* Mobile-friendly pricing and payments overlays */
-  #pricingOverlay > div,
-  #paymentsOverlay > div,
-  #pricingPaymentsOverlay > div {
+  #pricingOverlay > div {
     min-width: 90vw !important;
     max-width: 95vw !important;
     max-height: 90vh !important;
@@ -306,9 +353,7 @@ table button:hover {
     margin: 20px 10px;
   }
   
-  #pricingOverlay button,
-  #paymentsOverlay button,
-  #pricingPaymentsOverlay button {
+  #pricingOverlay button {
     font-size: 24px;
     padding: 8px 12px;
     background: #333;
@@ -319,8 +364,14 @@ table button:hover {
   
   #pricingEnglish,
   #pricingSpanish,
-  #paymentsContent {
+  #pricingFrench {
     font-size: 16px !important;
     margin-top: 20px !important;
+  }
+
+  #pricingLanguageSelect {
+    font-size: 16px;
+    width: 100%;
+    max-width: 300px;
   }
 }

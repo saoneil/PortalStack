@@ -15,13 +15,13 @@
     #pricingOverlay #pricingDescription { font-size: 14px; }
     @media (max-width: 768px) {
       #pricingOverlay th, #pricingOverlay td { padding: 6px 8px; }
-      .lang-row { margin-top: 32px !important; }
+      .lang-select-row { margin-top: 20px !important; }
     }
     @media (max-width: 480px) {
       #pricingOverlay th, #pricingOverlay td { padding: 4px 6px; font-size: 12px; }
       #pricingOverlay h1 { font-size: 18px; }
       #pricingOverlay #pricingDescription { font-size: 12px; }
-      .lang-row { margin-top: 40px !important; }
+      .lang-select-row { margin-top: 20px !important; }
     }
   </style>
 </head>
@@ -64,32 +64,22 @@
     </div>
   </div>
 
-  <div id="pricingPaymentsOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:10000;">
-    <div style="background:rgba(33,33,33,0.95); padding:32px 40px; border-radius:16px; min-width:320px; max-width:90vw; position:relative; box-shadow:0 0 40px #00d4ff55; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;">
-      <button id="closePricingPaymentsOverlayBtn" style="position:absolute; top:16px; right:16px; background:none; border:none; color:#fff; font-size:28px; cursor:pointer;">✕</button>
-      <button id="modalPricingBtn" class="action-btn" style="min-width:180px;">pricing</button>
-      <button id="modalPaymentsBtn" class="action-btn" style="min-width:180px;">payments</button>
-    </div>
-  </div>
-  
   <div id="pricingOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:10000;">
     <div style="background:rgba(33,33,33,0.95); padding:32px 40px; border-radius:16px; width:95vw; max-width:1000px; max-height:80vh; overflow-y:auto; position:relative; box-shadow:0 0 40px #00d4ff55;">
       <button id="closePricingOverlayBtn" style="position:absolute; top:16px; right:16px; background:none; border:none; color:#fff; font-size:28px; cursor:pointer;">✕</button>
-      <!-- <h2 class="heading"><u>pricing</u></h2> -->
-      <div class="lang-row" style="display:flex; justify-content:center; margin-top:24px; gap:8px; flex-wrap:wrap;">
-        <button id="pricingEnglishBtn" style="padding:8px 16px; font-size:14px; background:#00d4ff; color:#222; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">English</button>
-        <button id="pricingSpanishBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Español</button>
-        <button id="pricingFrenchBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Français</button>
-        <button id="pricingItalianBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Italiano</button>
-        <button id="pricingJapaneseBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">日本語</button>
-        <button id="pricingPolishBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Polski</button>
-        <button id="pricingDutchBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Nederlands</button>
-        <button id="pricingMalayBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Bahasa Melayu</button>
-        <button id="pricingRussianBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Русский</button>
-      </div>
-      <div class="lang-row" style="display:flex; justify-content:center; margin-top:16px; gap:8px; flex-wrap:wrap;">
-        <button id="pricingNonSubscriberBtn" style="padding:8px 16px; font-size:14px; background:#00d4ff; color:#222; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">Non-Subscribers</button>
-        <button id="pricingSubscriberBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Subscribers</button>
+      <div class="lang-select-row">
+        <label for="pricingLanguageSelect">Language:</label>
+        <select id="pricingLanguageSelect" aria-label="Select pricing language">
+          <option value="en">English</option>
+          <option value="es">Espanol</option>
+          <option value="fr">Francais</option>
+          <option value="it">Italiano</option>
+          <option value="ja">日本語</option>
+          <option value="pl">Polski</option>
+          <option value="nl">Nederlands</option>
+          <option value="ms">Bahasa Melayu</option>
+          <option value="ru">Русский</option>
+        </select>
       </div>
       <div id="pricingEnglish" style="margin-top:32px; color:#fff; font-size:18px;"></div>
       <div id="pricingSpanish" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
@@ -100,36 +90,6 @@
       <div id="pricingDutch" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
       <div id="pricingMalay" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
       <div id="pricingRussian" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
-    </div>
-  </div>
-
-  <div id="paymentsOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:10000;">
-    <div style="background:rgba(33,33,33,0.95); padding:32px 40px; border-radius:16px; width:95vw; max-width:1000px; max-height:80vh; overflow-y:auto; position:relative; box-shadow:0 0 40px #00d4ff55;">
-      <button id="closePaymentsOverlayBtn" style="position:absolute; top:16px; right:16px; background:none; border:none; color:#fff; font-size:28px; cursor:pointer;">✕</button>
-      <div class="lang-row" style="display:flex; justify-content:center; margin-top:24px; gap:8px; flex-wrap:wrap;">
-        <button id="paymentsEnglishBtn" style="padding:8px 16px; font-size:14px; background:#00d4ff; color:#222; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">English</button>
-        <button id="paymentsSpanishBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Español</button>
-        <button id="paymentsFrenchBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Français</button>
-        <button id="paymentsItalianBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Italiano</button>
-        <button id="paymentsJapaneseBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">日本語</button>
-        <button id="paymentsPolishBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Polski</button>
-        <button id="paymentsDutchBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Nederlands</button>
-        <button id="paymentsMalayBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Bahasa Melayu</button>
-        <button id="paymentsRussianBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Русский</button>
-      </div>
-      <div class="lang-row" style="display:flex; justify-content:center; margin-top:16px; gap:8px; flex-wrap:wrap;">
-        <button id="paymentsNonSubscriberBtn" style="padding:8px 16px; font-size:14px; background:#00d4ff; color:#222; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">Non-Subscribers</button>
-        <button id="paymentsSubscriberBtn" style="padding:8px 16px; font-size:14px; background:transparent; color:#00d4ff; border:1px solid #00d4ff; border-radius:6px; cursor:pointer; font-weight:bold;">Subscribers</button>
-      </div>
-      <div id="paymentsEnglish" style="margin-top:32px; color:#fff; font-size:18px;"></div>
-      <div id="paymentsSpanish" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
-      <div id="paymentsFrench" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
-      <div id="paymentsItalian" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
-      <div id="paymentsJapanese" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
-      <div id="paymentsPolish" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
-      <div id="paymentsDutch" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
-      <div id="paymentsMalay" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
-      <div id="paymentsRussian" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
     </div>
   </div>
 
@@ -339,65 +299,6 @@
         });
     }
 
-    function updatePricingFilterLabels(lang) {
-      const labelMap = {
-        'en': { non: 'Non-Subscribers', sub: 'Subscribers' },
-        'es': { non: 'No suscriptores', sub: 'Suscriptores' },
-        'fr': { non: 'Non-abonnés', sub: 'Abonnés' },
-        'it': { non: 'Non iscritti', sub: 'Iscritti' },
-        'ja': { non: '非加入者', sub: '加入者' },
-        'pl': { non: 'Nieabonenci', sub: 'Abonenci' },
-        'nl': { non: 'Niet-abonnees', sub: 'Abonnees' },
-        'ms': { non: 'Bukan Pelanggan', sub: 'Pelanggan' },
-        'ru': { non: 'Не подписчики', sub: 'Подписчики' }
-      };
-      const labels = labelMap[lang] || labelMap.en;
-      document.getElementById('pricingNonSubscriberBtn').textContent = labels.non;
-      document.getElementById('pricingSubscriberBtn').textContent = labels.sub;
-    }
-
-    let pricingFilter = 'non';
-
-    function applyPricingFilter(filter) {
-      const pricingContainers = ['pricingEnglish', 'pricingSpanish', 'pricingFrench', 'pricingItalian', 'pricingJapanese', 'pricingPolish', 'pricingDutch', 'pricingMalay', 'pricingRussian'];
-      pricingContainers.forEach(containerId => {
-        const container = document.getElementById(containerId);
-        if (!container || container.style.display === 'none') {
-          return;
-        }
-        const subscriberRows = container.querySelectorAll('.subscriber-row');
-        const nonSubscriberRows = container.querySelectorAll('.non-subscriber-row');
-        if (filter === 'non') {
-          subscriberRows.forEach(row => row.style.display = 'none');
-          nonSubscriberRows.forEach(row => row.style.display = '');
-        } else {
-          subscriberRows.forEach(row => row.style.display = '');
-          nonSubscriberRows.forEach(row => row.style.display = 'none');
-        }
-      });
-    }
-
-    function setPricingFilter(filter) {
-      pricingFilter = filter;
-      const nonBtn = document.getElementById('pricingNonSubscriberBtn');
-      const subBtn = document.getElementById('pricingSubscriberBtn');
-      if (filter === 'non') {
-        nonBtn.style.background = '#00d4ff';
-        nonBtn.style.color = '#222';
-        nonBtn.style.border = 'none';
-        subBtn.style.background = 'transparent';
-        subBtn.style.color = '#00d4ff';
-        subBtn.style.border = '1px solid #00d4ff';
-      } else {
-        subBtn.style.background = '#00d4ff';
-        subBtn.style.color = '#222';
-        subBtn.style.border = 'none';
-        nonBtn.style.background = 'transparent';
-        nonBtn.style.color = '#00d4ff';
-        nonBtn.style.border = '1px solid #00d4ff';
-      }
-      applyPricingFilter(filter);
-    }
     function switchPricingLanguage(lang) {
       // Hide all pricing content divs
       const allDivs = ['pricingEnglish', 'pricingSpanish', 'pricingFrench', 'pricingItalian', 'pricingJapanese', 'pricingPolish', 'pricingDutch', 'pricingMalay', 'pricingRussian'];
@@ -405,205 +306,32 @@
         document.getElementById(divId).style.display = 'none';
       });
       
-      // Reset all button styles
-      const allButtons = ['pricingEnglishBtn', 'pricingSpanishBtn', 'pricingFrenchBtn', 'pricingItalianBtn', 'pricingJapaneseBtn', 'pricingPolishBtn', 'pricingDutchBtn', 'pricingMalayBtn', 'pricingRussianBtn'];
-      allButtons.forEach(btnId => {
-        const btn = document.getElementById(btnId);
-        btn.style.background = 'transparent';
-        btn.style.color = '#00d4ff';
-        btn.style.border = '1px solid #00d4ff';
-      });
-      
-      // Show selected content and style selected button
+      // Show selected localized container
       const langMap = {
-        'en': { div: 'pricingEnglish', btn: 'pricingEnglishBtn' },
-        'es': { div: 'pricingSpanish', btn: 'pricingSpanishBtn' },
-        'fr': { div: 'pricingFrench', btn: 'pricingFrenchBtn' },
-        'it': { div: 'pricingItalian', btn: 'pricingItalianBtn' },
-        'ja': { div: 'pricingJapanese', btn: 'pricingJapaneseBtn' },
-        'pl': { div: 'pricingPolish', btn: 'pricingPolishBtn' },
-        'nl': { div: 'pricingDutch', btn: 'pricingDutchBtn' },
-        'ms': { div: 'pricingMalay', btn: 'pricingMalayBtn' },
-        'ru': { div: 'pricingRussian', btn: 'pricingRussianBtn' }
+        'en': 'pricingEnglish',
+        'es': 'pricingSpanish',
+        'fr': 'pricingFrench',
+        'it': 'pricingItalian',
+        'ja': 'pricingJapanese',
+        'pl': 'pricingPolish',
+        'nl': 'pricingDutch',
+        'ms': 'pricingMalay',
+        'ru': 'pricingRussian'
       };
       
-      document.getElementById(langMap[lang].div).style.display = '';
-      const activeBtn = document.getElementById(langMap[lang].btn);
-      activeBtn.style.background = '#00d4ff';
-      activeBtn.style.color = '#222';
-      activeBtn.style.border = 'none';
-      
-      updatePricingFilterLabels(lang);
-      return loadPricingContent(lang).then(() => {
-        setPricingFilter(pricingFilter);
-      });
+      document.getElementById(langMap[lang]).style.display = '';
+      return loadPricingContent(lang);
     }
 
     function openPricingOverlay() {
-      logInteraction('open_pricing', { description: 'Opened pricing overlay' });
+      logInteraction('open_pricing_payments', { description: 'Opened unified pricing/payments overlay' });
       document.getElementById('pricingOverlay').style.display = 'flex';
-      pricingFilter = 'non';
+      document.getElementById('pricingLanguageSelect').value = 'en';
       switchPricingLanguage('en');
-    }
-    
-    document.getElementById('pricingEnglishBtn').onclick = function() { logInteraction('pricing_language', { language: 'en' }); switchPricingLanguage('en'); };
-    document.getElementById('pricingSpanishBtn').onclick = function() { logInteraction('pricing_language', { language: 'es' }); switchPricingLanguage('es'); };
-    document.getElementById('pricingFrenchBtn').onclick = function() { logInteraction('pricing_language', { language: 'fr' }); switchPricingLanguage('fr'); };
-    document.getElementById('pricingItalianBtn').onclick = function() { logInteraction('pricing_language', { language: 'it' }); switchPricingLanguage('it'); };
-    document.getElementById('pricingJapaneseBtn').onclick = function() { logInteraction('pricing_language', { language: 'ja' }); switchPricingLanguage('ja'); };
-    document.getElementById('pricingPolishBtn').onclick = function() { logInteraction('pricing_language', { language: 'pl' }); switchPricingLanguage('pl'); };
-    document.getElementById('pricingDutchBtn').onclick = function() { logInteraction('pricing_language', { language: 'nl' }); switchPricingLanguage('nl'); };
-    document.getElementById('pricingMalayBtn').onclick = function() { logInteraction('pricing_language', { language: 'ms' }); switchPricingLanguage('ms'); };
-    document.getElementById('pricingRussianBtn').onclick = function() { logInteraction('pricing_language', { language: 'ru' }); switchPricingLanguage('ru'); };
-    document.getElementById('pricingNonSubscriberBtn').onclick = function() { logInteraction('pricing_filter', { filter: 'non-subscriber' }); setPricingFilter('non'); };
-    document.getElementById('pricingSubscriberBtn').onclick = function() { logInteraction('pricing_filter', { filter: 'subscriber' }); setPricingFilter('sub'); };
-
-    // Payments Popup Logic
-    let paymentsFilter = 'non';
-
-    function loadPaymentsContent(lang) {
-      const langMap = {
-        'en': 'paymentsEnglish',
-        'es': 'paymentsSpanish', 
-        'fr': 'paymentsFrench',
-        'it': 'paymentsItalian',
-        'ja': 'paymentsJapanese',
-        'pl': 'paymentsPolish',
-        'nl': 'paymentsDutch',
-        'ms': 'paymentsMalay',
-        'ru': 'paymentsRussian'
-      };
-      const targetDiv = document.getElementById(langMap[lang]);
-      return fetch('html/payments/payments_' + lang + '.html')
-        .then(res => res.text())
-        .then(html => {
-          // Extract only the <body> content
-          const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-          targetDiv.innerHTML = bodyMatch ? bodyMatch[1] : html;
-        });
-    }
-
-    function updatePaymentsFilterLabels(lang) {
-      const labelMap = {
-        'en': { non: 'Non-Subscribers', sub: 'Subscribers' },
-        'es': { non: 'No suscriptores', sub: 'Suscriptores' },
-        'fr': { non: 'Non-abonnés', sub: 'Abonnés' },
-        'it': { non: 'Non iscritti', sub: 'Iscritti' },
-        'ja': { non: '非加入者', sub: '加入者' },
-        'pl': { non: 'Nieabonenci', sub: 'Abonenci' },
-        'nl': { non: 'Niet-abonnees', sub: 'Abonnees' },
-        'ms': { non: 'Bukan Pelanggan', sub: 'Pelanggan' },
-        'ru': { non: 'Не подписчики', sub: 'Подписчики' }
-      };
-      const labels = labelMap[lang] || labelMap.en;
-      document.getElementById('paymentsNonSubscriberBtn').textContent = labels.non;
-      document.getElementById('paymentsSubscriberBtn').textContent = labels.sub;
-    }
-
-    function applyPaymentsFilter(filter) {
-      const paymentsContainers = ['paymentsEnglish', 'paymentsSpanish', 'paymentsFrench', 'paymentsItalian', 'paymentsJapanese', 'paymentsPolish', 'paymentsDutch', 'paymentsMalay', 'paymentsRussian'];
-      paymentsContainers.forEach(containerId => {
-        const container = document.getElementById(containerId);
-        if (!container || container.style.display === 'none') {
-          return;
-        }
-        const subscriberSections = container.querySelectorAll('.subscriber-section, .subscriber-option');
-        const nonSubscriberOptions = container.querySelectorAll('.non-subscriber-option');
-        const paymentGrid = container.querySelector('.payment-grid');
-        if (filter === 'non') {
-          subscriberSections.forEach(item => item.style.display = 'none');
-          nonSubscriberOptions.forEach(item => item.style.display = '');
-          if (paymentGrid) {
-            paymentGrid.classList.add('compact');
-          }
-        } else {
-          subscriberSections.forEach(item => item.style.display = '');
-          nonSubscriberOptions.forEach(item => item.style.display = 'none');
-          if (paymentGrid) {
-            paymentGrid.classList.add('compact');
-          }
-        }
-      });
-    }
-    
-    function setPaymentsFilter(filter) {
-      paymentsFilter = filter;
-      const nonBtn = document.getElementById('paymentsNonSubscriberBtn');
-      const subBtn = document.getElementById('paymentsSubscriberBtn');
-      if (filter === 'non') {
-        nonBtn.style.background = '#00d4ff';
-        nonBtn.style.color = '#222';
-        nonBtn.style.border = 'none';
-        subBtn.style.background = 'transparent';
-        subBtn.style.color = '#00d4ff';
-        subBtn.style.border = '1px solid #00d4ff';
-      } else {
-        subBtn.style.background = '#00d4ff';
-        subBtn.style.color = '#222';
-        subBtn.style.border = 'none';
-        nonBtn.style.background = 'transparent';
-        nonBtn.style.color = '#00d4ff';
-        nonBtn.style.border = '1px solid #00d4ff';
-      }
-      applyPaymentsFilter(filter);
-    }
-    
-    function switchPaymentsLanguage(lang) {
-      // Hide all payments content divs
-      const allDivs = ['paymentsEnglish', 'paymentsSpanish', 'paymentsFrench', 'paymentsItalian', 'paymentsJapanese', 'paymentsPolish', 'paymentsDutch', 'paymentsMalay', 'paymentsRussian'];
-      allDivs.forEach(divId => {
-        document.getElementById(divId).style.display = 'none';
-      });
-      
-      // Reset all button styles
-      const allButtons = ['paymentsEnglishBtn', 'paymentsSpanishBtn', 'paymentsFrenchBtn', 'paymentsItalianBtn', 'paymentsJapaneseBtn', 'paymentsPolishBtn', 'paymentsDutchBtn', 'paymentsMalayBtn', 'paymentsRussianBtn'];
-      allButtons.forEach(btnId => {
-        const btn = document.getElementById(btnId);
-        btn.style.background = 'transparent';
-        btn.style.color = '#00d4ff';
-        btn.style.border = '1px solid #00d4ff';
-      });
-      
-      // Show selected content and style selected button
-      const langMap = {
-        'en': { div: 'paymentsEnglish', btn: 'paymentsEnglishBtn' },
-        'es': { div: 'paymentsSpanish', btn: 'paymentsSpanishBtn' },
-        'fr': { div: 'paymentsFrench', btn: 'paymentsFrenchBtn' },
-        'it': { div: 'paymentsItalian', btn: 'paymentsItalianBtn' },
-        'ja': { div: 'paymentsJapanese', btn: 'paymentsJapaneseBtn' },
-        'pl': { div: 'paymentsPolish', btn: 'paymentsPolishBtn' },
-        'nl': { div: 'paymentsDutch', btn: 'paymentsDutchBtn' },
-        'ms': { div: 'paymentsMalay', btn: 'paymentsMalayBtn' },
-        'ru': { div: 'paymentsRussian', btn: 'paymentsRussianBtn' }
-      };
-      
-      document.getElementById(langMap[lang].div).style.display = '';
-      const activeBtn = document.getElementById(langMap[lang].btn);
-      activeBtn.style.background = '#00d4ff';
-      activeBtn.style.color = '#222';
-      activeBtn.style.border = 'none';
-      
-      updatePaymentsFilterLabels(lang);
-      return loadPaymentsContent(lang).then(() => {
-        setPaymentsFilter(paymentsFilter);
-      });
-    }
-
-    function openPaymentsOverlay() {
-      logInteraction('open_payments', { description: 'Opened payments overlay' });
-      document.getElementById('paymentsOverlay').style.display = 'flex';
-      paymentsFilter = 'non';
-      switchPaymentsLanguage('en');
     }
 
     document.getElementById('openPricingPaymentsBtn').onclick = function() {
-      logInteraction('open_pricing_payments_menu', { description: 'Opened pricing/payments menu' });
-      document.getElementById('pricingPaymentsOverlay').style.display = 'flex';
-    };
-
-    document.getElementById('closePricingPaymentsOverlayBtn').onclick = function() {
-      logInteraction('close_pricing_payments_menu', { description: 'Closed pricing/payments menu' });
-      document.getElementById('pricingPaymentsOverlay').style.display = 'none';
+      openPricingOverlay();
     };
 
     function closeOverlay(overlayId, actionName) {
@@ -625,12 +353,15 @@
     document.getElementById('closePricingOverlayBtn').onclick = function() {
       closeOverlay('pricingOverlay', 'close_pricing_overlay');
     };
-    document.getElementById('closePaymentsOverlayBtn').onclick = function() {
-      closeOverlay('paymentsOverlay', 'close_payments_overlay');
-    };
+
+    document.getElementById('pricingLanguageSelect').addEventListener('change', function(evt) {
+      const lang = evt.target.value;
+      logInteraction('pricing_payments_language', { language: lang });
+      switchPricingLanguage(lang);
+    });
 
     // Allow clicking the backdrop itself to close each modal.
-    ['qrOverlay', 'releaseNotesOverlay', 'pricingPaymentsOverlay', 'pricingOverlay', 'paymentsOverlay'].forEach(function(overlayId) {
+    ['qrOverlay', 'releaseNotesOverlay', 'pricingOverlay'].forEach(function(overlayId) {
       const overlay = document.getElementById(overlayId);
       if (!overlay) return;
       overlay.addEventListener('click', function(evt) {
@@ -643,35 +374,13 @@
     // Close any open overlay with Escape.
     document.addEventListener('keydown', function(evt) {
       if (evt.key !== 'Escape') return;
-      ['qrOverlay', 'releaseNotesOverlay', 'pricingPaymentsOverlay', 'pricingOverlay', 'paymentsOverlay'].forEach(function(overlayId) {
+      ['qrOverlay', 'releaseNotesOverlay', 'pricingOverlay'].forEach(function(overlayId) {
         const overlay = document.getElementById(overlayId);
         if (overlay && overlay.style.display !== 'none') {
           overlay.style.display = 'none';
         }
       });
     });
-
-    document.getElementById('modalPricingBtn').onclick = function() {
-      document.getElementById('pricingPaymentsOverlay').style.display = 'none';
-      openPricingOverlay();
-    };
-
-    document.getElementById('modalPaymentsBtn').onclick = function() {
-      document.getElementById('pricingPaymentsOverlay').style.display = 'none';
-      openPaymentsOverlay();
-    };
-    
-    document.getElementById('paymentsEnglishBtn').onclick = function() { logInteraction('payments_language', { language: 'en' }); switchPaymentsLanguage('en'); };
-    document.getElementById('paymentsSpanishBtn').onclick = function() { logInteraction('payments_language', { language: 'es' }); switchPaymentsLanguage('es'); };
-    document.getElementById('paymentsFrenchBtn').onclick = function() { logInteraction('payments_language', { language: 'fr' }); switchPaymentsLanguage('fr'); };
-    document.getElementById('paymentsItalianBtn').onclick = function() { logInteraction('payments_language', { language: 'it' }); switchPaymentsLanguage('it'); };
-    document.getElementById('paymentsJapaneseBtn').onclick = function() { logInteraction('payments_language', { language: 'ja' }); switchPaymentsLanguage('ja'); };
-    document.getElementById('paymentsPolishBtn').onclick = function() { logInteraction('payments_language', { language: 'pl' }); switchPaymentsLanguage('pl'); };
-    document.getElementById('paymentsDutchBtn').onclick = function() { logInteraction('payments_language', { language: 'nl' }); switchPaymentsLanguage('nl'); };
-    document.getElementById('paymentsMalayBtn').onclick = function() { logInteraction('payments_language', { language: 'ms' }); switchPaymentsLanguage('ms'); };
-    document.getElementById('paymentsRussianBtn').onclick = function() { logInteraction('payments_language', { language: 'ru' }); switchPaymentsLanguage('ru'); };
-    document.getElementById('paymentsNonSubscriberBtn').onclick = function() { logInteraction('payments_filter', { filter: 'non-subscriber' }); setPaymentsFilter('non'); };
-    document.getElementById('paymentsSubscriberBtn').onclick = function() { logInteraction('payments_filter', { filter: 'subscriber' }); setPaymentsFilter('sub'); };
 
     // Log logout button click (server also logs it, but this captures the client-side intent)
     document.getElementById('logoutForm').addEventListener('submit', function() {

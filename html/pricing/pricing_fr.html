@@ -6,22 +6,38 @@
   <style>
     body { background: #222; color: #fff; font-family: monospace; padding: 40px; }
     h1 { color: #00d4ff; }
-    table { width:90%; max-width:600px; margin:16px auto; color:#fff; border-collapse:collapse; }
+    table { width:95%; max-width:900px; margin:16px auto; color:#fff; border-collapse:collapse; table-layout:fixed; }
     th, td { padding: 8px 12px; }
     th { border-bottom:1px solid #00d4ff; text-align:left; }
     td { border-bottom:1px solid #333; }
-    .subscriber-row { background-color: rgba(0, 212, 255, 0.1); }
-    .non-subscriber-row { background-color: rgba(255, 165, 0, 0.1); }
+    th:nth-child(1), td:nth-child(1) { width: 22%; }
+    th:nth-child(2), td:nth-child(2) { width: 15%; }
+    th:nth-child(3), td:nth-child(3) { width: 45%; }
+    th:nth-child(4), td:nth-child(4) { width: 18%; text-align:center; }
+    tr:nth-child(even) { background-color: rgba(0, 212, 255, 0.08); }
     b { color: #00d4ff; }
+    .paypal-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 10px;
+      border: 1px solid #00d4ff;
+      border-radius: 6px;
+      text-decoration: none;
+      background: #ffd140;
+    }
+    .paypal-link:hover { filter: brightness(0.95); }
+    .paypal-logo { height: 16px; width: auto; display: block; }
     
     /* Mobile responsive styles */
     @media (max-width: 768px) {
       body { padding: 20px 10px; overflow-x: hidden; }
       table { width: 100%; max-width: none; margin: 16px 0; font-size: 14px; table-layout: fixed; }
       th, td { padding: 6px 8px; word-wrap: break-word; overflow-wrap: break-word; }
-      th:nth-child(1), td:nth-child(1) { width: 25%; }
-      th:nth-child(2), td:nth-child(2) { width: 20%; }
-      th:nth-child(3), td:nth-child(3) { width: 55%; }
+      th:nth-child(1), td:nth-child(1) { width: 24%; }
+      th:nth-child(2), td:nth-child(2) { width: 18%; }
+      th:nth-child(3), td:nth-child(3) { width: 42%; }
+      th:nth-child(4), td:nth-child(4) { width: 16%; }
       h1 { font-size: 24px; }
       #pricingDescription { font-size: 14px; margin: 8px auto 16px auto; }
     }
@@ -30,27 +46,24 @@
       body { padding: 15px 5px; overflow-x: hidden; }
       table { font-size: 11px; table-layout: fixed; }
       th, td { padding: 4px 6px; word-wrap: break-word; overflow-wrap: break-word; }
-      th:nth-child(1), td:nth-child(1) { width: 25%; }
-      th:nth-child(2), td:nth-child(2) { width: 20%; }
-      th:nth-child(3), td:nth-child(3) { width: 55%; }
+      th:nth-child(1), td:nth-child(1) { width: 24%; }
+      th:nth-child(2), td:nth-child(2) { width: 18%; }
+      th:nth-child(3), td:nth-child(3) { width: 42%; }
+      th:nth-child(4), td:nth-child(4) { width: 16%; }
       h1 { font-size: 18px; }
       #pricingDescription { font-size: 12px; }
     }
   </style>
 </head>
 <body>
-  <h1><center>Tarifs ($USD)</center></h1>
-  <div id="pricingDescription" style="margin: 12px auto 24px auto; max-width: 600px; color: #fff; text-align: center; font-size: 17px; min-height: 32px;">
-Instance = application de formes <strong>OU</strong> de combat, à votre choix.
-  </div>
+  <h1><center>Tarifs et Paiements ($USD)</center></h1>
+  <div id="pricingDescription" style="margin: 12px auto 24px auto; max-width: 760px; color: #fff; text-align: center; font-size: 17px; min-height: 32px;">Le paiement PayPal est active uniquement pour l option Abonne.</div>
   <table>
-    <tr><th>Option</th><th>Prix</th><th>Description</th></tr>
-    <tr class="subscriber-row"><td><strong>Plan Club</strong></td><td>$25/mois ou $240/an</td><td>Accès illimité à 2 instances, idéal pour l'entraînement et les petits événements.</td></tr>
-    <tr class="subscriber-row"><td><strong>Plan Organisateur</strong></td><td>$60/mois ou $600/an</td><td>Accès illimité à 6 instances, support prioritaire, formation, idéal pour les événements de taille moyenne.</td></tr>
-    <tr class="subscriber-row"><td><strong>Instance Supplémentaire (Abonnés)</strong></td><td>$30/événement</td><td>Ajoute des instances de notation supplémentaires pour les tournois ou événements spéciaux.</td></tr>
-    <tr class="subscriber-row"><td><strong>Passe Événement Illimité (Abonnés)</strong></td><td>$250/événement</td><td>Instances de notation supplémentaires illimitées pour un seul événement — idéal pour les grands événements et configurations multi-rings.</td></tr>
-    <tr class="non-subscriber-row"><td><strong>Instance Unique (Non-Abonnés)</strong></td><td>$50/événement</td><td>Payer par instance de notation pour les non-membres. Idéal pour l'entraînement ou les petits événements.</td></tr>
-    <tr class="non-subscriber-row"><td><strong>Passe Événement Illimité (Non-Abonnés)</strong></td><td>$350/événement</td><td>Instances illimitées, idéal pour les grands événements ou configurations multi-rings.</td></tr>
+    <tr><th>Option</th><th>Prix</th><th>Description</th><th>PayPal</th></tr>
+    <tr><td><strong>Abonne</strong></td><td>$25/mois</td><td>Acces 24/7 a deux applications de votre choix</td><td><a class="paypal-link" href="https://www.paypal.com/webapps/billing/plans/subscribe?plan_id=P-3SX09611CF132153YNDNVW5Y" target="_blank" rel="noopener noreferrer" title="subscriber"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr><td><strong>Petit Evenement</strong></td><td>$100</td><td>Jusqu a 4 applications pour un seul evenement</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/N73R9PNA4ZUSU" target="_blank" rel="noopener noreferrer" title="mini"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr><td><strong>Grand Evenement</strong></td><td>$250</td><td>Autant d applications que necessaire pour un seul evenement</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/KAZVAY7VT6Y9N" target="_blank" rel="noopener noreferrer" title="unlimited"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr><td><strong>Support Inscription</strong></td><td>Grand Evenement + $100</td><td>Hebergement des inscriptions et creation des tirages/divisions</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/6FGYWDMSQSEZ8" target="_blank" rel="noopener noreferrer" title="unlimited+"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
   </table>
 </body>
 </html>

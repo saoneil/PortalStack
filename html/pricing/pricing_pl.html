@@ -6,22 +6,38 @@
   <style>
     body { background: #222; color: #fff; font-family: monospace; padding: 40px; }
     h1 { color: #00d4ff; }
-    table { width:90%; max-width:600px; margin:16px auto; color:#fff; border-collapse:collapse; }
+    table { width:95%; max-width:900px; margin:16px auto; color:#fff; border-collapse:collapse; table-layout:fixed; }
     th, td { padding: 8px 12px; }
     th { border-bottom:1px solid #00d4ff; text-align:left; }
     td { border-bottom:1px solid #333; }
-    .subscriber-row { background-color: rgba(0, 212, 255, 0.1); }
-    .non-subscriber-row { background-color: rgba(255, 165, 0, 0.1); }
+    th:nth-child(1), td:nth-child(1) { width: 22%; }
+    th:nth-child(2), td:nth-child(2) { width: 15%; }
+    th:nth-child(3), td:nth-child(3) { width: 45%; }
+    th:nth-child(4), td:nth-child(4) { width: 18%; text-align:center; }
+    tr:nth-child(even) { background-color: rgba(0, 212, 255, 0.08); }
     b { color: #00d4ff; }
+    .paypal-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 10px;
+      border: 1px solid #00d4ff;
+      border-radius: 6px;
+      text-decoration: none;
+      background: #ffd140;
+    }
+    .paypal-link:hover { filter: brightness(0.95); }
+    .paypal-logo { height: 16px; width: auto; display: block; }
     
     /* Mobile responsive styles */
     @media (max-width: 768px) {
       body { padding: 20px 10px; overflow-x: hidden; }
       table { width: 100%; max-width: none; margin: 16px 0; font-size: 14px; table-layout: fixed; }
       th, td { padding: 6px 8px; word-wrap: break-word; overflow-wrap: break-word; }
-      th:nth-child(1), td:nth-child(1) { width: 25%; }
-      th:nth-child(2), td:nth-child(2) { width: 20%; }
-      th:nth-child(3), td:nth-child(3) { width: 55%; }
+      th:nth-child(1), td:nth-child(1) { width: 24%; }
+      th:nth-child(2), td:nth-child(2) { width: 18%; }
+      th:nth-child(3), td:nth-child(3) { width: 42%; }
+      th:nth-child(4), td:nth-child(4) { width: 16%; }
       h1 { font-size: 24px; }
       #pricingDescription { font-size: 14px; margin: 8px auto 16px auto; }
     }
@@ -30,27 +46,24 @@
       body { padding: 15px 5px; overflow-x: hidden; }
       table { font-size: 11px; table-layout: fixed; }
       th, td { padding: 4px 6px; word-wrap: break-word; overflow-wrap: break-word; }
-      th:nth-child(1), td:nth-child(1) { width: 25%; }
-      th:nth-child(2), td:nth-child(2) { width: 20%; }
-      th:nth-child(3), td:nth-child(3) { width: 55%; }
+      th:nth-child(1), td:nth-child(1) { width: 24%; }
+      th:nth-child(2), td:nth-child(2) { width: 18%; }
+      th:nth-child(3), td:nth-child(3) { width: 42%; }
+      th:nth-child(4), td:nth-child(4) { width: 16%; }
       h1 { font-size: 18px; }
       #pricingDescription { font-size: 12px; }
     }
   </style>
 </head>
 <body>
-  <h1><center>Cennik ($USD)</center></h1>
-  <div id="pricingDescription" style="margin: 12px auto 24px auto; max-width: 600px; color: #fff; text-align: center; font-size: 17px; min-height: 32px;">
-Instancja = aplikacja form <strong>LUB</strong> walki, do wyboru.
-  </div>
+  <h1><center>Cennik i Platnosci ($USD)</center></h1>
+  <div id="pricingDescription" style="margin: 12px auto 24px auto; max-width: 760px; color: #fff; text-align: center; font-size: 17px; min-height: 32px;">PayPal jest obecnie dostepny tylko dla opcji Subskrybent.</div>
   <table>
-    <tr><th>Opcja</th><th>Cena</th><th>Opis</th></tr>
-    <tr class="subscriber-row"><td><strong>Plan Klubowy</strong></td><td>$25/miesiąc lub $240/rok</td><td>Nieograniczony dostęp do 2 instancji, idealny do treningów i małych wydarzeń.</td></tr>
-    <tr class="subscriber-row"><td><strong>Plan Organizatora</strong></td><td>$60/miesiąc lub $600/rok</td><td>Nieograniczony dostęp do 6 instancji, priorytetowe wsparcie, szkolenie, idealny dla średnich wydarzeń.</td></tr>
-    <tr class="subscriber-row"><td><strong>Dodatkowa Instancja (Subskrybenci)</strong></td><td>$30/wydarzenie</td><td>Dodaj dodatkowe instancje punktowania dla turniejów lub specjalnych wydarzeń.</td></tr>
-    <tr class="subscriber-row"><td><strong>Nieograniczony Passe Wydarzenia (Subskrybenci)</strong></td><td>$250/wydarzenie</td><td>Nieograniczone dodatkowe instancje punktowania dla jednego wydarzenia — idealne dla dużych wydarzeń i konfiguracji wieloringowych.</td></tr>
-    <tr class="non-subscriber-row"><td><strong>Pojedyncza Instancja (Nie-Subskrybenci)</strong></td><td>$50/wydarzenie</td><td>Płać za instancję punktowania dla nie-członków. Idealne do treningów lub małych wydarzeń.</td></tr>
-    <tr class="non-subscriber-row"><td><strong>Nieograniczony Passe Wydarzenia (Nie-Subskrybenci)</strong></td><td>$350/wydarzenie</td><td>Nieograniczone instancje, idealne dla dużych wydarzeń lub konfiguracji wieloringowych.</td></tr>
+    <tr><th>Opcja</th><th>Cena</th><th>Opis</th><th>PayPal</th></tr>
+    <tr><td><strong>Subskrybent</strong></td><td>$25/miesiac</td><td>Dostep 24/7 do dwoch wybranych aplikacji</td><td><a class="paypal-link" href="https://www.paypal.com/webapps/billing/plans/subscribe?plan_id=P-3SX09611CF132153YNDNVW5Y" target="_blank" rel="noopener noreferrer" title="subscriber"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr><td><strong>Male Wydarzenie</strong></td><td>$100</td><td>Do 4 aplikacji do uzycia podczas jednego wydarzenia</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/N73R9PNA4ZUSU" target="_blank" rel="noopener noreferrer" title="mini"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr><td><strong>Duze Wydarzenie</strong></td><td>$250</td><td>Dowolna liczba aplikacji potrzebnych na jedno wydarzenie</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/KAZVAY7VT6Y9N" target="_blank" rel="noopener noreferrer" title="unlimited"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr><td><strong>Wsparcie Rejestracji</strong></td><td>Duze Wydarzenie + $100</td><td>Hosting rejestracji oraz tworzenie drabinek/dywizji</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/6FGYWDMSQSEZ8" target="_blank" rel="noopener noreferrer" title="unlimited+"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
   </table>
 </body>
 </html>

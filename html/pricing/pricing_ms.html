@@ -6,22 +6,38 @@
   <style>
     body { background: #222; color: #fff; font-family: monospace; padding: 40px; }
     h1 { color: #00d4ff; }
-    table { width:90%; max-width:600px; margin:16px auto; color:#fff; border-collapse:collapse; }
+    table { width:95%; max-width:900px; margin:16px auto; color:#fff; border-collapse:collapse; table-layout:fixed; }
     th, td { padding: 8px 12px; }
     th { border-bottom:1px solid #00d4ff; text-align:left; }
     td { border-bottom:1px solid #333; }
-    .subscriber-row { background-color: rgba(0, 212, 255, 0.1); }
-    .non-subscriber-row { background-color: rgba(255, 165, 0, 0.1); }
+    th:nth-child(1), td:nth-child(1) { width: 22%; }
+    th:nth-child(2), td:nth-child(2) { width: 15%; }
+    th:nth-child(3), td:nth-child(3) { width: 45%; }
+    th:nth-child(4), td:nth-child(4) { width: 18%; text-align:center; }
+    tr:nth-child(even) { background-color: rgba(0, 212, 255, 0.08); }
     b { color: #00d4ff; }
+    .paypal-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 10px;
+      border: 1px solid #00d4ff;
+      border-radius: 6px;
+      text-decoration: none;
+      background: #ffd140;
+    }
+    .paypal-link:hover { filter: brightness(0.95); }
+    .paypal-logo { height: 16px; width: auto; display: block; }
     
     /* Mobile responsive styles */
     @media (max-width: 768px) {
       body { padding: 20px 10px; overflow-x: hidden; }
       table { width: 100%; max-width: none; margin: 16px 0; font-size: 14px; table-layout: fixed; }
       th, td { padding: 6px 8px; word-wrap: break-word; overflow-wrap: break-word; }
-      th:nth-child(1), td:nth-child(1) { width: 25%; }
-      th:nth-child(2), td:nth-child(2) { width: 20%; }
-      th:nth-child(3), td:nth-child(3) { width: 55%; }
+      th:nth-child(1), td:nth-child(1) { width: 24%; }
+      th:nth-child(2), td:nth-child(2) { width: 18%; }
+      th:nth-child(3), td:nth-child(3) { width: 42%; }
+      th:nth-child(4), td:nth-child(4) { width: 16%; }
       h1 { font-size: 24px; }
       #pricingDescription { font-size: 14px; margin: 8px auto 16px auto; }
     }
@@ -30,27 +46,24 @@
       body { padding: 15px 5px; overflow-x: hidden; }
       table { font-size: 11px; table-layout: fixed; }
       th, td { padding: 4px 6px; word-wrap: break-word; overflow-wrap: break-word; }
-      th:nth-child(1), td:nth-child(1) { width: 25%; }
-      th:nth-child(2), td:nth-child(2) { width: 20%; }
-      th:nth-child(3), td:nth-child(3) { width: 55%; }
+      th:nth-child(1), td:nth-child(1) { width: 24%; }
+      th:nth-child(2), td:nth-child(2) { width: 18%; }
+      th:nth-child(3), td:nth-child(3) { width: 42%; }
+      th:nth-child(4), td:nth-child(4) { width: 16%; }
       h1 { font-size: 18px; }
       #pricingDescription { font-size: 12px; }
     }
   </style>
 </head>
 <body>
-  <h1><center>Harga ($USD)</center></h1>
-  <div id="pricingDescription" style="margin: 12px auto 24px auto; max-width: 600px; color: #fff; text-align: center; font-size: 17px; min-height: 32px;">
-Instans = aplikasi bentuk <strong>ATAU</strong> sparring, pilihan anda.
-  </div>
+  <h1><center>Harga dan Pembayaran ($USD)</center></h1>
+  <div id="pricingDescription" style="margin: 12px auto 24px auto; max-width: 760px; color: #fff; text-align: center; font-size: 17px; min-height: 32px;">PayPal kini hanya tersedia untuk pilihan Pelanggan.</div>
   <table>
-    <tr><th>Pilihan</th><th>Harga</th><th>Penerangan</th></tr>
-    <tr class="subscriber-row"><td><strong>Pelan Kelab</strong></td><td>$25/bulan atau $240/tahun</td><td>Akses tanpa had kepada 2 instans, sesuai untuk latihan dan acara kecil.</td></tr>
-    <tr class="subscriber-row"><td><strong>Pelan Penganjur</strong></td><td>$60/bulan atau $600/tahun</td><td>Akses tanpa had kepada 6 instans, sokongan keutamaan, latihan, sesuai untuk acara bersaiz sederhana.</td></tr>
-    <tr class="subscriber-row"><td><strong>Instans Tambahan (Pelanggan)</strong></td><td>$30/acara</td><td>Tambah instans penilaian tambahan untuk kejohanan atau acara khas.</td></tr>
-    <tr class="subscriber-row"><td><strong>Pas Acara Tanpa Had (Pelanggan)</strong></td><td>$250/acara</td><td>Instans penilaian tambahan tanpa had untuk satu acara — sesuai untuk acara besar dan susunan multi-ring.</td></tr>
-    <tr class="non-subscriber-row"><td><strong>Instans Tunggal (Bukan Pelanggan)</strong></td><td>$50/acara</td><td>Bayar per instans penilaian untuk bukan ahli. Sesuai untuk latihan atau acara kecil.</td></tr>
-    <tr class="non-subscriber-row"><td><strong>Pas Acara Tanpa Had (Bukan Pelanggan)</strong></td><td>$350/acara</td><td>Instans tanpa had, sesuai untuk acara besar atau susunan multi-ring.</td></tr>
+    <tr><th>Pilihan</th><th>Harga</th><th>Penerangan</th><th>PayPal</th></tr>
+    <tr><td><strong>Pelanggan</strong></td><td>$25/bulan</td><td>Akses 24/7 kepada dua aplikasi pilihan anda</td><td><a class="paypal-link" href="https://www.paypal.com/webapps/billing/plans/subscribe?plan_id=P-3SX09611CF132153YNDNVW5Y" target="_blank" rel="noopener noreferrer" title="subscriber"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr><td><strong>Acara Kecil</strong></td><td>$100</td><td>Sehingga 4 aplikasi untuk satu acara</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/N73R9PNA4ZUSU" target="_blank" rel="noopener noreferrer" title="mini"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr><td><strong>Acara Besar</strong></td><td>$250</td><td>Sebanyak aplikasi yang diperlukan untuk satu acara</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/KAZVAY7VT6Y9N" target="_blank" rel="noopener noreferrer" title="unlimited"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr><td><strong>Sokongan Pendaftaran</strong></td><td>Acara Besar + $100</td><td>Hosting pendaftaran dan pembinaan draw/division</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/6FGYWDMSQSEZ8" target="_blank" rel="noopener noreferrer" title="unlimited+"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
   </table>
 </body>
 </html>
