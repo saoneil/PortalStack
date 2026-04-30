@@ -52,7 +52,6 @@ app.use(bodyParser.json());
 app.use('/css', express.static(path.join(__dirname, 'css')));
 app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use('/js', express.static(path.join(__dirname, 'js')));
-app.use('/html', express.static(path.join(__dirname, 'html')));
 
 
 
@@ -126,6 +125,13 @@ const signupLimiter = rateLimit({
   skipSuccessfulRequests: true
 });
 
+// public interaction log rate limiter
+const publicLogLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 100,
+  message: 'Too many public log requests. Please try again shortly.'
+});
+
 // auth middleware
 function requireLogin(req, res, next) {
   if (req.session.loggedIn) {
@@ -134,6 +140,10 @@ function requireLogin(req, res, next) {
     res.redirect('/');
   }
 }
+
+app.use('/html/pricing', requireLogin, express.static(path.join(__dirname, 'html', 'pricing')));
+app.use('/html/payments', requireLogin, express.static(path.join(__dirname, 'html', 'payments')));
+app.use('/html/release_notes', requireLogin, express.static(path.join(__dirname, 'html', 'release_notes')));
 
 
 
@@ -221,7 +231,22 @@ app.post('/signup', signupLimiter, async (req, res) => {
 });
 
 app.get('/landing', requireLogin, (req, res) => {
+  res.set({
+    'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+    Pragma: 'no-cache',
+    Expires: '0'
+  });
   res.sendFile(path.join(__dirname, 'html', 'landing.html'));
+});
+
+app.get('/html/registration_successful.html', (req, res) => {
+  res.set({
+    'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+    Pragma: 'no-cache',
+    Expires: '0',
+    'X-Robots-Tag': 'noindex, nofollow, noarchive'
+  });
+  res.sendFile(path.join(__dirname, 'html', 'registration_successful.html'));
 });
 
 app.get('/privacy', (req, res) => {
@@ -267,16 +292,28 @@ app.get('/api/profile', requireLogin, (req, res) => {
   });
 });
 
-// API endpoint to log client-side interactions
-app.post('/api/log', (req, res) => {
-  const userId = (req.session && req.session.username) || req.body.userId || null;
+// Public interaction logs are limited to unauthenticated entry pages.
+app.post('/api/public-log', publicLogLimiter, (req, res) => {
   const interaction = req.body.interaction || {};
-  insertLog(userId, interaction, req.ip);
+  const publicPages = ['index', 'signup', 'registration_successful'];
+
+  if (!publicPages.includes(interaction.page)) {
+    return res.status(403).json({ error: 'Public logging is not allowed for this page' });
+  }
+
+  insertLog(null, interaction, req.ip);
+  res.json({ ok: true });
+});
+
+// API endpoint to log authenticated client-side interactions
+app.post('/api/log', requireLogin, (req, res) => {
+  const interaction = req.body.interaction || {};
+  insertLog(req.session.username, interaction, req.ip);
   res.json({ ok: true });
 });
 
 // API endpoint to list release notes HTML files
-app.get('/api/release-notes-list', (req, res) => {
+app.get('/api/release-notes-list', requireLogin, (req, res) => {
   const notesDir = path.join(__dirname, 'html', 'release_notes');
   fs.readdir(notesDir, (err, files) => {
     if (err) {

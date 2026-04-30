@@ -1,6 +1,6 @@
 function logInteraction(action, details) {
   var payload = { interaction: Object.assign({ action: action, page: 'index' }, details || {}) };
-  fetch('/api/log', {
+  fetch('/api/public-log', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
