@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Secure client login for the PMA Club Portal. Authorized users only.">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Club Portal | Secure Login</title>
+  <link rel="icon" type="image/png" href="/images/PMA_Score_8.png">
+  <link rel="stylesheet" href="/css/index.css">
+</head>
+<body>
+  <div class="center-container">
+    <h1 class="portal-title">club portal</h1>
+
+    <form id="loginForm" class="form" action="/index" method="post" autocomplete="on">
+      <div class="control block-cube block-input">
+        <input id="login-client" type="text" name="client" placeholder="client name" required autocomplete="organization" aria-label="Assigned client name" />
+        <div class="bg-top"><div class="bg-inner"></div></div>
+        <div class="bg-right"><div class="bg-inner"></div></div>
+        <div class="bg"><div class="bg-inner"></div></div>
+      </div>
+
+      <div class="control block-cube block-input">
+        <input id="login-username" type="text" name="username" placeholder="username" required autocomplete="username" aria-label="Username or email" />
+        <div class="bg-top"><div class="bg-inner"></div></div>
+        <div class="bg-right"><div class="bg-inner"></div></div>
+        <div class="bg"><div class="bg-inner"></div></div>
+      </div>
+
+      <div class="control block-cube block-input">
+        <input id="login-password" type="password" name="password" placeholder="password" required autocomplete="current-password" aria-label="Password" />
+        <div class="bg-top"><div class="bg-inner"></div></div>
+        <div class="bg-right"><div class="bg-inner"></div></div>
+        <div class="bg"><div class="bg-inner"></div></div>
+      </div>
+
+      <button class="btn block-cube block-cube-hover" type="submit">
+        <div class="bg-top"><div class="bg-inner"></div></div>
+        <div class="bg-right"><div class="bg-inner"></div></div>
+        <div class="bg"><div class="bg-inner"></div></div>
+        <div class="text">login</div>
+      </button>
+    </form>
+
+    <div class="form">
+      <a id="createAccountBtn" class="btn btn-secondary block-cube block-cube-hover" href="/signup">
+        <div class="bg-top"><div class="bg-inner"></div></div>
+        <div class="bg-right"><div class="bg-inner"></div></div>
+        <div class="bg"><div class="bg-inner"></div></div>
+        <div class="text">create account</div>
+      </a>
+    </div>
+
+    <div class="form">
+      <a id="backToPortalBtn" class="btn block-cube block-cube-hover" href="/">
+        <div class="bg-top"><div class="bg-inner"></div></div>
+        <div class="bg-right"><div class="bg-inner"></div></div>
+        <div class="bg"><div class="bg-inner"></div></div>
+        <div class="text">← back to portal</div>
+      </a>
+    </div>
+
+    <div class="trust-footer" aria-label="Legal and security information">
+      <p>Official PMA access portal for approved club clients. Never share credentials. 
+        If this page is unexpected, close it and contact your PMA administrator. 
+        By continuing, you agree to the <a href="/terms">Terms</a> 
+        and <a href="/privacy">Privacy Policy</a>.</p>
+    </div>
+  </div>
+
+  <script src="/js/login.js" defer></script>
+</body>
+</html>

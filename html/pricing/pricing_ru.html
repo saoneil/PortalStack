@@ -28,6 +28,13 @@
     }
     .paypal-link:hover { filter: brightness(0.95); }
     .paypal-logo { height: 16px; width: auto; display: block; }
+    .email-link {
+      color: #00d4ff;
+      text-decoration: underline;
+      font-weight: bold;
+    }
+    .email-link:hover { filter: brightness(1.15); }
+
     
     /* Mobile responsive styles */
     @media (max-width: 768px) {
@@ -53,17 +60,23 @@
       h1 { font-size: 18px; }
       #pricingDescription { font-size: 12px; }
     }
-  </style>
+      .pricing-custom-row td,
+    .pricing-custom-cell {
+      text-align: center !important;
+      border-left: none !important;
+      border-right: none !important;
+    }
+</style>
 </head>
 <body>
-  <h1><center>Цены и платежи ($USD)</center></h1>
-  <div id="pricingDescription" style="margin: 12px auto 24px auto; max-width: 760px; color: #fff; text-align: center; font-size: 17px; min-height: 32px;">Сейчас PayPal доступен только для варианта Подписчик.</div>
+  <h1><center>Цены ($USD)</center></h1>
   <table>
-    <tr><th>Опция</th><th>Цена</th><th>Описание</th><th>PayPal</th></tr>
-    <tr><td><strong>Подписчик</strong></td><td>$25/месяц</td><td>Круглосуточный доступ к двум выбранным приложениям</td><td><a class="paypal-link" href="https://www.paypal.com/webapps/billing/plans/subscribe?plan_id=P-3SX09611CF132153YNDNVW5Y" target="_blank" rel="noopener noreferrer" title="subscriber"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
-    <tr><td><strong>Малое событие</strong></td><td>$100</td><td>До 4 приложений для использования в одном событии</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/N73R9PNA4ZUSU" target="_blank" rel="noopener noreferrer" title="mini"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
-    <tr><td><strong>Крупное событие</strong></td><td>$250</td><td>Любое количество приложений, необходимое для одного события</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/KAZVAY7VT6Y9N" target="_blank" rel="noopener noreferrer" title="unlimited"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
-    <tr><td><strong>Поддержка регистрации</strong></td><td>Крупное событие + $100</td><td>Хостинг регистрации и создание сеток/дивизионов</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/6FGYWDMSQSEZ8" target="_blank" rel="noopener noreferrer" title="unlimited+"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr><th>Вариант</th><th>Цена</th><th>Описание</th><th>PayPal</th></tr>
+    <tr><td><strong>Подписчик</strong></td><td>$25/месяц</td><td>Круглосуточный доступ к 1 приложению судейства</td><td><a class="paypal-link" href="https://www.paypal.com/webapps/billing/plans/subscribe?plan_id=P-3SX09611CF132153YNDNVW5Y" target="_blank" rel="noopener noreferrer" title="subscriber"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr><td><strong>Малое событие</strong></td><td>$150</td><td>Доступ к 2 приложениям судейства для одного события.</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/N73R9PNA4ZUSU" target="_blank" rel="noopener noreferrer" title="small-event"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr><td><strong>Крупное событие</strong></td><td>$300</td><td>Неограниченное число приложений судейства для одного события, плюс базовое создание дивизионов и управление событиями.</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/KAZVAY7VT6Y9N" target="_blank" rel="noopener noreferrer" title="large-event"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr><td><strong>Крупное событие<br>+<br>Инструменты организатора</strong></td><td>$450</td><td>Неограниченное число приложений судейства для одного события, плюс расширенное создание дивизионов, live-расписание события и сохранение/повторное использование дивизионов, группировок, сеток и расписаний на событие.</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/6FGYWDMSQSEZ8" target="_blank" rel="noopener noreferrer" title="large-event-organizer"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr class="pricing-custom-row"><td colspan="4" class="pricing-custom-cell">По индивидуальным функциям и ценам, пожалуйста, <a class="email-link" href="mailto:performance.ma.can@gmail.com?subject=PMA%20Score%20custom%20pricing%20inquiry">свяжитесь с нами</a></td></tr>
   </table>
 </body>
 </html>

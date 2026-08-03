@@ -28,6 +28,13 @@
     }
     .paypal-link:hover { filter: brightness(0.95); }
     .paypal-logo { height: 16px; width: auto; display: block; }
+    .email-link {
+      color: #00d4ff;
+      text-decoration: underline;
+      font-weight: bold;
+    }
+    .email-link:hover { filter: brightness(1.15); }
+
     
     /* Mobile responsive styles */
     @media (max-width: 768px) {
@@ -53,17 +60,23 @@
       h1 { font-size: 18px; }
       #pricingDescription { font-size: 12px; }
     }
-  </style>
+      .pricing-custom-row td,
+    .pricing-custom-cell {
+      text-align: center !important;
+      border-left: none !important;
+      border-right: none !important;
+    }
+</style>
 </head>
 <body>
-  <h1><center>Precios y Pagos ($USD)</center></h1>
-  <div id="pricingDescription" style="margin: 12px auto 24px auto; max-width: 760px; color: #fff; text-align: center; font-size: 17px; min-height: 32px;">El pago por PayPal esta habilitado solo para Suscriptor por ahora.</div>
+  <h1><center>Precios ($USD)</center></h1>
   <table>
     <tr><th>Opcion</th><th>Precio</th><th>Descripcion</th><th>PayPal</th></tr>
-    <tr><td><strong>Suscriptor</strong></td><td>$25/mes</td><td>Acceso 24/7 a dos aplicaciones de su eleccion</td><td><a class="paypal-link" href="https://www.paypal.com/webapps/billing/plans/subscribe?plan_id=P-3SX09611CF132153YNDNVW5Y" target="_blank" rel="noopener noreferrer" title="subscriber"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
-    <tr><td><strong>Evento Pequeno</strong></td><td>$100</td><td>Hasta 4 aplicaciones para usar durante un solo evento</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/N73R9PNA4ZUSU" target="_blank" rel="noopener noreferrer" title="mini"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
-    <tr><td><strong>Evento Grande</strong></td><td>$250</td><td>Tantas aplicaciones como se necesiten para un solo evento</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/KAZVAY7VT6Y9N" target="_blank" rel="noopener noreferrer" title="unlimited"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
-    <tr><td><strong>Soporte de Registro</strong></td><td>Evento Grande + $100</td><td>Hosting de registro y creacion de cuadros/divisiones</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/6FGYWDMSQSEZ8" target="_blank" rel="noopener noreferrer" title="unlimited+"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr><td><strong>Suscriptor</strong></td><td>$25/mes</td><td>Acceso 24/7 a 1 aplicacion de puntuacion</td><td><a class="paypal-link" href="https://www.paypal.com/webapps/billing/plans/subscribe?plan_id=P-3SX09611CF132153YNDNVW5Y" target="_blank" rel="noopener noreferrer" title="subscriber"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr><td><strong>Evento Pequeno</strong></td><td>$150</td><td>Acceso a 2 aplicaciones de puntuacion para un solo evento.</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/N73R9PNA4ZUSU" target="_blank" rel="noopener noreferrer" title="small-event"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr><td><strong>Evento Grande</strong></td><td>$300</td><td>Aplicaciones de puntuacion ilimitados para un solo evento, mas creacion basica de divisiones y gestion de eventos.</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/KAZVAY7VT6Y9N" target="_blank" rel="noopener noreferrer" title="large-event"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr><td><strong>Evento Grande<br>+<br>Herramientas de Organizador</strong></td><td>$450</td><td>Aplicaciones de puntuacion ilimitados para un solo evento, mas creacion avanzada de divisiones, horario en vivo del evento, y guardar/reutilizar divisiones, agrupaciones, cuadros y horarios por evento.</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/6FGYWDMSQSEZ8" target="_blank" rel="noopener noreferrer" title="large-event-organizer"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr class="pricing-custom-row"><td colspan="4" class="pricing-custom-cell">Para funciones y precios personalizados, por favor <a class="email-link" href="mailto:performance.ma.can@gmail.com?subject=PMA%20Score%20custom%20pricing%20inquiry">contactenos</a></td></tr>
   </table>
 </body>
 </html>

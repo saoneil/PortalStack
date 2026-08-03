@@ -13,6 +13,12 @@
   <div class="center-wrapper">
     <h1><center>register</center></h1>
     <p>official registration for pre-approved PMA club users:</p>
+    <p class="request-access">
+      need access?
+      <a
+        href="mailto:performance.ma.can@gmail.com?subject=PMA%20Club%20Portal%20access%20request&body=Hello%2C%0A%0AI%20would%20like%20to%20request%20access%20to%20the%20PMA%20Club%20Portal.%0A%0AName%3A%0AClub%20%2F%20organization%3A%0AEmail%3A%0A%0AThank%20you."
+      >email me to request access</a>
+    </p>
 
     <form id="registerForm" class="signup-form" action="/signup" method="post">
       <div class="control block-cube">
@@ -47,7 +53,7 @@
       </button>
     </form>
 
-    <form id="backToLoginForm" class="signup-form" action="/" method="get">
+    <form id="backToLoginForm" class="signup-form" action="/login" method="get">
       <button class="btn block-cube block-cube-hover" type="submit">
         <div class="bg-top"><div class="bg-inner"></div></div>
         <div class="bg-right"><div class="bg-inner"></div></div>
@@ -57,9 +63,13 @@
     </form>
 
     <div class="trust-footer" aria-label="Legal and security information">
-      <p>Registration is limited to pre-approved client accounts. 
-        If you were not invited to register, return to login and contact your PMA administrator. 
-        By registering, you agree to the <a href="/terms">Terms</a> 
+      <p>Registration is limited to pre-approved client accounts.
+        If you were not invited to register,
+        <a
+          href="mailto:performance.ma.can@gmail.com?subject=PMA%20Club%20Portal%20access%20request&body=Hello%2C%0A%0AI%20would%20like%20to%20request%20access%20to%20the%20PMA%20Club%20Portal.%0A%0AName%3A%0AClub%20%2F%20organization%3A%0AEmail%3A%0A%0AThank%20you."
+        >email me to request access</a>
+        or return to login.
+        By registering, you agree to the <a href="/terms">Terms</a>
         and <a href="/privacy">Privacy Policy</a>.</p>
     </div>
   </div>

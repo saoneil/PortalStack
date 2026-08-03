@@ -26,6 +26,21 @@ p {
   color: #ddd;
 }
 
+.request-access {
+  margin: 0 0 4px;
+  max-width: 360px;
+}
+
+.request-access a {
+  color: #00d4ff;
+  text-decoration: underline;
+}
+
+.request-access a:hover,
+.request-access a:focus {
+  color: #7ae8ff;
+}
+
 .signup-form {
   width: 100%;
   max-width: 260px;

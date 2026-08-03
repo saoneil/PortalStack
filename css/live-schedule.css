@@ -1,0 +1,531 @@
+:root {
+  --live-bg: #f3f1ea;
+  --live-bg-deep: #e7e2d6;
+  --live-ink: #1a1c1e;
+  --live-muted: #5b6168;
+  --live-line: #c9c2b3;
+  --live-accent: #0b6e4f;
+  --live-accent-soft: #d7f0e5;
+  --live-warn: #9a3412;
+  --live-card: #fffcf5;
+  --live-shadow: 0 18px 40px rgba(26, 28, 30, 0.12);
+  --live-slot-h: 34px;
+  --live-time-w: 72px;
+}
+
+.live-schedule-page {
+  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top left, rgba(11, 110, 79, 0.08), transparent 40%),
+    linear-gradient(180deg, #f8f5ee 0%, var(--live-bg) 45%, var(--live-bg-deep) 100%);
+  color: var(--live-ink);
+  font-family: "DM Sans", sans-serif;
+}
+
+html:has(.live-schedule-page),
+body:has(.live-schedule-page) {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+.live-schedule-main {
+  max-width: 1600px;
+  height: 100%;
+  margin: 0 auto;
+  padding: 20px 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-sizing: border-box;
+  min-height: 0;
+}
+
+.live-schedule-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+}
+
+.live-kicker {
+  margin: 0 0 4px;
+  color: var(--live-accent);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.live-schedule-title-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+
+.live-schedule-title {
+  margin: 0;
+  color: var(--live-ink);
+  font-size: clamp(28px, 4vw, 42px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.live-schedule-subtitle {
+  margin: 0;
+  color: var(--live-muted);
+  font-size: clamp(16px, 2.2vw, 22px);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.live-schedule-top-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.live-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding: 10px 16px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.live-btn:hover {
+  transform: translateY(-1px);
+}
+
+.live-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.live-btn-primary {
+  background: var(--live-accent);
+  color: #fff;
+}
+
+.live-btn-secondary {
+  background: #fff;
+  color: var(--live-ink);
+  border-color: var(--live-line);
+}
+
+.live-btn-ghost {
+  background: transparent;
+  color: var(--live-muted);
+  border-color: transparent;
+}
+
+.live-panel {
+  background: var(--live-card);
+  border: 1px solid rgba(26, 28, 30, 0.08);
+  border-radius: 20px;
+  padding: 22px;
+  box-shadow: var(--live-shadow);
+}
+
+.live-panel-board {
+  padding: 16px;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.live-panel h2 {
+  margin: 0 0 8px;
+  color: var(--live-ink);
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.live-hint {
+  color: var(--live-muted);
+  font-size: 15px;
+  margin: 0 0 16px;
+}
+
+.live-error {
+  color: var(--live-warn);
+  margin-top: 12px;
+  font-weight: 700;
+}
+
+.live-field-label {
+  display: block;
+  color: var(--live-muted);
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.live-select {
+  width: 100%;
+  max-width: 560px;
+  background: #fff;
+  color: var(--live-ink);
+  border: 1px solid var(--live-line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.live-select-sm {
+  width: auto;
+  max-width: none;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
+.live-select-event {
+  min-width: min(360px, 70vw);
+  max-width: min(520px, 80vw);
+}
+
+.live-actions-row {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+}
+
+.live-viewer-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 0 4px;
+  flex: 0 0 auto;
+}
+
+.live-inline-label {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--live-muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.live-meta {
+  color: var(--live-muted);
+  font-size: 13px;
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.live-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 14px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.live-stage.is-readonly {
+  grid-template-columns: 1fr;
+}
+
+.live-board-wrap,
+.live-scratch {
+  min-height: 0;
+  height: 100%;
+  background: #fff;
+  border: 1px solid var(--live-line);
+  border-radius: 16px;
+  overflow: auto;
+}
+
+.live-board-wrap {
+  padding: 12px;
+  position: relative;
+}
+
+.live-schedule-page .live-board,
+.live-schedule-page .da-schedule-board.live-board {
+  overflow: visible;
+  min-height: 0;
+  height: auto;
+}
+
+.live-board-wrap.is-drop-target,
+.live-scratch.is-drop-target {
+  outline: 3px solid rgba(11, 110, 79, 0.45);
+  outline-offset: -3px;
+  background: var(--live-accent-soft);
+}
+
+.live-scratch {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.live-scratch-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-height: 120px;
+}
+
+.live-scratch-item {
+  background: var(--live-accent-soft);
+  border: 1px solid rgba(11, 110, 79, 0.28);
+  color: var(--live-ink);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-weight: 700;
+  cursor: grab;
+}
+
+.live-scratch-item.selected,
+.live-scratch-item:hover {
+  border-color: var(--live-accent);
+}
+
+.live-scratch-item.da-dragging {
+  opacity: 0.55;
+}
+
+.live-toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 10000;
+  background: var(--live-ink);
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 12px;
+  box-shadow: var(--live-shadow);
+  max-width: min(360px, calc(100vw - 40px));
+  font-weight: 700;
+}
+
+.live-toast.is-error {
+  background: #7f1d1d;
+}
+
+.live-context-menu {
+  position: fixed;
+  z-index: 10001;
+  min-width: 180px;
+  background: #fff;
+  border: 1px solid var(--live-line);
+  border-radius: 12px;
+  box-shadow: var(--live-shadow);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.live-context-menu[hidden] {
+  display: none !important;
+}
+
+.live-context-menu button {
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 700;
+  color: var(--live-ink);
+  cursor: pointer;
+}
+
+.live-context-menu button:hover {
+  background: var(--live-accent-soft);
+  color: var(--live-accent);
+}
+
+/* High-visibility board overrides */
+.live-schedule-page .da-schedule-timeline {
+  --da-sched-slot-h: var(--live-slot-h);
+  --da-sched-time-w: var(--live-time-w);
+  position: relative;
+  border: 1px solid var(--live-line);
+  border-radius: 14px;
+  background: #fffdf8;
+  min-width: max(100%, calc(var(--da-sched-time-w) + var(--da-sched-cols, 3) * 180px));
+}
+
+.live-now-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  margin-top: -1px;
+  background: #c2410c;
+  box-shadow: 0 0 0 1px rgba(194, 65, 12, 0.2);
+  z-index: 6;
+  pointer-events: none;
+}
+
+.live-now-line::before {
+  content: attr(data-label);
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #c2410c;
+  color: #fff;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.live-now-line[hidden] {
+  display: none !important;
+}
+
+.live-schedule-page .da-schedule-timeline-corner,
+.live-schedule-page .da-schedule-timeline-ring-head {
+  color: var(--live-ink);
+  background: #f0ebe1;
+  border-bottom: 1px solid var(--live-line);
+  border-right: 1px solid var(--live-line);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.live-schedule-page .da-schedule-time-axis {
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(var(--da-sched-slot-h) - 1px),
+      rgba(26, 28, 30, 0.08) calc(var(--da-sched-slot-h) - 1px),
+      rgba(26, 28, 30, 0.08) var(--da-sched-slot-h)
+    );
+}
+
+.live-schedule-page .da-schedule-time-tick {
+  color: var(--live-muted);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.live-schedule-page .da-schedule-ring-lane {
+  border-right: 1px solid var(--live-line);
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(var(--da-sched-slot-h) - 1px),
+      rgba(26, 28, 30, 0.05) calc(var(--da-sched-slot-h) - 1px),
+      rgba(26, 28, 30, 0.05) var(--da-sched-slot-h)
+    );
+}
+
+.live-schedule-page .da-schedule-block {
+  left: 6px;
+  right: 6px;
+  padding: 3px 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(11, 110, 79, 0.35);
+  border-left: 5px solid var(--live-accent);
+  background: linear-gradient(180deg, #ffffff 0%, #eef8f3 100%);
+  color: var(--live-ink);
+  box-shadow: 0 6px 14px rgba(26, 28, 30, 0.08);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.live-schedule-page .da-schedule-block strong {
+  color: var(--live-ink);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.12;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.live-schedule-page .da-schedule-block[data-slots]:not([data-slots="1"]):not([data-slots="2"]) strong {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.live-schedule-page .da-schedule-block[data-slots="1"],
+.live-schedule-page .da-schedule-block[data-slots="2"] {
+  padding: 1px 5px;
+  gap: 0;
+}
+
+.live-schedule-page .da-schedule-block span {
+  color: var(--live-muted);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.live-schedule-page .da-schedule-block.is-selected {
+  outline: 2px solid var(--live-accent);
+  box-shadow: 0 0 0 3px rgba(11, 110, 79, 0.18), 0 8px 18px rgba(26, 28, 30, 0.12);
+}
+
+.live-schedule-page .da-schedule-block.da-dragging {
+  opacity: 0.5;
+}
+
+@media (max-width: 900px) {
+  .live-stage:not(.is-readonly) {
+    grid-template-columns: 1fr;
+  }
+
+  .live-schedule-main {
+    padding: 18px 14px 40px;
+  }
+}

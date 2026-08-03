@@ -8,20 +8,22 @@
   <link rel="stylesheet" href="css/landing.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
-    /* Ensure pricing tables fit on mobile regardless of embedded content language */
-    #pricingOverlay table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-    #pricingOverlay th, #pricingOverlay td { padding: 8px 10px; word-break: break-word; overflow-wrap: anywhere; }
-    #pricingOverlay h1 { font-size: 24px; }
-    #pricingOverlay #pricingDescription { font-size: 14px; }
+    /* Larger pricing modal — same layout, bigger type */
+    #pricingOverlay table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0; }
+    #pricingOverlay th, #pricingOverlay td {
+      padding: 10px 12px;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      font-size: 16px;
+      line-height: 1.35;
+    }
+    #pricingOverlay h1 { display: none; }
     @media (max-width: 768px) {
-      #pricingOverlay th, #pricingOverlay td { padding: 6px 8px; }
-      .lang-select-row { margin-top: 20px !important; }
+      #pricingOverlay th, #pricingOverlay td { padding: 7px 8px; font-size: 14px; }
     }
     @media (max-width: 480px) {
-      #pricingOverlay th, #pricingOverlay td { padding: 4px 6px; font-size: 12px; }
-      #pricingOverlay h1 { font-size: 18px; }
-      #pricingOverlay #pricingDescription { font-size: 12px; }
-      .lang-select-row { margin-top: 20px !important; }
+      #pricingOverlay th, #pricingOverlay td { padding: 5px 6px; font-size: 12px; }
+      #pricingOverlay .paypal-logo { height: 34px !important; }
     }
   </style>
 </head>
@@ -32,14 +34,50 @@
   </div>
 
   <div id="clientHeader" style="display:flex; justify-content:center; align-items:center; gap:10px; margin-top:24px;">
-    <button id="openPricingPaymentsBtn" class="action-btn ellipsis-btn"><span class="ellipsis-text">&nbsp;&nbsp;&nbsp;</span></button>
+    <button id="openPricingPaymentsBtn" class="action-btn ellipsis-btn" hidden><span class="ellipsis-text">&nbsp;&nbsp;&nbsp;</span></button>
     <div id="profileLabel" style="text-align:center; color:#fff; font-size:28px; font-weight:bold; display:none; text-shadow: 0 0 10px #00d4ff55, 0 0 20px #00d4ff55;">
       Client: <span id="profileClientName" style="color:#00d4ff; text-shadow: 0 0 10px #00d4ff88, 0 0 20px #00d4ff55;"></span>
     </div>
   </div>
 
+  <div id="loggedInUser" class="logged-in-user" hidden>user: <span id="loggedInUsername"></span></div>
+
   <div id="release-notes-section" style="text-align:center; margin-top:16px;">
     <button id="openReleaseNotesBtn" class="action-btn" style="margin-right:16px; display:none;">release notes/user guide</button>
+  </div>
+
+  <div id="organizerToolsSection" hidden>
+    <div class="scoring-system-text">organizer tools:</div>
+    <div class="scoring-table-container">
+      <table id="organizerToolsGrid">
+        <tr>
+          <th>Type</th>
+          <th>Tool</th>
+        </tr>
+        <tr>
+          <td>Events</td>
+          <td>
+            <a href="#" id="openEventCreationBtn">Event Creation</a>
+            -
+            <a href="#" id="openEventRegistrationBtn">Event Management</a>
+          </td>
+        </tr>
+        <tr>
+          <td>Division Creation Tool</td>
+          <td>
+            <a href="#" id="openDivisionCreationToolBtn">Basic</a>
+            -
+            <a href="/division-advanced" id="openAdvancedDivisionCreationBtn">Advanced</a>
+          </td>
+        </tr>
+        <tr>
+          <td>Live Event Schedule</td>
+          <td>
+            <a href="/live-schedule" id="openLiveEventScheduleBtn" target="_blank" rel="noopener noreferrer">Open</a>
+          </td>
+        </tr>
+      </table>
+    </div>
   </div>
 
   <!-- <h2 class="heading">please select a scoring system to continue:</h2> -->
@@ -64,32 +102,354 @@
     </div>
   </div>
 
-  <div id="pricingOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:10000;">
-    <div style="background:rgba(33,33,33,0.95); padding:32px 40px; border-radius:16px; width:95vw; max-width:1000px; max-height:80vh; overflow-y:auto; position:relative; box-shadow:0 0 40px #00d4ff55;">
-      <button id="closePricingOverlayBtn" style="position:absolute; top:16px; right:16px; background:none; border:none; color:#fff; font-size:28px; cursor:pointer;">✕</button>
-      <div class="lang-select-row">
-        <label for="pricingLanguageSelect">Language:</label>
-        <select id="pricingLanguageSelect" aria-label="Select pricing language">
-          <option value="en">English</option>
-          <option value="es">Espanol</option>
-          <option value="fr">Francais</option>
-          <option value="it">Italiano</option>
-          <option value="ja">日本語</option>
-          <option value="pl">Polski</option>
-          <option value="nl">Nederlands</option>
-          <option value="ms">Bahasa Melayu</option>
-          <option value="ru">Русский</option>
-        </select>
+  <div id="pricingOverlay" class="pricing-overlay-landing" style="display:none;">
+    <div class="pricing-modal-landing" role="dialog" aria-modal="true" aria-labelledby="pricingModalTitle">
+      <button id="closePricingOverlayBtn" class="modal-close-btn" type="button" aria-label="Close payments">✕</button>
+      <div class="pricing-modal-header">
+        <h2 id="pricingModalTitle" class="modal-title">payments</h2>
+        <div class="lang-select-row">
+          <label for="pricingLanguageSelect">Language:</label>
+          <select id="pricingLanguageSelect" aria-label="Select pricing language">
+            <option value="en">English</option>
+            <option value="es">Espanol</option>
+            <option value="fr">Francais</option>
+            <option value="it">Italiano</option>
+            <option value="ja">日本語</option>
+            <option value="pl">Polski</option>
+            <option value="nl">Nederlands</option>
+            <option value="ms">Bahasa Melayu</option>
+            <option value="ru">Русский</option>
+          </select>
+        </div>
       </div>
-      <div id="pricingEnglish" style="margin-top:32px; color:#fff; font-size:18px;"></div>
-      <div id="pricingSpanish" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
-      <div id="pricingFrench" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
-      <div id="pricingItalian" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
-      <div id="pricingJapanese" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
-      <div id="pricingPolish" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
-      <div id="pricingDutch" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
-      <div id="pricingMalay" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
-      <div id="pricingRussian" style="margin-top:32px; color:#fff; font-size:18px; display:none;"></div>
+      <div class="pricing-modal-body">
+        <div id="pricingEnglish" class="pricing-lang-panel"></div>
+        <div id="pricingSpanish" class="pricing-lang-panel" style="display:none;"></div>
+        <div id="pricingFrench" class="pricing-lang-panel" style="display:none;"></div>
+        <div id="pricingItalian" class="pricing-lang-panel" style="display:none;"></div>
+        <div id="pricingJapanese" class="pricing-lang-panel" style="display:none;"></div>
+        <div id="pricingPolish" class="pricing-lang-panel" style="display:none;"></div>
+        <div id="pricingDutch" class="pricing-lang-panel" style="display:none;"></div>
+        <div id="pricingMalay" class="pricing-lang-panel" style="display:none;"></div>
+        <div id="pricingRussian" class="pricing-lang-panel" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="eventRegistrationOverlay" class="large-modal-overlay">
+    <div class="large-modal-content">
+      <button id="closeEventRegistrationBtn" class="modal-close-btn">✕</button>
+      <h2 class="modal-title">event management</h2>
+      
+      <div id="eventRegEmptyState" style="display:none; text-align:center; color:#aaa; font-size:18px; margin:40px 0;">
+        you have no events
+      </div>
+      
+      <div id="eventRegContent" style="display:none;">
+        <div class="event-select-container">
+          <label for="eventRegSelect" style="color:#00d4ff; font-size:16px; margin-right:12px;">Select Event:</label>
+          <select id="eventRegSelect" class="event-select" aria-label="Select event">
+            <option value="">-- choose an event --</option>
+          </select>
+        </div>
+        
+        <div id="eventDetailsContainer" style="display:none; margin-top:24px; padding-top:24px; border-top:1px solid rgba(0,212,255,0.25);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 style="color:#00d4ff; margin:0;">event details</h3>
+            <button id="downloadQrBtn" class="action-btn" style="margin:0;">download QR code</button>
+          </div>
+          
+          <form id="eventEditForm" class="event-form" style="margin-bottom:24px;">
+            <div class="form-group">
+              <label for="editEventName">Event Name *</label>
+              <input type="text" id="editEventName" maxlength="100" required />
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="editEventDateStart">Event Start Date *</label>
+                <input type="date" id="editEventDateStart" required />
+              </div>
+              <div class="form-group">
+                <label for="editEventDateEnd">Event End Date *</label>
+                <input type="date" id="editEventDateEnd" required />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="editRegOpenDate">Registration Open Date *</label>
+                <input type="date" id="editRegOpenDate" required />
+              </div>
+              <div class="form-group">
+                <label for="editRegCloseDate">Registration Close Date *</label>
+                <input type="date" id="editRegCloseDate" required />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="editEventLocation">Event Location *</label>
+              <input type="text" id="editEventLocation" maxlength="100" required />
+            </div>
+
+            <div class="form-group">
+              <label>events</label>
+              <div id="editEventEventsCheckboxes" class="event-checkbox-grid">
+                <label class="event-checkbox-item"><input type="checkbox" name="editEventType" value="individual_patterns" /> individual patterns</label>
+                <label class="event-checkbox-item"><input type="checkbox" name="editEventType" value="individual_sparring" /> individual sparring</label>
+                <label class="event-checkbox-item"><input type="checkbox" name="editEventType" value="individual_special_technique" /> individual special technique</label>
+                <label class="event-checkbox-item"><input type="checkbox" name="editEventType" value="individual_power_test" /> individual power test</label>
+                <label class="event-checkbox-item"><input type="checkbox" name="editEventType" value="team_patterns" /> team patterns</label>
+                <label class="event-checkbox-item"><input type="checkbox" name="editEventType" value="team_sparring" /> team sparring</label>
+                <label class="event-checkbox-item"><input type="checkbox" name="editEventType" value="team_special_technique" /> team special technique</label>
+                <label class="event-checkbox-item"><input type="checkbox" name="editEventType" value="team_power_test" /> team power test</label>
+                <label class="event-checkbox-item"><input type="checkbox" name="editEventType" value="pre_arranged_sparring" /> pre-arranged sparring</label>
+              </div>
+              <div class="custom-event-add-row">
+                <input type="text" id="editCustomEventInput" maxlength="40" placeholder="add custom event" />
+                <button type="button" id="editAddCustomEventBtn" class="action-btn custom-event-add-btn">add</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="editEventLink">Event Link (optional)</label>
+              <input type="text" id="editEventLink" maxlength="255" placeholder="https://example.com/event-info" />
+            </div>
+
+            <div class="form-group">
+              <label for="editEventContact">Event Contact Email (optional)</label>
+              <input type="email" id="editEventContact" maxlength="100" placeholder="contact@example.com" />
+            </div>
+
+            <div class="form-group">
+              <label for="editEventPoster">Event Poster (PNG, optional)</label>
+              <input type="file" id="editEventPoster" accept="image/png" />
+              <div id="currentPosterInfo" style="margin-top:8px; color:#aaa; font-size:12px;"></div>
+            </div>
+
+            <button type="submit" class="action-btn event-form-submit">
+              save changes
+            </button>
+          </form>
+        </div>
+        
+        <div id="regTableContainer" style="display:none; margin-top:24px; padding-top:24px; border-top:1px solid rgba(0,212,255,0.25);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 style="color:#00d4ff; margin:0;">registrations</h3>
+            <button id="downloadRegCsvBtn" class="action-btn" style="margin:0;">download CSV</button>
+          </div>
+          <div class="scrollable-table-wrapper">
+            <table id="regTable" class="reg-table"></table>
+          </div>
+          <div id="regEmptyMessage" style="display:none; text-align:center; color:#aaa; margin-top:20px; font-size:16px;">
+            no registrations found for this event
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="eventCreationOverlay" class="large-modal-overlay">
+    <div class="large-modal-content">
+      <button id="closeEventCreationBtn" class="modal-close-btn">✕</button>
+      <h2 class="modal-title">event creation</h2>
+
+      <form id="eventCreationForm" class="event-form">
+        <div class="form-group">
+          <label for="eventNameInput">Event Name *</label>
+          <input type="text" id="eventNameInput" name="eventName" maxlength="100" required />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="eventDateStartInput">Event Start Date *</label>
+            <input type="date" id="eventDateStartInput" name="eventDateStart" required />
+          </div>
+          <div class="form-group">
+            <label for="eventDateEndInput">Event End Date *</label>
+            <input type="date" id="eventDateEndInput" name="eventDateEnd" required />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="regOpenDateInput">Registration Open Date *</label>
+            <input type="date" id="regOpenDateInput" name="registrationOpenDate" required />
+          </div>
+          <div class="form-group">
+            <label for="regCloseDateInput">Registration Close Date *</label>
+            <input type="date" id="regCloseDateInput" name="registrationCloseDate" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="eventLocationInput">Event Location *</label>
+          <input type="text" id="eventLocationInput" name="eventLocation" maxlength="100" required />
+        </div>
+
+        <div class="form-group">
+          <label>events</label>
+          <div id="eventEventsCheckboxes" class="event-checkbox-grid">
+            <label class="event-checkbox-item"><input type="checkbox" name="eventType" value="individual_patterns" /> individual patterns</label>
+            <label class="event-checkbox-item"><input type="checkbox" name="eventType" value="individual_sparring" /> individual sparring</label>
+            <label class="event-checkbox-item"><input type="checkbox" name="eventType" value="individual_special_technique" /> individual special technique</label>
+            <label class="event-checkbox-item"><input type="checkbox" name="eventType" value="individual_power_test" /> individual power test</label>
+            <label class="event-checkbox-item"><input type="checkbox" name="eventType" value="team_patterns" /> team patterns</label>
+            <label class="event-checkbox-item"><input type="checkbox" name="eventType" value="team_sparring" /> team sparring</label>
+            <label class="event-checkbox-item"><input type="checkbox" name="eventType" value="team_special_technique" /> team special technique</label>
+            <label class="event-checkbox-item"><input type="checkbox" name="eventType" value="team_power_test" /> team power test</label>
+            <label class="event-checkbox-item"><input type="checkbox" name="eventType" value="pre_arranged_sparring" /> pre-arranged sparring</label>
+          </div>
+          <div class="custom-event-add-row">
+            <input type="text" id="customEventInput" maxlength="40" placeholder="add custom event" />
+            <button type="button" id="addCustomEventBtn" class="action-btn custom-event-add-btn">add</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="eventLinkInput">Event Link (optional)</label>
+          <input type="text" id="eventLinkInput" name="eventLink" maxlength="255" placeholder="https://example.com/event-info" />
+        </div>
+
+        <div class="form-group">
+          <label for="eventContactInput">Event Contact Email (optional)</label>
+          <input type="email" id="eventContactInput" name="eventContact" maxlength="100" placeholder="contact@example.com" />
+        </div>
+
+        <div class="form-group">
+          <label for="eventPosterInput">Event Poster (PNG, optional)</label>
+          <input type="file" id="eventPosterInput" name="eventPoster" accept="image/png" />
+        </div>
+
+        <button type="submit" class="action-btn event-form-submit">
+          submit event request
+        </button>
+      </form>
+
+      <div id="eventCreationSuccess" class="modal-placeholder-message" hidden>
+        <div class="modal-success-title">
+          thank you for creating the event!
+        </div>
+        <div class="modal-success-text">
+          your event request has been submitted successfully.<br/>
+          it will be reviewed and become active, usually within 24-48 hours.
+        </div>
+        <button id="createAnotherEventBtn" class="action-btn" style="margin-top:24px;">
+          create another event
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="basicDivisionCreationOverlay" class="large-modal-overlay">
+    <div class="large-modal-content">
+      <button id="closeBasicDivisionCreationBtn" class="modal-close-btn">✕</button>
+      <h2 class="modal-title">basic division creation</h2>
+
+      <div class="division-creation-form">
+        <div class="form-field-row">
+          <div class="form-field">
+            <label for="divisionName">Division Name</label>
+            <input type="text" id="divisionName" maxlength="100" value="Test Division">
+          </div>
+
+          <div class="form-field">
+            <label for="divisionType">Division Type</label>
+            <select id="divisionType">
+              <option value="single elimination" selected>single elimination</option>
+              <option value="round robin">round robin</option>
+              <option value="Premier League">Premier League</option>
+              <option value="list">list</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-field-row">
+          <div class="form-field">
+            <label for="ringNumber">Ring Number</label>
+            <input type="text" id="ringNumber" maxlength="50" value="Ring 1">
+          </div>
+
+          <div class="form-field">
+            <label for="divisionSize">Division Size</label>
+            <input type="text" id="divisionSize" readonly value="4">
+          </div>
+        </div>
+
+        <div class="athletes-section">
+          <div class="athletes-header">
+            <h3>Athletes</h3>
+            <div class="athlete-controls">
+              <button type="button" id="addAthleteBtn" class="control-btn">+</button>
+              <button type="button" id="removeAthleteBtn" class="control-btn">−</button>
+            </div>
+          </div>
+          <div id="athleteEntries"></div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" id="clearDivisionBtn" class="secondary-btn">Clear</button>
+          <button type="button" id="confirmDivisionBtn" class="primary-btn">Create Division</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="complexDivisionModal" class="confirm-dialog-overlay" hidden>
+    <div class="confirm-dialog-card" role="dialog" aria-labelledby="complexDivisionTitle" aria-modal="true">
+      <h2 id="complexDivisionTitle" class="confirm-dialog-title">Complex Divisions</h2>
+      <div class="confirm-dialog-body">
+        <p>In order to create more complex divisions, please contact <a href="mailto:performance.ma.can@gmail.com" style="color: #00d4ff; text-decoration: underline;">PMA Score</a>.</p>
+      </div>
+      <div class="confirm-dialog-actions">
+        <button id="closeComplexDivisionModal" class="confirm-dialog-btn confirm-dialog-btn-primary">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="advancedAccessDeniedModal" class="confirm-dialog-overlay" hidden>
+    <div class="confirm-dialog-card" role="dialog" aria-labelledby="advancedAccessDeniedTitle" aria-modal="true">
+      <h2 id="advancedAccessDeniedTitle" class="confirm-dialog-title">access denied</h2>
+      <div class="confirm-dialog-body">
+        <p>You currently don't have access to this feature. Please email <a href="mailto:performance.ma.can@gmail.com?subject=PMA%20Advanced%20Division%20Tool%20access%20request&body=Hello%2C%0A%0AI%20would%20like%20to%20request%20access%20to%20the%20Advanced%20Division%20Creation%20tool.%0A%0AName%3A%0AClub%20%2F%20organization%3A%0AEmail%3A%0A%0AThank%20you." style="color: #00d4ff; text-decoration: underline;">PMA</a> to request access.</p>
+      </div>
+      <div class="confirm-dialog-actions">
+        <button type="button" id="closeAdvancedAccessDeniedModal" class="confirm-dialog-btn confirm-dialog-btn-primary">ok</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="divisionCreatedModal" class="confirm-dialog-overlay" hidden>
+    <div class="confirm-dialog-card" role="dialog" aria-labelledby="divisionCreatedTitle" aria-modal="true">
+      <h2 id="divisionCreatedTitle" class="confirm-dialog-title">Division Created</h2>
+      <div class="confirm-dialog-body">
+        <p>Division created successfully! Would you like to clear the form and create another division?</p>
+      </div>
+      <div class="confirm-dialog-actions">
+        <button type="button" id="divisionCreatedNoBtn" class="action-btn confirm-dialog-btn">no</button>
+        <button type="button" id="divisionCreatedYesBtn" class="action-btn confirm-dialog-btn">yes, create another</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="eventCreationConfirmOverlay" class="confirm-dialog-overlay" hidden>
+    <div class="confirm-dialog-card" role="dialog" aria-labelledby="eventCreationConfirmTitle" aria-modal="true">
+      <h3 id="eventCreationConfirmTitle" class="confirm-dialog-title">confirm event submission</h3>
+      <p class="confirm-dialog-text">Submit this event for review? It will become active within 24-48 hours.</p>
+      <div class="confirm-dialog-actions">
+        <button type="button" id="eventCreationConfirmCancelBtn" class="action-btn confirm-dialog-btn">cancel</button>
+        <button type="button" id="eventCreationConfirmSubmitBtn" class="action-btn confirm-dialog-btn">confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="appMessageOverlay" class="confirm-dialog-overlay" hidden>
+    <div class="confirm-dialog-card" role="dialog" aria-labelledby="appMessageTitle" aria-modal="true">
+      <h3 id="appMessageTitle" class="confirm-dialog-title">notice</h3>
+      <p id="appMessageText" class="confirm-dialog-text"></p>
+      <div class="confirm-dialog-actions">
+        <button type="button" id="appMessageOkBtn" class="action-btn confirm-dialog-btn">ok</button>
+      </div>
     </div>
   </div>
 
@@ -117,21 +477,173 @@
     // Log landing page view
     logInteraction('page_view', { description: 'Landing page loaded' });
 
-    // Populate Profile label
-    fetch('/api/profile')
-      .then(res => {
-        if (!res.ok) throw new Error('Server error');
-        return res.json();
-      })
-      .then(profile => {
-        if (profile && profile.clientName) {
-          document.getElementById('profileClientName').textContent = profile.clientName;
-          document.getElementById('profileLabel').style.display = 'block';
+    var hasPrincipleUserAccess = false;
+    var hasPrincipleUserAdvancedAccess = false;
+    var principleUserCheckInFlight = null;
+    var PRINCIPLE_USER_OVERLAYS = [
+      'basicDivisionCreationOverlay',
+      'eventCreationOverlay',
+      'eventRegistrationOverlay',
+      'pricingOverlay'
+    ];
+
+    function applyPrincipleUserAccess(profile) {
+      hasPrincipleUserAccess = Number(profile && profile.principleUser) === 1;
+      hasPrincipleUserAdvancedAccess = Number(profile && profile.principleUserAdvanced) === 1;
+      var organizerSection = document.getElementById('organizerToolsSection');
+      if (organizerSection) {
+        organizerSection.hidden = !hasPrincipleUserAccess;
+      }
+      var pricingBtn = document.getElementById('openPricingPaymentsBtn');
+      if (pricingBtn) {
+        pricingBtn.hidden = !hasPrincipleUserAccess;
+      }
+
+      if (!hasPrincipleUserAccess) {
+        PRINCIPLE_USER_OVERLAYS.forEach(function(overlayId) {
+          var overlay = document.getElementById(overlayId);
+          if (overlay && overlay.style.display === 'flex') {
+            overlay.style.display = 'none';
+          }
+        });
+        var confirmOverlay = document.getElementById('eventCreationConfirmOverlay');
+        if (confirmOverlay) confirmOverlay.hidden = true;
+        var divisionCreatedModal = document.getElementById('divisionCreatedModal');
+        if (divisionCreatedModal) divisionCreatedModal.hidden = true;
+        var complexDivisionModal = document.getElementById('complexDivisionModal');
+        if (complexDivisionModal) complexDivisionModal.hidden = true;
+        var advancedAccessDeniedModal = document.getElementById('advancedAccessDeniedModal');
+        if (advancedAccessDeniedModal) advancedAccessDeniedModal.hidden = true;
+        var appMessageOverlay = document.getElementById('appMessageOverlay');
+        if (appMessageOverlay) appMessageOverlay.hidden = true;
+      }
+
+      return hasPrincipleUserAccess;
+    }
+
+    function refreshPrincipleUserAccess() {
+      if (principleUserCheckInFlight) return principleUserCheckInFlight;
+
+      principleUserCheckInFlight = fetch('/api/profile')
+        .then(function(res) {
+          if (!res.ok) throw new Error('Server error');
+          return res.json();
+        })
+        .then(function(profile) {
+          if (profile && profile.clientName) {
+            document.getElementById('profileClientName').textContent = profile.clientName;
+            document.getElementById('profileLabel').style.display = 'block';
+          }
+          if (profile && profile.username) {
+            document.getElementById('loggedInUsername').textContent = profile.username;
+            document.getElementById('loggedInUser').hidden = false;
+          }
+          return applyPrincipleUserAccess(profile);
+        })
+        .catch(function() {
+          applyPrincipleUserAccess(null);
+          return false;
+        })
+        .finally(function() {
+          principleUserCheckInFlight = null;
+        });
+
+      return principleUserCheckInFlight;
+    }
+
+    function showAdvancedAccessDeniedModal() {
+      var overlay = document.getElementById('advancedAccessDeniedModal');
+      if (!overlay) return;
+      overlay.hidden = false;
+    }
+
+    function hideAdvancedAccessDeniedModal() {
+      var overlay = document.getElementById('advancedAccessDeniedModal');
+      if (overlay) overlay.hidden = true;
+    }
+
+    function requirePrincipleUserAccess(onAllowed) {
+      refreshPrincipleUserAccess().then(function(allowed) {
+        if (!allowed) {
+          showAppMessage({
+            title: 'access denied',
+            message: 'You no longer have access to organizer tools.'
+          });
+          return;
         }
-      })
-      .catch(() => {
-        alert('Unable to load your profile. The database may be temporarily unavailable — please try refreshing the page.');
+        onAllowed();
       });
+    }
+
+    function requirePrincipleUserAdvancedAccess(onAllowed) {
+      refreshPrincipleUserAccess().then(function(allowed) {
+        if (!allowed) {
+          showAppMessage({
+            title: 'access denied',
+            message: 'You no longer have access to organizer tools.'
+          });
+          return;
+        }
+        if (!hasPrincipleUserAdvancedAccess) {
+          showAdvancedAccessDeniedModal();
+          return;
+        }
+        onAllowed();
+      });
+    }
+
+    function showAppMessage({ title = 'notice', message = '', okLabel = 'ok' } = {}) {
+      return new Promise(function(resolve) {
+        var overlay = document.getElementById('appMessageOverlay');
+        var titleEl = document.getElementById('appMessageTitle');
+        var textEl = document.getElementById('appMessageText');
+        var okBtn = document.getElementById('appMessageOkBtn');
+        if (!overlay || !okBtn) {
+          resolve();
+          return;
+        }
+
+        titleEl.textContent = title;
+        textEl.textContent = message;
+        okBtn.textContent = okLabel;
+        overlay.hidden = false;
+
+        var cleanup = function() {
+          overlay.hidden = true;
+          okBtn.removeEventListener('click', onOk);
+          overlay.removeEventListener('click', onOverlay);
+          document.removeEventListener('keydown', onKey);
+          resolve();
+        };
+        var onOk = function() { cleanup(); };
+        var onOverlay = function(evt) {
+          if (evt.target === overlay) cleanup();
+        };
+        var onKey = function(evt) {
+          if (evt.key === 'Escape' || evt.key === 'Enter') cleanup();
+        };
+
+        okBtn.addEventListener('click', onOk);
+        overlay.addEventListener('click', onOverlay);
+        document.addEventListener('keydown', onKey);
+        okBtn.focus();
+      });
+    }
+
+    // Initial permission check on page load / refresh
+    refreshPrincipleUserAccess().catch(function() {
+      showAppMessage({
+        title: 'profile unavailable',
+        message: 'Unable to load your profile. The database may be temporarily unavailable — please try refreshing the page.'
+      });
+    });
+
+    // Re-check permissions whenever the user clicks a button or tool link
+    document.addEventListener('click', function(e) {
+      var target = e.target.closest('button, a.action-btn, #organizerToolsGrid a, .action-btn');
+      if (!target) return;
+      refreshPrincipleUserAccess();
+    }, true);
 
     fetch('/api/grid-data')
       .then(res => {
@@ -146,12 +658,17 @@
         }
 
         // Only show columns whose name starts with "DISPLAY_"
+        // Scoreboard is folded into the App Instance cell, so hide its own column
         const displayPrefix = 'DISPLAY_';
-        const headers = Object.keys(data[0]).filter(h => h.startsWith(displayPrefix));
+        const headers = Object.keys(data[0]).filter(h =>
+          h.startsWith(displayPrefix) && h !== 'DISPLAY_Scoreboard'
+        );
         const headerRow = document.createElement('tr');
         headers.forEach(h => {
           const th = document.createElement('th');
-          th.textContent = h.substring(displayPrefix.length);
+          let label = h.substring(displayPrefix.length);
+          if (label === 'App Instance Name') label = 'App Instance';
+          th.textContent = label;
           headerRow.appendChild(th);
         });
         table.appendChild(headerRow);
@@ -160,24 +677,56 @@
           const tr = document.createElement('tr');
           const appName = row['App Instance Name'] || 'unknown';
           const appId = row['app_instance_id'] || null;
+          const controlPanelUrl = row['DISPLAY_App Instance Name'] || '';
+          const scoreboardUrl = row['DISPLAY_Scoreboard'] || '';
 
           headers.forEach(h => {
             const td = document.createElement('td');
             const label = h.substring(displayPrefix.length);
 
             if (label === 'App Instance Name') {
-              if (row[h]) {
+              const parts = [];
+
+              const nameSpan = document.createElement('span');
+              nameSpan.textContent = appName !== 'unknown' ? appName : 'App';
+              parts.push(nameSpan);
+
+              if (controlPanelUrl) {
                 const a = document.createElement('a');
-                a.href = row[h];
-                a.textContent = appName !== 'unknown' ? appName : 'app link';
+                a.href = controlPanelUrl;
+                a.textContent = 'Control Panel';
                 a.target = '_blank';
+                a.rel = 'noopener noreferrer';
                 a.addEventListener('click', function() {
                   logInteraction('app_click', { app_instance_id: appId, app_name: appName });
                 });
-                td.appendChild(a);
+                parts.push(a);
               } else {
-                td.textContent = appName;
+                const plain = document.createElement('span');
+                plain.textContent = 'Control Panel';
+                parts.push(plain);
               }
+
+              if (scoreboardUrl) {
+                const a = document.createElement('a');
+                a.href = scoreboardUrl;
+                a.textContent = 'Scoreboard';
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                a.addEventListener('click', function() {
+                  logInteraction('scoreboard_click', { app_instance_id: appId, app_name: appName });
+                });
+                parts.push(a);
+              } else {
+                const plain = document.createElement('span');
+                plain.textContent = 'Scoreboard';
+                parts.push(plain);
+              }
+
+              parts.forEach(function(part, index) {
+                if (index > 0) td.appendChild(document.createTextNode(' - '));
+                td.appendChild(part);
+              });
             } else if (label === 'Extra Links') {
               const linkField = row[h];
               if (linkField) {
@@ -324,10 +873,12 @@
     }
 
     function openPricingOverlay() {
-      logInteraction('open_pricing_payments', { description: 'Opened unified pricing/payments overlay' });
-      document.getElementById('pricingOverlay').style.display = 'flex';
-      document.getElementById('pricingLanguageSelect').value = 'en';
-      switchPricingLanguage('en');
+      requirePrincipleUserAccess(function() {
+        logInteraction('open_pricing_payments', { description: 'Opened unified pricing/payments overlay' });
+        document.getElementById('pricingOverlay').style.display = 'flex';
+        document.getElementById('pricingLanguageSelect').value = 'en';
+        switchPricingLanguage('en');
+      });
     }
 
     document.getElementById('openPricingPaymentsBtn').onclick = function() {
@@ -361,7 +912,7 @@
     });
 
     // Allow clicking the backdrop itself to close each modal.
-    ['qrOverlay', 'releaseNotesOverlay', 'pricingOverlay'].forEach(function(overlayId) {
+    ['qrOverlay', 'releaseNotesOverlay', 'pricingOverlay', 'eventCreationOverlay', 'eventRegistrationOverlay', 'basicDivisionCreationOverlay'].forEach(function(overlayId) {
       const overlay = document.getElementById(overlayId);
       if (!overlay) return;
       overlay.addEventListener('click', function(evt) {
@@ -374,7 +925,17 @@
     // Close any open overlay with Escape.
     document.addEventListener('keydown', function(evt) {
       if (evt.key !== 'Escape') return;
-      ['qrOverlay', 'releaseNotesOverlay', 'pricingOverlay'].forEach(function(overlayId) {
+      var advancedAccessDeniedModal = document.getElementById('advancedAccessDeniedModal');
+      if (advancedAccessDeniedModal && !advancedAccessDeniedModal.hidden) {
+        hideAdvancedAccessDeniedModal();
+        return;
+      }
+      var confirmOverlay = document.getElementById('eventCreationConfirmOverlay');
+      if (confirmOverlay && !confirmOverlay.hidden) {
+        hideEventCreationConfirm();
+        return;
+      }
+      ['qrOverlay', 'releaseNotesOverlay', 'pricingOverlay', 'eventCreationOverlay', 'eventRegistrationOverlay', 'basicDivisionCreationOverlay'].forEach(function(overlayId) {
         const overlay = document.getElementById(overlayId);
         if (overlay && overlay.style.display !== 'none') {
           overlay.style.display = 'none';
@@ -386,6 +947,781 @@
     document.getElementById('logoutForm').addEventListener('submit', function() {
       logInteraction('logout', { description: 'User clicked logout' });
     });
+
+    // ========== EVENT CREATION MODAL ==========
+    var pendingEventFormData = null;
+
+    function hideEventCreationConfirm() {
+      document.getElementById('eventCreationConfirmOverlay').hidden = true;
+      pendingEventFormData = null;
+    }
+
+    function resetEventCreationModal() {
+      document.getElementById('eventCreationForm').reset();
+      document.getElementById('eventCreationForm').hidden = false;
+      document.getElementById('eventCreationSuccess').hidden = true;
+      clearCustomEventCheckboxes(document.getElementById('eventEventsCheckboxes'));
+      const customInput = document.getElementById('customEventInput');
+      if (customInput) customInput.value = '';
+      hideEventCreationConfirm();
+    }
+
+    document.getElementById('openEventCreationBtn').onclick = function(e) {
+      e.preventDefault();
+      requirePrincipleUserAccess(function() {
+        logInteraction('open_event_creation', { description: 'Opened event creation modal' });
+        resetEventCreationModal();
+        document.getElementById('eventCreationOverlay').style.display = 'flex';
+      });
+    };
+
+    document.getElementById('closeEventCreationBtn').onclick = function() {
+      hideEventCreationConfirm();
+      closeOverlay('eventCreationOverlay', 'close_event_creation');
+    };
+
+    // ========== EVENT REGISTRATION MODAL ==========
+    let clientEvents = [];
+    let currentRegistrations = [];
+
+    document.getElementById('openEventRegistrationBtn').onclick = function(e) {
+      e.preventDefault();
+      requirePrincipleUserAccess(function() {
+        logInteraction('open_event_registration', { description: 'Opened event registration modal' });
+        document.getElementById('eventRegistrationOverlay').style.display = 'flex';
+        loadClientEvents();
+      });
+    };
+
+    document.getElementById('closeEventRegistrationBtn').onclick = function() {
+      closeOverlay('eventRegistrationOverlay', 'close_event_registration');
+    };
+
+    function loadClientEvents() {
+      fetch('/api/client-events')
+        .then(res => {
+          if (!res.ok) throw new Error('Server error');
+          return res.json();
+        })
+        .then(events => {
+          clientEvents = events || [];
+          if (clientEvents.length === 0) {
+            document.getElementById('eventRegEmptyState').style.display = 'block';
+            document.getElementById('eventRegContent').style.display = 'none';
+          } else {
+            document.getElementById('eventRegEmptyState').style.display = 'none';
+            document.getElementById('eventRegContent').style.display = 'block';
+            populateEventSelect();
+          }
+        })
+        .catch(() => {
+          showAppMessage({ title: 'unable to load events', message: 'Unable to load your events. Please try again.' });
+        });
+    }
+
+    function populateEventSelect() {
+      const select = document.getElementById('eventRegSelect');
+      select.innerHTML = '<option value="">-- choose an event --</option>';
+      
+      clientEvents.forEach(event => {
+        const option = document.createElement('option');
+        option.value = event.id;
+        const startDate = event.event_date_start ? new Date(event.event_date_start).toLocaleDateString() : '';
+        const status = event.active ? 'active' : 'pending';
+        option.textContent = event.event_name + ' (' + startDate + ') - ' + status;
+        select.appendChild(option);
+      });
+    }
+
+    const STANDARD_EVENT_TYPE_KEYS = [
+      'individual_patterns',
+      'individual_sparring',
+      'individual_special_technique',
+      'individual_power_test',
+      'team_patterns',
+      'team_sparring',
+      'team_special_technique',
+      'team_power_test',
+      'pre_arranged_sparring'
+    ];
+
+    function sanitizeCustomEventKey(value) {
+      return String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^a-z0-9_-]/g, '')
+        .replace(/_+/g, '_')
+        .replace(/^[_-]+|[_-]+$/g, '')
+        .slice(0, 40);
+    }
+
+    function formatEventTypeLabel(key) {
+      return String(key || '').replace(/_/g, ' ');
+    }
+
+    function clearCustomEventCheckboxes(container) {
+      if (!container) return;
+      container.querySelectorAll('.event-checkbox-item.custom-event-item').forEach(function(item) {
+        item.remove();
+      });
+    }
+
+    function addCustomEventCheckbox(container, checkboxName, key, checked) {
+      if (!container || !key) return false;
+      const existing = container.querySelector('input[value="' + key + '"]');
+      if (existing) {
+        existing.checked = !!checked;
+        return false;
+      }
+
+      const label = document.createElement('label');
+      label.className = 'event-checkbox-item custom-event-item';
+
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.name = checkboxName;
+      input.value = key;
+      input.checked = checked !== false;
+
+      label.appendChild(input);
+      label.appendChild(document.createTextNode(' ' + formatEventTypeLabel(key)));
+      container.appendChild(label);
+      return true;
+    }
+
+    function addCustomEventFromInput(inputId, containerId, checkboxName) {
+      const input = document.getElementById(inputId);
+      const container = document.getElementById(containerId);
+      if (!input || !container) return;
+
+      const key = sanitizeCustomEventKey(input.value);
+      if (!key) {
+        showAppMessage({ title: 'custom event required', message: 'Please enter a custom event name.' });
+        return;
+      }
+
+      addCustomEventCheckbox(container, checkboxName, key, true);
+      input.value = '';
+      input.focus();
+    }
+
+    document.getElementById('eventRegSelect').addEventListener('change', function() {
+      const eventId = this.value;
+      if (!eventId) {
+        document.getElementById('regTableContainer').style.display = 'none';
+        document.getElementById('eventDetailsContainer').style.display = 'none';
+        return;
+      }
+      
+      loadEventDetails(eventId);
+      loadRegistrations(eventId);
+    });
+
+    function loadEventDetails(eventId) {
+      const event = clientEvents.find(e => e.id == eventId);
+      if (!event) return;
+      
+      document.getElementById('eventDetailsContainer').style.display = 'block';
+      
+      document.getElementById('editEventName').value = event.event_name || '';
+      document.getElementById('editEventDateStart').value = event.event_date_start ? event.event_date_start.split('T')[0] : '';
+      document.getElementById('editEventDateEnd').value = event.event_date_end ? event.event_date_end.split('T')[0] : '';
+      document.getElementById('editRegOpenDate').value = event.registration_open_date ? event.registration_open_date.split('T')[0] : '';
+      document.getElementById('editRegCloseDate').value = event.registration_close_date ? event.registration_close_date.split('T')[0] : '';
+      document.getElementById('editEventLocation').value = event.event_location || '';
+      document.getElementById('editEventLink').value = event.event_link || '';
+      document.getElementById('editEventContact').value = event.event_contact || '';
+      
+      const editCheckboxContainer = document.getElementById('editEventEventsCheckboxes');
+      clearCustomEventCheckboxes(editCheckboxContainer);
+
+      const eventTypes = (event.event_events || '').split(';').map(function(part) {
+        return part.trim();
+      }).filter(Boolean);
+
+      document.querySelectorAll('#editEventEventsCheckboxes input[name="editEventType"]').forEach(checkbox => {
+        if (checkbox.closest('.custom-event-item')) return;
+        checkbox.checked = eventTypes.includes(checkbox.value);
+      });
+
+      eventTypes.forEach(function(key) {
+        if (STANDARD_EVENT_TYPE_KEYS.indexOf(key) === -1) {
+          addCustomEventCheckbox(editCheckboxContainer, 'editEventType', key, true);
+        }
+      });
+      
+      const posterInfo = document.getElementById('currentPosterInfo');
+      if (event.has_poster || (event.event_poster && event.event_poster.length > 0)) {
+        posterInfo.textContent = 'current poster is set';
+      } else {
+        posterInfo.textContent = 'no poster currently uploaded';
+      }
+    }
+
+    document.getElementById('eventEditForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const eventId = document.getElementById('eventRegSelect').value;
+      if (!eventId) {
+        showAppMessage({ title: 'select an event', message: 'Please select an event.' });
+        return;
+      }
+      
+      const selectedEventTypes = Array.from(
+        document.querySelectorAll('#editEventEventsCheckboxes input[name="editEventType"]:checked')
+      ).map(input => input.value);
+      
+      const formData = new FormData();
+      formData.append('eventName', document.getElementById('editEventName').value.trim());
+      formData.append('eventDateStart', document.getElementById('editEventDateStart').value);
+      formData.append('eventDateEnd', document.getElementById('editEventDateEnd').value);
+      formData.append('registrationOpenDate', document.getElementById('editRegOpenDate').value);
+      formData.append('registrationCloseDate', document.getElementById('editRegCloseDate').value);
+      formData.append('eventLocation', document.getElementById('editEventLocation').value.trim());
+      formData.append('eventEvents', JSON.stringify(selectedEventTypes));
+      
+      const eventLink = document.getElementById('editEventLink').value.trim();
+      if (eventLink) {
+        formData.append('eventLink', eventLink);
+      }
+
+      const eventContact = document.getElementById('editEventContact').value.trim();
+      if (eventContact) {
+        formData.append('eventContact', eventContact);
+      }
+
+      const posterFile = document.getElementById('editEventPoster').files[0];
+      if (posterFile) {
+        formData.append('eventPoster', posterFile);
+      }
+      
+      fetch('/api/client-events/' + eventId, {
+        method: 'POST',
+        body: formData
+      })
+        .then(res => res.json())
+        .then(result => {
+          if (result.success) {
+            showAppMessage({
+              title: 'event updated',
+              message: 'Event updated successfully. Changes will be reviewed and the event will be reactivated, usually within 24-48 hours.'
+            });
+            loadClientEvents();
+          } else {
+            showAppMessage({
+              title: 'update failed',
+              message: result.error || 'Unable to update event.'
+            });
+          }
+        })
+        .catch(() => {
+          showAppMessage({
+            title: 'update failed',
+            message: 'Unable to update event. Please try again.'
+          });
+        });
+    });
+
+    document.getElementById('downloadQrBtn').addEventListener('click', function() {
+      const eventId = document.getElementById('eventRegSelect').value;
+      if (!eventId) {
+        showAppMessage({ title: 'select an event', message: 'Please select an event.' });
+        return;
+      }
+      
+      logInteraction('download_qr_code', { eventId: eventId });
+      
+      const eventUrl = window.location.origin + '/registration/' + eventId;
+      
+      const qrContainer = document.createElement('div');
+      qrContainer.style.display = 'none';
+      document.body.appendChild(qrContainer);
+      
+      new QRCode(qrContainer, {
+        text: eventUrl,
+        width: 512,
+        height: 512,
+        correctLevel: QRCode.CorrectLevel.M
+      });
+      
+      setTimeout(function() {
+        const canvas = qrContainer.querySelector('canvas');
+        if (canvas) {
+          canvas.toBlob(function(blob) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const eventSelect = document.getElementById('eventRegSelect');
+            const eventName = eventSelect.options[eventSelect.selectedIndex].text.split('(')[0].trim();
+            const safeEventName = eventName.replace(/[^a-zA-Z0-9]/g, '_');
+            a.download = 'qr_code_' + safeEventName + '_' + eventId + '.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            document.body.removeChild(qrContainer);
+          });
+        } else {
+          showAppMessage({ title: 'qr code failed', message: 'Unable to generate QR code.' });
+          document.body.removeChild(qrContainer);
+        }
+      }, 100);
+    });
+
+    function loadRegistrations(eventId) {
+      fetch('/api/client-events/' + eventId + '/registrations')
+        .then(res => {
+          if (!res.ok) throw new Error('Server error');
+          return res.json();
+        })
+        .then(registrations => {
+          currentRegistrations = registrations || [];
+          renderRegistrationsTable(registrations);
+        })
+        .catch(err => {
+          showAppMessage({
+            title: 'registrations failed',
+            message: 'Unable to load registrations: ' + err.message
+          });
+        });
+    }
+
+    function formatRegistrationCellValue(field, value) {
+      if (value === null || value === undefined) {
+        return '';
+      }
+
+      if (field === 'dob') {
+        if (value instanceof Date && !isNaN(value.getTime())) {
+          const year = value.getUTCFullYear();
+          const month = String(value.getUTCMonth() + 1).padStart(2, '0');
+          const day = String(value.getUTCDate()).padStart(2, '0');
+          return year + '-' + month + '-' + day;
+        }
+        const str = String(value);
+        const match = str.match(/^(\d{4}-\d{2}-\d{2})/);
+        if (match) {
+          return match[1];
+        }
+      }
+
+      if (typeof value === 'number' && (field === 'individual_patterns' || field === 'individual_sparring' || field === 'individual_special_technique' || field === 'individual_power_test' || field === 'team_patterns' || field === 'team_sparring' || field === 'team_special_technique' || field === 'team_power_test' || field === 'pre_arranged_sparring')) {
+        return value === 1 ? '✓' : '';
+      }
+
+      return String(value);
+    }
+
+    function renderRegistrationsTable(registrations) {
+      const container = document.getElementById('regTableContainer');
+      const table = document.getElementById('regTable');
+      const emptyMsg = document.getElementById('regEmptyMessage');
+      
+      if (!registrations || registrations.length === 0) {
+        container.style.display = 'block';
+        table.style.display = 'none';
+        emptyMsg.style.display = 'block';
+        return;
+      }
+      
+      container.style.display = 'block';
+      table.style.display = 'table';
+      emptyMsg.style.display = 'none';
+      
+      // Build table headers
+      const headers = Object.keys(registrations[0]);
+      let headerHTML = '<thead><tr>';
+      headers.forEach(h => {
+        headerHTML += '<th>' + h.replace(/_/g, ' ') + '</th>';
+      });
+      headerHTML += '</tr></thead>';
+      
+      // Build table rows
+      let bodyHTML = '<tbody>';
+      registrations.forEach(reg => {
+        bodyHTML += '<tr>';
+        headers.forEach(h => {
+          const value = formatRegistrationCellValue(h, reg[h]);
+          bodyHTML += '<td>' + value + '</td>';
+        });
+        bodyHTML += '</tr>';
+      });
+      bodyHTML += '</tbody>';
+      
+      table.innerHTML = headerHTML + bodyHTML;
+    }
+
+    document.getElementById('downloadRegCsvBtn').onclick = function() {
+      if (!currentRegistrations || currentRegistrations.length === 0) {
+        showAppMessage({ title: 'nothing to download', message: 'No registrations to download.' });
+        return;
+      }
+      
+      logInteraction('download_registration_csv', { count: currentRegistrations.length });
+      
+      const headers = Object.keys(currentRegistrations[0]);
+      let csv = headers.join(',') + '\n';
+      
+      currentRegistrations.forEach(reg => {
+        const row = headers.map(h => {
+          let value = formatRegistrationCellValue(h, reg[h]);
+          value = value.replace(/"/g, '""');
+          if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+            return '"' + value + '"';
+          }
+          return value;
+        });
+        csv += row.join(',') + '\n';
+      });
+      
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      
+      const eventSelect = document.getElementById('eventRegSelect');
+      const eventName = eventSelect.options[eventSelect.selectedIndex].text.split('(')[0].trim();
+      const safeEventName = eventName.replace(/[^a-zA-Z0-9]/g, '_');
+      a.download = 'registrations_' + safeEventName + '_' + Date.now() + '.csv';
+      
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    };
+
+    // ========== ORGANIZER TOOL MODALS ==========
+    document.getElementById('openDivisionCreationToolBtn').onclick = function(e) {
+      e.preventDefault();
+      requirePrincipleUserAccess(function() {
+        logInteraction('open_division_creation_tool', { description: 'Opened basic division creation modal' });
+        document.getElementById('basicDivisionCreationOverlay').style.display = 'flex';
+        if (document.getElementById('athleteEntries').children.length === 0) {
+          initializeAthleteEntries();
+        }
+      });
+    };
+
+    document.getElementById('closeBasicDivisionCreationBtn').onclick = function() {
+      closeOverlay('basicDivisionCreationOverlay', 'close_basic_division_creation');
+    };
+
+    document.getElementById('openAdvancedDivisionCreationBtn').onclick = function(e) {
+      e.preventDefault();
+      requirePrincipleUserAdvancedAccess(function() {
+        logInteraction('open_advanced_division_creation', { description: 'Navigated to advanced division creation page' });
+        window.location.href = '/division-advanced';
+      });
+    };
+
+    document.getElementById('openLiveEventScheduleBtn').onclick = function(e) {
+      e.preventDefault();
+      requirePrincipleUserAdvancedAccess(function() {
+        logInteraction('open_live_event_schedule', { description: 'Opened live event schedule in a new tab' });
+        window.open('/live-schedule', '_blank', 'noopener,noreferrer');
+      });
+    };
+
+    function submitEventCreationRequest(formData) {
+      logInteraction('event_creation_submit', { eventName: formData.get('eventName') });
+
+      fetch('/api/client-events', {
+        method: 'POST',
+        body: formData
+      })
+        .then(res => res.json())
+        .then(result => {
+          if (result.success) {
+            document.getElementById('eventCreationForm').hidden = true;
+            document.getElementById('eventCreationSuccess').hidden = false;
+          } else {
+            showAppMessage({
+              title: 'create failed',
+              message: result.error || 'Unable to create event.'
+            });
+          }
+        })
+        .catch(() => {
+          showAppMessage({
+            title: 'create failed',
+            message: 'Unable to submit event. Please try again.'
+          });
+        });
+    }
+
+    document.getElementById('eventCreationConfirmCancelBtn').onclick = hideEventCreationConfirm;
+
+    document.getElementById('eventCreationConfirmSubmitBtn').onclick = function() {
+      if (!pendingEventFormData) return;
+      var formData = pendingEventFormData;
+      hideEventCreationConfirm();
+      submitEventCreationRequest(formData);
+    };
+
+    document.getElementById('eventCreationConfirmOverlay').addEventListener('click', function(evt) {
+      if (evt.target === this) {
+        hideEventCreationConfirm();
+      }
+    });
+
+    // Event creation form submission
+    document.getElementById('eventCreationForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const selectedEventTypes = Array.from(
+        document.querySelectorAll('#eventEventsCheckboxes input[name="eventType"]:checked')
+      ).map(function(input) { return input.value; });
+
+      const eventName = document.getElementById('eventNameInput').value.trim();
+      const eventDateStart = document.getElementById('eventDateStartInput').value;
+      const eventDateEnd = document.getElementById('eventDateEndInput').value;
+      const registrationOpenDate = document.getElementById('regOpenDateInput').value;
+      const registrationCloseDate = document.getElementById('regCloseDateInput').value;
+      const eventLocation = document.getElementById('eventLocationInput').value.trim();
+      
+      if (!eventName || !eventDateStart || !eventDateEnd || 
+          !registrationOpenDate || !registrationCloseDate || 
+          !eventLocation) {
+        showAppMessage({
+          title: 'missing fields',
+          message: 'Please fill in all required fields.'
+        });
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('eventName', eventName);
+      formData.append('eventDateStart', eventDateStart);
+      formData.append('eventDateEnd', eventDateEnd);
+      formData.append('registrationOpenDate', registrationOpenDate);
+      formData.append('registrationCloseDate', registrationCloseDate);
+      formData.append('eventLocation', eventLocation);
+      formData.append('eventEvents', JSON.stringify(selectedEventTypes));
+      
+      const eventLink = document.getElementById('eventLinkInput').value.trim();
+      if (eventLink) {
+        formData.append('eventLink', eventLink);
+      }
+
+      const eventContact = document.getElementById('eventContactInput').value.trim();
+      if (eventContact) {
+        formData.append('eventContact', eventContact);
+      }
+      
+      const posterFile = document.getElementById('eventPosterInput').files[0];
+      if (posterFile) {
+        formData.append('eventPoster', posterFile);
+      }
+
+      pendingEventFormData = formData;
+      document.getElementById('eventCreationConfirmOverlay').hidden = false;
+    });
+
+    document.getElementById('createAnotherEventBtn').onclick = function() {
+      resetEventCreationModal();
+    };
+
+    document.getElementById('addCustomEventBtn').onclick = function() {
+      addCustomEventFromInput('customEventInput', 'eventEventsCheckboxes', 'eventType');
+    };
+
+    document.getElementById('customEventInput').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addCustomEventFromInput('customEventInput', 'eventEventsCheckboxes', 'eventType');
+      }
+    });
+
+    document.getElementById('editAddCustomEventBtn').onclick = function() {
+      addCustomEventFromInput('editCustomEventInput', 'editEventEventsCheckboxes', 'editEventType');
+    };
+
+    document.getElementById('editCustomEventInput').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addCustomEventFromInput('editCustomEventInput', 'editEventEventsCheckboxes', 'editEventType');
+      }
+    });
+
+    // Division Creation Tool
+    let athleteCount = 0;
+
+    function createAthleteEntry() {
+      const entry = document.createElement('div');
+      entry.className = 'athlete-entry';
+      entry.dataset.entryId = athleteCount++;
+      
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.placeholder = 'Name (First Last)';
+      nameInput.maxLength = 100;
+      nameInput.className = 'athlete-name';
+      nameInput.addEventListener('input', updateDivisionSize);
+      
+      const clubInput = document.createElement('input');
+      clubInput.type = 'text';
+      clubInput.placeholder = 'Club Name';
+      clubInput.maxLength = 100;
+      clubInput.className = 'athlete-club';
+      clubInput.addEventListener('input', updateDivisionSize);
+      
+      entry.appendChild(nameInput);
+      entry.appendChild(clubInput);
+      
+      return entry;
+    }
+
+    function initializeAthleteEntries() {
+      const container = document.getElementById('athleteEntries');
+      container.innerHTML = '';
+      // Create exactly 4 entries
+      for (let i = 0; i < 4; i++) {
+        container.appendChild(createAthleteEntry());
+      }
+    }
+
+    function updateDivisionSize() {
+      const entries = document.querySelectorAll('.athlete-entry');
+      let filledCount = 0;
+      
+      entries.forEach(entry => {
+        const name = entry.querySelector('.athlete-name').value.trim();
+        const club = entry.querySelector('.athlete-club').value.trim();
+        if (name && club) {
+          filledCount++;
+        }
+      });
+      
+      document.getElementById('divisionSize').value = filledCount;
+    }
+
+    function showComplexDivisionModal(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.getElementById('complexDivisionModal').hidden = false;
+    }
+
+    document.getElementById('closeComplexDivisionModal').onclick = function() {
+      document.getElementById('complexDivisionModal').hidden = true;
+    };
+
+    document.getElementById('closeAdvancedAccessDeniedModal').onclick = function() {
+      hideAdvancedAccessDeniedModal();
+    };
+
+    document.getElementById('advancedAccessDeniedModal').addEventListener('click', function(evt) {
+      if (evt.target === this) hideAdvancedAccessDeniedModal();
+    });
+
+    document.getElementById('divisionCreatedNoBtn').onclick = function() {
+      document.getElementById('divisionCreatedModal').hidden = true;
+    };
+
+    document.getElementById('divisionCreatedYesBtn').onclick = function() {
+      document.getElementById('divisionCreatedModal').hidden = true;
+      clearDivisionForm();
+    };
+
+    document.getElementById('addAthleteBtn').onclick = showComplexDivisionModal;
+    document.getElementById('removeAthleteBtn').onclick = showComplexDivisionModal;
+    
+    document.getElementById('divisionType').addEventListener('mousedown', function(e) {
+      if (this.value !== 'single elimination') {
+        showComplexDivisionModal(e);
+        this.value = 'single elimination';
+      }
+    });
+    
+    document.getElementById('divisionType').addEventListener('change', function(e) {
+      if (this.value !== 'single elimination') {
+        e.preventDefault();
+        showComplexDivisionModal(e);
+        this.value = 'single elimination';
+      }
+    });
+
+    function clearDivisionForm() {
+      document.getElementById('divisionName').value = 'Test Division';
+      document.getElementById('divisionType').value = 'single elimination';
+      document.getElementById('ringNumber').value = 'Ring 1';
+      document.getElementById('divisionSize').value = '4';
+      initializeAthleteEntries();
+    }
+
+    document.getElementById('clearDivisionBtn').onclick = clearDivisionForm;
+
+    function generateDivisionFile() {
+      const divisionName = document.getElementById('divisionName').value.trim();
+      const divisionType = document.getElementById('divisionType').value;
+      const ringNumber = document.getElementById('ringNumber').value;
+      const divisionSize = document.getElementById('divisionSize').value;
+      
+      if (!divisionName) {
+        alert('Please enter a division name');
+        return null;
+      }
+      
+      if (!divisionType) {
+        alert('Please select a division type');
+        return null;
+      }
+      
+      if (!ringNumber) {
+        alert('Please select a ring number');
+        return null;
+      }
+      
+      const entries = document.querySelectorAll('.athlete-entry');
+      const athletes = [];
+      
+      entries.forEach(entry => {
+        const name = entry.querySelector('.athlete-name').value.trim();
+        const club = entry.querySelector('.athlete-club').value.trim();
+        if (name && club) {
+          athletes.push({ name, club });
+        }
+      });
+      
+      if (athletes.length < 2) {
+        alert('Please enter at least 2 athletes with complete information');
+        return null;
+      }
+      
+      let content = '';
+      content += `Divison Name: ${divisionName}\n`;
+      content += `Division Type: ${divisionType}\n`;
+      content += `Ring Number: ${ringNumber}\n`;
+      content += `Division Size: ${divisionSize}\n\n`;
+      
+      athletes.forEach((athlete, index) => {
+        content += `${athlete.name} | ${athlete.club}\n`;
+        if ((index + 1) % 2 === 0 && index < athletes.length - 1) {
+          content += '\n';
+        }
+      });
+      
+      return content;
+    }
+
+    document.getElementById('confirmDivisionBtn').onclick = function() {
+      const content = generateDivisionFile();
+      
+      if (content) {
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'division.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        document.getElementById('divisionCreatedModal').hidden = false;
+      }
+    };
+
   </script>
 
 </body>

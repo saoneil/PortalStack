@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" href="/images/PMA_Score_8.png">
+  <title>Live Event Schedule</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/division-advanced.css">
+  <link rel="stylesheet" href="/css/live-schedule.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body class="live-schedule-page">
+  <main class="live-schedule-main">
+    <header class="live-schedule-top">
+      <div class="live-schedule-heading">
+        <p class="live-kicker">PMA Score</p>
+        <div class="live-schedule-title-row">
+          <h1 class="live-schedule-title">Live Event Schedule</h1>
+          <p id="liveScheduleSubtitle" class="live-schedule-subtitle">Select a saved schedule to display</p>
+        </div>
+      </div>
+      <div class="live-schedule-top-actions">
+        <button type="button" id="liveDownloadQrBtn" class="live-btn live-btn-secondary" hidden>Download QR code</button>
+        <button type="button" id="liveSaveBtn" class="live-btn live-btn-primary" hidden>Save</button>
+        <button type="button" id="liveRefreshBtn" class="live-btn live-btn-secondary" hidden>Reload</button>
+        <a href="/landing" id="liveBackLink" class="live-btn live-btn-ghost" hidden>← Portal</a>
+      </div>
+    </header>
+
+    <div id="liveToast" class="live-toast" hidden></div>
+
+    <div id="liveContextMenu" class="live-context-menu" hidden>
+      <button type="button" data-action="longer">Lengthen (+5 min)</button>
+      <button type="button" data-action="shorter">Shorten (−5 min)</button>
+    </div>
+
+    <section id="livePickerPanel" class="live-panel" hidden>
+      <p id="livePickerEmpty" class="live-hint" hidden>No saved schedules found for this client. Save a schedule in the advanced division tool first.</p>
+      <p id="livePickerError" class="live-error" hidden></p>
+    </section>
+
+    <section id="liveViewerPanel" class="live-panel live-panel-board" hidden>
+      <div class="live-viewer-toolbar">
+        <label class="live-inline-label" id="liveEventSelectWrap" hidden for="liveScheduleSelect">Event
+          <select id="liveScheduleSelect" class="live-select live-select-sm live-select-event" aria-label="Select saved schedule">
+            <option value="">— choose a schedule —</option>
+          </select>
+        </label>
+        <label class="live-inline-label" for="liveDaySelect">Day
+          <select id="liveDaySelect" class="live-select live-select-sm"></select>
+        </label>
+        <span id="liveUpdatedAt" class="live-meta"></span>
+      </div>
+
+      <div class="live-stage" id="liveStage">
+        <div class="live-board-wrap" id="liveBoardDrop">
+          <div id="liveBoard" class="da-schedule-board live-board"></div>
+        </div>
+        <div class="live-scratch" id="liveScratchDrop" hidden>
+          <ul id="liveScratchList" class="live-scratch-list"></ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="liveMissingPanel" class="live-panel" hidden>
+      <h2>Schedule unavailable</h2>
+      <p id="liveMissingMessage" class="live-hint">This live schedule link is invalid or no schedule has been saved yet.</p>
+    </section>
+  </main>
+
+  <script type="module" src="/js/live-schedule.js"></script>
+</body>
+</html>

@@ -28,6 +28,13 @@
     }
     .paypal-link:hover { filter: brightness(0.95); }
     .paypal-logo { height: 16px; width: auto; display: block; }
+    .email-link {
+      color: #00d4ff;
+      text-decoration: underline;
+      font-weight: bold;
+    }
+    .email-link:hover { filter: brightness(1.15); }
+
     
     /* Mobile responsive styles */
     @media (max-width: 768px) {
@@ -53,17 +60,23 @@
       h1 { font-size: 18px; }
       #pricingDescription { font-size: 12px; }
     }
-  </style>
+      .pricing-custom-row td,
+    .pricing-custom-cell {
+      text-align: center !important;
+      border-left: none !important;
+      border-right: none !important;
+    }
+</style>
 </head>
 <body>
-  <h1><center>料金と支払い ($USD)</center></h1>
-  <div id="pricingDescription" style="margin: 12px auto 24px auto; max-width: 760px; color: #fff; text-align: center; font-size: 17px; min-height: 32px;">現在、PayPalはサブスクライバーのみ利用できます。</div>
+  <h1><center>料金 ($USD)</center></h1>
   <table>
     <tr><th>オプション</th><th>価格</th><th>説明</th><th>PayPal</th></tr>
-    <tr><td><strong>サブスクライバー</strong></td><td>$25/月</td><td>選択した2つのアプリケーションに24時間365日アクセス</td><td><a class="paypal-link" href="https://www.paypal.com/webapps/billing/plans/subscribe?plan_id=P-3SX09611CF132153YNDNVW5Y" target="_blank" rel="noopener noreferrer" title="subscriber"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
-    <tr><td><strong>小規模イベント</strong></td><td>$100</td><td>単一イベントで最大4つのアプリケーションを利用可能</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/N73R9PNA4ZUSU" target="_blank" rel="noopener noreferrer" title="mini"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
-    <tr><td><strong>大規模イベント</strong></td><td>$250</td><td>単一イベントで必要な数のアプリケーションを利用可能</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/KAZVAY7VT6Y9N" target="_blank" rel="noopener noreferrer" title="unlimited"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
-    <tr><td><strong>登録サポート</strong></td><td>大規模イベント + $100</td><td>登録ホスティングとドロー/ディビジョン作成</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/6FGYWDMSQSEZ8" target="_blank" rel="noopener noreferrer" title="unlimited+"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr><td><strong>サブスクライバー</strong></td><td>$25/月</td><td>スコアリングアプリケーション 1つへの24時間アクセス</td><td><a class="paypal-link" href="https://www.paypal.com/webapps/billing/plans/subscribe?plan_id=P-3SX09611CF132153YNDNVW5Y" target="_blank" rel="noopener noreferrer" title="subscriber"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr><td><strong>小規模イベント</strong></td><td>$150</td><td>1回のイベントでスコアリングアプリケーション 2つまで。</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/N73R9PNA4ZUSU" target="_blank" rel="noopener noreferrer" title="small-event"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr><td><strong>大規模イベント</strong></td><td>$300</td><td>1回のイベントで無制限のスコアリングアプリケーション。基本ディビジョン作成とイベント管理付き。</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/KAZVAY7VT6Y9N" target="_blank" rel="noopener noreferrer" title="large-event"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr><td><strong>大規模イベント<br>+<br>主催者ツール</strong></td><td>$450</td><td>1回のイベントで無制限のスコアリングアプリケーション。高度なディビジョン作成、ライブイベントスケジュール、ディビジョン / グルーピング / ドロー / スケジュールの保存・再利用付き。</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/6FGYWDMSQSEZ8" target="_blank" rel="noopener noreferrer" title="large-event-organizer"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr class="pricing-custom-row"><td colspan="4" class="pricing-custom-cell">カスタム機能・料金については、<a class="email-link" href="mailto:performance.ma.can@gmail.com?subject=PMA%20Score%20custom%20pricing%20inquiry">お問い合わせ</a>ください。</td></tr>
   </table>
 </body>
 </html>

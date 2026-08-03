@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" href="/images/PMA_Score_8.png">
+  <title>Event Registration</title>
+  <link rel="stylesheet" href="/css/registration.css">
+</head>
+<body>
+  <div class="page-wrapper">
+    <div class="card">
+      <h1>event registration</h1>
+
+      <p id="eventStatus" class="status-message" role="status"></p>
+
+      <p id="eventGridHint" class="event-grid-hint" aria-live="polite">
+        tap an event to register
+      </p>
+
+      <div id="eventGrid" class="event-grid">
+        <p class="event-grid-loading">loading events...</p>
+      </div>
+
+      <section id="eventFocusStage" class="event-focus-stage" hidden aria-live="polite">
+        <div id="eventFocusPoster" class="event-focus-poster" aria-hidden="false"></div>
+        <aside id="eventFocusDetails" class="event-focus-details"></aside>
+      </section>
+
+      <div id="registrationClosedWarning" class="registration-closed-warning" hidden>
+        <div class="warning-icon">⚠</div>
+        <div class="warning-content">
+          <h3>Registration Closed</h3>
+          <p>The registration deadline for this event has passed. Registration is no longer available.</p>
+        </div>
+      </div>
+
+      <section id="registrationFlow" class="entry-fields-section" hidden>
+        <h2>registration details</h2>
+        <div class="form-column">
+        <form id="entryFieldsForm" class="registration-form" autocomplete="on">
+          <div class="block-cube full-width">
+            <select id="reg-role" class="field-select field-empty" name="role" aria-label="role">
+              <option value="">role</option>
+              <option value="athlete">athlete</option>
+              <option value="team">team</option>
+              <option value="coach">coach</option>
+              <option value="umpire">umpire</option>
+              <option value="vip">vip</option>
+              <option value="medical">medical</option>
+              <option value="volunteer">volunteer</option>
+            </select>
+            <div class="bg-top"><div class="bg-inner"></div></div>
+            <div class="bg-right"><div class="bg-inner"></div></div>
+            <div class="bg"><div class="bg-inner"></div></div>
+          </div>
+
+          <div id="roleDivider" class="form-section-divider" hidden></div>
+
+          <div id="athleteFields" class="role-fields" hidden>
+            <div class="block-cube full-width">
+              <input id="reg-email" type="email" name="contactEmail" maxlength="100" autocomplete="email" placeholder="email" aria-label="email" />
+              <div class="bg-top"><div class="bg-inner"></div></div>
+              <div class="bg-right"><div class="bg-inner"></div></div>
+              <div class="bg"><div class="bg-inner"></div></div>
+            </div>
+
+            <div class="block-cube">
+              <input id="reg-first-name" type="text" name="firstName" maxlength="100" autocomplete="given-name" placeholder="first name" aria-label="first name" />
+              <div class="bg-top"><div class="bg-inner"></div></div>
+              <div class="bg-right"><div class="bg-inner"></div></div>
+              <div class="bg"><div class="bg-inner"></div></div>
+            </div>
+
+            <div class="block-cube">
+              <input id="reg-last-name" type="text" name="lastName" maxlength="100" autocomplete="family-name" placeholder="last name" aria-label="last name" />
+              <div class="bg-top"><div class="bg-inner"></div></div>
+              <div class="bg-right"><div class="bg-inner"></div></div>
+              <div class="bg"><div class="bg-inner"></div></div>
+            </div>
+
+            <div class="block-cube dob-field-block full-width">
+              <div id="dobDisplay" class="dob-display" aria-hidden="true"></div>
+              <input id="reg-dob" class="dob-input" type="text" name="dob" inputmode="numeric" autocomplete="bday" aria-label="date of birth" spellcheck="false" />
+              <div class="bg-top"><div class="bg-inner"></div></div>
+              <div class="bg-right"><div class="bg-inner"></div></div>
+              <div class="bg"><div class="bg-inner"></div></div>
+            </div>
+
+            <div class="block-cube">
+              <select id="reg-rank" class="field-select field-empty" name="rank" aria-label="rank">
+                <option value="">rank</option>
+                <option value="10th gup">10th gup</option>
+                <option value="9th gup">9th gup</option>
+                <option value="8th gup">8th gup</option>
+                <option value="7th gup">7th gup</option>
+                <option value="6th gup">6th gup</option>
+                <option value="5th gup">5th gup</option>
+                <option value="4th gup">4th gup</option>
+                <option value="3rd gup">3rd gup</option>
+                <option value="2nd gup">2nd gup</option>
+                <option value="1st gup">1st gup</option>
+                <option value="1st dan">1st dan</option>
+                <option value="2nd dan">2nd dan</option>
+                <option value="3rd dan">3rd dan</option>
+                <option value="4th dan">4th dan</option>
+                <option value="5th dan">5th dan</option>
+                <option value="6th dan">6th dan</option>
+                <option value="7th dan">7th dan</option>
+                <option value="8th dan">8th dan</option>
+                <option value="9th dan">9th dan</option>
+              </select>
+              <div class="bg-top"><div class="bg-inner"></div></div>
+              <div class="bg-right"><div class="bg-inner"></div></div>
+              <div class="bg"><div class="bg-inner"></div></div>
+            </div>
+
+            <div class="block-cube">
+              <select id="reg-gender" class="field-select field-empty" name="gender" aria-label="gender">
+                <option value="">gender</option>
+                <option value="M">m</option>
+                <option value="F">f</option>
+              </select>
+              <div class="bg-top"><div class="bg-inner"></div></div>
+              <div class="bg-right"><div class="bg-inner"></div></div>
+              <div class="bg"><div class="bg-inner"></div></div>
+            </div>
+
+            <div class="block-cube field-with-hint">
+              <div class="field-hint-popup" id="weightHint" role="tooltip" hidden>please ensure you enter a value in kg</div>
+              <input id="reg-weight" type="number" name="weightKg" min="0" step="0.01" placeholder="weight (kg)" aria-label="weight (kg)" />
+              <div class="bg-top"><div class="bg-inner"></div></div>
+              <div class="bg-right"><div class="bg-inner"></div></div>
+              <div class="bg"><div class="bg-inner"></div></div>
+            </div>
+
+            <div class="block-cube field-with-hint">
+              <div class="field-hint-popup" id="heightHint" role="tooltip" hidden>please ensure you enter a value in cm</div>
+              <input id="reg-height" type="number" name="heightKg" min="0" step="0.01" placeholder="height (cm)" aria-label="height (cm)" />
+              <div class="bg-top"><div class="bg-inner"></div></div>
+              <div class="bg-right"><div class="bg-inner"></div></div>
+              <div class="bg"><div class="bg-inner"></div></div>
+            </div>
+
+            <div class="block-cube full-width">
+              <input id="reg-team" type="text" name="teamNameOrCountry" maxlength="100" placeholder="team name or country" aria-label="team name or country" />
+              <div class="bg-top"><div class="bg-inner"></div></div>
+              <div class="bg-right"><div class="bg-inner"></div></div>
+              <div class="bg"><div class="bg-inner"></div></div>
+            </div>
+
+            <fieldset class="events-group full-width" id="athleteEventsGroup">
+              <legend class="input-label">events</legend>
+              <div class="checkbox-grid" id="athleteEventsGrid">
+                <label class="checkbox-item"><input type="checkbox" name="individualPatterns" value="1" checked /> individual patterns</label>
+                <label class="checkbox-item"><input type="checkbox" name="individualSparring" value="1" checked /> individual sparring</label>
+                <label class="checkbox-item"><input type="checkbox" name="individualSpecialTechnique" value="1" /> individual special technique</label>
+                <label class="checkbox-item"><input type="checkbox" name="individualPowerTest" value="1" /> individual power test</label>
+                <label class="checkbox-item"><input type="checkbox" name="preArrangedSparring" value="1" /> pre-arranged sparring</label>
+              </div>
+              <div id="athleteTeamEventsHint" class="athlete-team-events-hint" hidden></div>
+            </fieldset>
+          </div>
+
+          <div id="teamFields" class="role-fields" hidden>
+            <div class="block-cube full-width">
+              <input id="reg-team-email" type="email" name="teamContactEmail" maxlength="100" autocomplete="email" placeholder="email" aria-label="team email" />
+              <div class="bg-top"><div class="bg-inner"></div></div>
+              <div class="bg-right"><div class="bg-inner"></div></div>
+              <div class="bg"><div class="bg-inner"></div></div>
+            </div>
+
+            <div class="block-cube">
+              <input id="reg-team-name" type="text" name="teamName" maxlength="100" placeholder="team name" aria-label="team name" />
+              <div class="bg-top"><div class="bg-inner"></div></div>
+              <div class="bg-right"><div class="bg-inner"></div></div>
+              <div class="bg"><div class="bg-inner"></div></div>
+            </div>
+
+            <div class="block-cube">
+              <input id="reg-team-members" type="text" name="teamMemberLastNames" maxlength="100" placeholder="member last names, 3–5 (ex oneil, roger, peters)" aria-label="last names of team members" />
+              <div class="bg-top"><div class="bg-inner"></div></div>
+              <div class="bg-right"><div class="bg-inner"></div></div>
+              <div class="bg"><div class="bg-inner"></div></div>
+            </div>
+
+            <div class="block-cube full-width">
+              <select id="reg-team-age-range" class="field-select field-empty" name="teamAgeRange" aria-label="age range">
+                <option value="">age range (optional)</option>
+                <option value="pre-junior">pre-junior</option>
+                <option value="junior">junior</option>
+                <option value="adult">adult</option>
+              </select>
+              <div class="bg-top"><div class="bg-inner"></div></div>
+              <div class="bg-right"><div class="bg-inner"></div></div>
+              <div class="bg"><div class="bg-inner"></div></div>
+            </div>
+
+            <div class="block-cube">
+              <select id="reg-team-rank" class="field-select field-empty" name="teamRankBand" aria-label="gup or dan">
+                <option value="">gup / dan (optional)</option>
+                <option value="gup">gup</option>
+                <option value="dan">dan</option>
+              </select>
+              <div class="bg-top"><div class="bg-inner"></div></div>
+              <div class="bg-right"><div class="bg-inner"></div></div>
+              <div class="bg"><div class="bg-inner"></div></div>
+            </div>
+
+            <div class="block-cube">
+              <select id="reg-team-gender" class="field-select field-empty" name="teamGender" aria-label="gender of the group">
+                <option value="">gender</option>
+                <option value="M">m</option>
+                <option value="F">f</option>
+                <option value="X">mixed</option>
+              </select>
+              <div class="bg-top"><div class="bg-inner"></div></div>
+              <div class="bg-right"><div class="bg-inner"></div></div>
+              <div class="bg"><div class="bg-inner"></div></div>
+            </div>
+
+            <fieldset class="events-group full-width" id="teamEventsGroup">
+              <legend class="input-label">events</legend>
+              <div class="checkbox-grid" id="teamEventsGrid">
+                <label class="checkbox-item"><input type="checkbox" name="teamPatterns" value="1" /> team patterns</label>
+                <label class="checkbox-item"><input type="checkbox" name="teamSparring" value="1" /> team sparring</label>
+                <label class="checkbox-item"><input type="checkbox" name="teamSpecialTechnique" value="1" /> team special technique</label>
+                <label class="checkbox-item"><input type="checkbox" name="teamPowerTest" value="1" /> team power test</label>
+              </div>
+            </fieldset>
+          </div>
+
+          <div id="staffFields" class="role-fields" hidden>
+            <div class="block-cube">
+              <input id="reg-staff-first-name" type="text" name="staffFirstName" maxlength="100" autocomplete="given-name" placeholder="first name" aria-label="first name" />
+              <div class="bg-top"><div class="bg-inner"></div></div>
+              <div class="bg-right"><div class="bg-inner"></div></div>
+              <div class="bg"><div class="bg-inner"></div></div>
+            </div>
+
+            <div class="block-cube">
+              <input id="reg-staff-last-name" type="text" name="staffLastName" maxlength="100" autocomplete="family-name" placeholder="last name" aria-label="last name" />
+              <div class="bg-top"><div class="bg-inner"></div></div>
+              <div class="bg-right"><div class="bg-inner"></div></div>
+              <div class="bg"><div class="bg-inner"></div></div>
+            </div>
+
+            <div class="block-cube dob-field-block full-width">
+              <div id="staffDobDisplay" class="dob-display" aria-hidden="true"></div>
+              <input id="reg-staff-dob" class="dob-input" type="text" name="staffDob" inputmode="numeric" autocomplete="bday" aria-label="date of birth" spellcheck="false" />
+              <div class="bg-top"><div class="bg-inner"></div></div>
+              <div class="bg-right"><div class="bg-inner"></div></div>
+              <div class="bg"><div class="bg-inner"></div></div>
+            </div>
+
+            <div class="block-cube">
+              <select id="reg-staff-rank" class="field-select field-empty" name="staffRank" aria-label="rank">
+                <option value="">rank</option>
+                <option value="10th gup">10th gup</option>
+                <option value="9th gup">9th gup</option>
+                <option value="8th gup">8th gup</option>
+                <option value="7th gup">7th gup</option>
+                <option value="6th gup">6th gup</option>
+                <option value="5th gup">5th gup</option>
+                <option value="4th gup">4th gup</option>
+                <option value="3rd gup">3rd gup</option>
+                <option value="2nd gup">2nd gup</option>
+                <option value="1st gup">1st gup</option>
+                <option value="1st dan">1st dan</option>
+                <option value="2nd dan">2nd dan</option>
+                <option value="3rd dan">3rd dan</option>
+                <option value="4th dan">4th dan</option>
+                <option value="5th dan">5th dan</option>
+                <option value="6th dan">6th dan</option>
+                <option value="7th dan">7th dan</option>
+                <option value="8th dan">8th dan</option>
+                <option value="9th dan">9th dan</option>
+              </select>
+              <div class="bg-top"><div class="bg-inner"></div></div>
+              <div class="bg-right"><div class="bg-inner"></div></div>
+              <div class="bg"><div class="bg-inner"></div></div>
+            </div>
+
+            <div class="block-cube">
+              <select id="reg-staff-gender" class="field-select field-empty" name="staffGender" aria-label="gender">
+                <option value="">gender</option>
+                <option value="M">m</option>
+                <option value="F">f</option>
+              </select>
+              <div class="bg-top"><div class="bg-inner"></div></div>
+              <div class="bg-right"><div class="bg-inner"></div></div>
+              <div class="bg"><div class="bg-inner"></div></div>
+            </div>
+
+            <div class="block-cube full-width">
+              <input id="reg-staff-team" type="text" name="staffTeamNameOrCountry" maxlength="100" placeholder="team name or country" aria-label="team name or country" />
+              <div class="bg-top"><div class="bg-inner"></div></div>
+              <div class="bg-right"><div class="bg-inner"></div></div>
+              <div class="bg"><div class="bg-inner"></div></div>
+            </div>
+          </div>
+
+          <div id="simpleFields" class="role-fields" hidden>
+            <div class="block-cube">
+              <input id="reg-simple-first-name" type="text" name="simpleFirstName" maxlength="100" autocomplete="given-name" placeholder="first name" aria-label="first name" />
+              <div class="bg-top"><div class="bg-inner"></div></div>
+              <div class="bg-right"><div class="bg-inner"></div></div>
+              <div class="bg"><div class="bg-inner"></div></div>
+            </div>
+
+            <div class="block-cube">
+              <input id="reg-simple-last-name" type="text" name="simpleLastName" maxlength="100" autocomplete="family-name" placeholder="last name" aria-label="last name" />
+              <div class="bg-top"><div class="bg-inner"></div></div>
+              <div class="bg-right"><div class="bg-inner"></div></div>
+              <div class="bg"><div class="bg-inner"></div></div>
+            </div>
+          </div>
+
+          <div id="submitRow" class="submit-row full-width" hidden>
+            <button type="submit" class="btn block-cube block-cube-hover" id="submitRegistrationBtn">
+              <div class="bg-top"><div class="bg-inner"></div></div>
+              <div class="bg-right"><div class="bg-inner"></div></div>
+              <div class="bg"><div class="bg-inner"></div></div>
+              <div class="text">submit registration</div>
+            </button>
+          </div>
+        </form>
+        <p id="formStatus" class="status-message" role="status"></p>
+        </div>
+      </section>
+
+      <div class="registration-nav">
+        <button type="button" id="backToEventsBtn" class="btn block-cube block-cube-hover registration-nav-btn" hidden>
+          <div class="bg-top"><div class="bg-inner"></div></div>
+          <div class="bg-right"><div class="bg-inner"></div></div>
+          <div class="bg"><div class="bg-inner"></div></div>
+          <div class="text">back to event page</div>
+        </button>
+        <a id="backToPortalBtn" class="btn block-cube block-cube-hover registration-nav-btn" href="/">
+          <div class="bg-top"><div class="bg-inner"></div></div>
+          <div class="bg-right"><div class="bg-inner"></div></div>
+          <div class="bg"><div class="bg-inner"></div></div>
+          <div class="text">← back to portal</div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div id="confirmOverlay" class="modal-overlay" hidden>
+    <div class="modal-card" role="dialog" aria-labelledby="confirmTitle" aria-modal="true">
+      <h3 id="confirmTitle">confirm registration</h3>
+      <div id="confirmSummary" class="confirm-summary"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn block-cube block-cube-hover modal-btn" id="confirmCancelBtn">
+          <div class="bg-top"><div class="bg-inner"></div></div>
+          <div class="bg-right"><div class="bg-inner"></div></div>
+          <div class="bg"><div class="bg-inner"></div></div>
+          <div class="text">cancel</div>
+        </button>
+        <button type="button" class="btn block-cube block-cube-hover modal-btn" id="confirmSubmitBtn">
+          <div class="bg-top"><div class="bg-inner"></div></div>
+          <div class="bg-right"><div class="bg-inner"></div></div>
+          <div class="bg"><div class="bg-inner"></div></div>
+          <div class="text">confirm</div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="successOverlay" class="modal-overlay" hidden>
+    <div class="modal-card" role="dialog" aria-labelledby="successTitle" aria-modal="true">
+      <h3 id="successTitle">registration complete</h3>
+      <p class="success-message">your registration has been submitted successfully.</p>
+      <div class="modal-actions">
+        <button type="button" class="btn block-cube block-cube-hover modal-btn" id="successOkBtn">
+          <div class="bg-top"><div class="bg-inner"></div></div>
+          <div class="bg-right"><div class="bg-inner"></div></div>
+          <div class="bg"><div class="bg-inner"></div></div>
+          <div class="text">ok</div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/registration.js" defer></script>
+</body>
+</html>

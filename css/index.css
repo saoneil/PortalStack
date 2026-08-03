@@ -32,6 +32,43 @@ h1 {
   color: #fff;
 }
 
+.event-registration-nav {
+  width: 100%;
+  max-width: 420px;
+  padding: 0 15px 4px;
+  margin-bottom: 28px;
+}
+
+.btn-event-registration {
+  display: block;
+  width: 100%;
+  padding: 18px 20px;
+  font-size: 18px;
+  letter-spacing: 0.14em;
+  text-decoration: none;
+  box-shadow: 0 0 20px 4px rgba(0, 212, 255, 0.4);
+}
+
+.btn-event-registration .bg-top,
+.btn-event-registration .bg {
+  background: linear-gradient(90deg, rgba(0, 212, 255, 1) 0%, rgba(52, 9, 121, 1) 45%, rgba(0, 212, 255, 1) 100%);
+}
+
+.btn-event-registration .bg-right {
+  background: rgba(0, 212, 255, 1);
+}
+
+.btn-event-registration .text {
+  color: #00d4ff;
+  text-shadow: 0 0 12px rgba(0, 212, 255, 0.55);
+}
+
+.block-cube-hover.btn-event-registration:hover .text,
+.block-cube-hover.btn-event-registration:focus .text {
+  color: #fff;
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.75);
+}
+
 .form {
   width: 100%;
   max-width: 300px;
@@ -236,6 +273,120 @@ h1 {
   text-decoration: underline;
 }
 
+.pricing-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+}
+
+.pricing-overlay[hidden] {
+  display: none !important;
+}
+
+.pricing-modal {
+  position: relative;
+  width: 95vw;
+  max-width: 1000px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: rgba(33, 33, 33, 0.98);
+  border-radius: 16px;
+  padding: 32px 40px;
+  box-shadow: 0 0 40px rgba(0, 212, 255, 0.35);
+}
+
+.pricing-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 28px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.pricing-lang-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 12px;
+  color: #00d4ff;
+  font-weight: bold;
+}
+
+.pricing-lang-row select {
+  background: #222;
+  color: #fff;
+  border: 1px solid #00d4ff;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-family: monospace, serif;
+}
+
+.pricing-content {
+  color: #fff;
+  font-size: 16px;
+}
+
+.pricing-content table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin: 16px auto;
+}
+
+.pricing-content th,
+.pricing-content td {
+  padding: 8px 10px;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid #333;
+  text-align: left;
+}
+
+.pricing-content th {
+  border-bottom: 1px solid #00d4ff;
+}
+
+.pricing-content h1 {
+  color: #00d4ff;
+  font-size: 24px;
+}
+
+.pricing-content #pricingDescription {
+  margin: 12px auto 24px;
+  max-width: 760px;
+  text-align: center;
+  font-size: 15px;
+  min-height: 32px;
+}
+
+.pricing-loading,
+.pricing-error {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+  padding: 24px 8px;
+}
+
+.pricing-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
 @media (max-width: 768px) {
   body {
     height: 100dvh;
@@ -264,6 +415,17 @@ h1 {
     line-height: 1.45;
   }
 
+  .event-registration-nav {
+    max-width: 320px;
+    padding: 0 10px 2px;
+    margin-bottom: 22px;
+  }
+
+  .btn-event-registration {
+    padding: 16px 14px;
+    font-size: 16px;
+  }
+
   .portal-title {
     font-size: 22px;
     margin: 0 0 4px;
@@ -285,5 +447,20 @@ h1 {
 
   .trust-footer p {
     margin: 3px 0;
+  }
+
+  .pricing-modal {
+    padding: 28px 16px 20px;
+    max-height: 85vh;
+  }
+
+  .pricing-content h1 {
+    font-size: 18px;
+  }
+
+  .pricing-content th,
+  .pricing-content td {
+    padding: 4px 6px;
+    font-size: 12px;
   }
 }

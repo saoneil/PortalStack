@@ -3,54 +3,33 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Secure client login for the PMA Club Portal. Authorized users only.">
+  <meta name="description" content="PMA Portal - Choose Event Registration or Organizer Portal">
   <meta name="robots" content="noindex, nofollow">
-  <title>Club Portal | Secure Login</title>
+  <title>PMA Score Portal</title>
   <link rel="icon" type="image/png" href="/images/PMA_Score_8.png">
   <link rel="stylesheet" href="/css/index.css">
 </head>
 <body>
   <div class="center-container">
-    <h1 class="portal-title">club portal</h1>
+    <h1 class="portal-title">PMA Score Portal</h1>
 
-    <form id="loginForm" class="form" action="/index" method="post" autocomplete="on">
-      <div class="control block-cube block-input">
-        <input id="login-client" type="text" name="client" placeholder="client name" required autocomplete="organization" aria-label="Assigned client name" />
+    <div class="form">
+      <a id="eventRegistrationBtn" class="btn block-cube block-cube-hover" href="/registration">
         <div class="bg-top"><div class="bg-inner"></div></div>
         <div class="bg-right"><div class="bg-inner"></div></div>
         <div class="bg"><div class="bg-inner"></div></div>
-      </div>
+        <div class="text">Event Registration</div>
+      </a>
+    </div>
 
-      <div class="control block-cube block-input">
-        <input id="login-username" type="text" name="username" placeholder="username" required autocomplete="username" aria-label="Username or email" />
+    <div class="form">
+      <a id="organizerPortalBtn" class="btn block-cube block-cube-hover" href="/login">
         <div class="bg-top"><div class="bg-inner"></div></div>
         <div class="bg-right"><div class="bg-inner"></div></div>
         <div class="bg"><div class="bg-inner"></div></div>
-      </div>
-
-      <div class="control block-cube block-input">
-        <input id="login-password" type="password" name="password" placeholder="password" required autocomplete="current-password" aria-label="Password" />
-        <div class="bg-top"><div class="bg-inner"></div></div>
-        <div class="bg-right"><div class="bg-inner"></div></div>
-        <div class="bg"><div class="bg-inner"></div></div>
-      </div>
-
-      <button class="btn block-cube block-cube-hover" type="submit">
-        <div class="bg-top"><div class="bg-inner"></div></div>
-        <div class="bg-right"><div class="bg-inner"></div></div>
-        <div class="bg"><div class="bg-inner"></div></div>
-        <div class="text">login</div>
-      </button>
-    </form>
-
-    <form id="signupNavForm" class="form" action="/signup" method="get">
-      <button class="btn block-cube block-cube-hover" type="submit">
-        <div class="bg-top"><div class="bg-inner"></div></div>
-        <div class="bg-right"><div class="bg-inner"></div></div>
-        <div class="bg"><div class="bg-inner"></div></div>
-        <div class="text">sign up</div>
-      </button>
-    </form>
+        <div class="text">Organizer Portal</div>
+      </a>
+    </div>
 
     <div class="form">
       <a id="returnPmaLink" class="btn btn-secondary block-cube block-cube-hover" href="https://performancema.herokuapp.com/ess">
@@ -61,11 +40,41 @@
       </a>
     </div>
 
+    <div class="form">
+      <button type="button" id="openPricingBtn" class="btn btn-secondary block-cube block-cube-hover">
+        <div class="bg-top"><div class="bg-inner"></div></div>
+        <div class="bg-right"><div class="bg-inner"></div></div>
+        <div class="bg"><div class="bg-inner"></div></div>
+        <div class="text">View Pricing</div>
+      </button>
+    </div>
+
     <div class="trust-footer" aria-label="Legal and security information">
-      <p>Official PMA access portal for approved club clients. Never share credentials. 
-        If this page is unexpected, close it and contact your PMA administrator. 
+      <p>Official PMA Score access portal. 
         By continuing, you agree to the <a href="/terms">Terms</a> 
         and <a href="/privacy">Privacy Policy</a>.</p>
+    </div>
+  </div>
+
+  <div id="pricingOverlay" class="pricing-overlay" hidden>
+    <div class="pricing-modal" role="dialog" aria-modal="true" aria-labelledby="pricingModalTitle">
+      <button type="button" id="closePricingBtn" class="pricing-close-btn" aria-label="Close pricing">✕</button>
+      <div class="pricing-lang-row">
+        <label for="pricingLanguageSelect">Language:</label>
+        <select id="pricingLanguageSelect" aria-label="Select pricing language">
+          <option value="en">English</option>
+          <option value="es">Espanol</option>
+          <option value="fr">Francais</option>
+          <option value="it">Italiano</option>
+          <option value="ja">日本語</option>
+          <option value="pl">Polski</option>
+          <option value="nl">Nederlands</option>
+          <option value="ms">Bahasa Melayu</option>
+          <option value="ru">Русский</option>
+        </select>
+      </div>
+      <h2 id="pricingModalTitle" class="pricing-visually-hidden">Pricing</h2>
+      <div id="pricingContent" class="pricing-content"></div>
     </div>
   </div>
 
