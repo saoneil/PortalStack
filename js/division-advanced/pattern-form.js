@@ -248,6 +248,10 @@ function populateDrawTypeSelect(drawType) {
   if (drawType) select.value = drawType;
 }
 
+export function getPatternMeta() {
+  return patternMeta;
+}
+
 export async function initPatternForm() {
   patternMeta = await apiFetch('/api/division-advanced/meta');
   populateEventSelect();

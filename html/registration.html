@@ -143,8 +143,10 @@
               <div class="bg"><div class="bg-inner"></div></div>
             </div>
 
-            <div class="block-cube full-width">
-              <input id="reg-team" type="text" name="teamNameOrCountry" maxlength="100" placeholder="team name or country" aria-label="team name or country" />
+            <div class="block-cube full-width team-name-picker" data-team-picker>
+              <input id="reg-team" class="team-picker-input" type="text" name="teamNameOrCountry" maxlength="100" autocomplete="off" placeholder="team / country / club / province" aria-label="team name or country" aria-autocomplete="list" aria-expanded="false" />
+              <button type="button" class="team-picker-toggle" tabindex="-1" aria-label="Browse teams">▾</button>
+              <div class="team-picker-panel" hidden role="listbox" aria-label="Country, club, and province options"></div>
               <div class="bg-top"><div class="bg-inner"></div></div>
               <div class="bg-right"><div class="bg-inner"></div></div>
               <div class="bg"><div class="bg-inner"></div></div>
@@ -171,8 +173,10 @@
               <div class="bg"><div class="bg-inner"></div></div>
             </div>
 
-            <div class="block-cube">
-              <input id="reg-team-name" type="text" name="teamName" maxlength="100" placeholder="team name" aria-label="team name" />
+            <div class="block-cube full-width team-name-picker" data-team-picker>
+              <input id="reg-team-name" class="team-picker-input" type="text" name="teamName" maxlength="100" autocomplete="off" placeholder="team / country / club / province" aria-label="team name" aria-autocomplete="list" aria-expanded="false" />
+              <button type="button" class="team-picker-toggle" tabindex="-1" aria-label="Browse teams">▾</button>
+              <div class="team-picker-panel" hidden role="listbox" aria-label="Country, club, and province options"></div>
               <div class="bg-top"><div class="bg-inner"></div></div>
               <div class="bg-right"><div class="bg-inner"></div></div>
               <div class="bg"><div class="bg-inner"></div></div>
@@ -293,8 +297,10 @@
               <div class="bg"><div class="bg-inner"></div></div>
             </div>
 
-            <div class="block-cube full-width">
-              <input id="reg-staff-team" type="text" name="staffTeamNameOrCountry" maxlength="100" placeholder="team name or country" aria-label="team name or country" />
+            <div class="block-cube full-width team-name-picker" data-team-picker>
+              <input id="reg-staff-team" class="team-picker-input" type="text" name="staffTeamNameOrCountry" maxlength="100" autocomplete="off" placeholder="team / country / club / province" aria-label="team name or country" aria-autocomplete="list" aria-expanded="false" />
+              <button type="button" class="team-picker-toggle" tabindex="-1" aria-label="Browse teams">▾</button>
+              <div class="team-picker-panel" hidden role="listbox" aria-label="Country, club, and province options"></div>
               <div class="bg-top"><div class="bg-inner"></div></div>
               <div class="bg-right"><div class="bg-inner"></div></div>
               <div class="bg"><div class="bg-inner"></div></div>
@@ -318,6 +324,12 @@
           </div>
 
           <div id="submitRow" class="submit-row full-width" hidden>
+            <button type="button" class="btn block-cube block-cube-hover" id="reviewWaiverBtn" hidden>
+              <div class="bg-top"><div class="bg-inner"></div></div>
+              <div class="bg-right"><div class="bg-inner"></div></div>
+              <div class="bg"><div class="bg-inner"></div></div>
+              <div class="text">accept waiver</div>
+            </button>
             <button type="submit" class="btn block-cube block-cube-hover" id="submitRegistrationBtn">
               <div class="bg-top"><div class="bg-inner"></div></div>
               <div class="bg-right"><div class="bg-inner"></div></div>
@@ -343,6 +355,28 @@
           <div class="bg"><div class="bg-inner"></div></div>
           <div class="text">← back to portal</div>
         </a>
+      </div>
+    </div>
+  </div>
+
+  <div id="waiverOverlay" class="modal-overlay" hidden>
+    <div class="modal-card waiver-modal-card" role="dialog" aria-labelledby="waiverTitle" aria-modal="true">
+      <h3 id="waiverTitle">event waiver</h3>
+      <p class="waiver-intro">please read and accept the waiver below to complete your registration.</p>
+      <div id="waiverDocument" class="waiver-document" tabindex="0"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn block-cube block-cube-hover modal-btn" id="waiverDeclineBtn">
+          <div class="bg-top"><div class="bg-inner"></div></div>
+          <div class="bg-right"><div class="bg-inner"></div></div>
+          <div class="bg"><div class="bg-inner"></div></div>
+          <div class="text">decline</div>
+        </button>
+        <button type="button" class="btn block-cube block-cube-hover modal-btn" id="waiverAcceptBtn">
+          <div class="bg-top"><div class="bg-inner"></div></div>
+          <div class="bg-right"><div class="bg-inner"></div></div>
+          <div class="bg"><div class="bg-inner"></div></div>
+          <div class="text">accept</div>
+        </button>
       </div>
     </div>
   </div>

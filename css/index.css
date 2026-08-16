@@ -352,6 +352,15 @@ h1 {
   text-align: left;
 }
 
+.pricing-content th:nth-child(1),
+.pricing-content td:nth-child(1) { width: 20%; }
+.pricing-content th:nth-child(2),
+.pricing-content td:nth-child(2) { width: 14%; }
+.pricing-content th:nth-child(3),
+.pricing-content td:nth-child(3) { width: 48%; }
+.pricing-content th:nth-child(4),
+.pricing-content td:nth-child(4) { width: 18%; text-align: center; }
+
 .pricing-content th {
   border-bottom: 1px solid #00d4ff;
 }
@@ -389,18 +398,19 @@ h1 {
 
 @media (max-width: 768px) {
   body {
-    height: 100dvh;
+    height: auto;
     min-height: 100dvh;
-    align-items: center;
-    overflow: hidden;
-    padding: 0;
+    align-items: flex-start;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 16px 0;
   }
 
   .center-container {
     width: 100%;
     max-width: 360px;
     padding: 12px 14px;
-    justify-content: center;
+    justify-content: flex-start;
   }
 
   .form {
@@ -460,7 +470,21 @@ h1 {
 
   .pricing-content th,
   .pricing-content td {
-    padding: 4px 6px;
-    font-size: 12px;
+    padding: 5px 4px;
+    font-size: 11px;
+  }
+
+  .pricing-content th:nth-child(1),
+  .pricing-content td:nth-child(1) { width: 14%; }
+  .pricing-content th:nth-child(2),
+  .pricing-content td:nth-child(2) { width: 11%; }
+  .pricing-content th:nth-child(3),
+  .pricing-content td:nth-child(3) { width: 62%; }
+  .pricing-content th:nth-child(4),
+  .pricing-content td:nth-child(4) { width: 13%; }
+
+  .pricing-content .paypal-logo {
+    height: 24px;
+    width: auto;
   }
 }

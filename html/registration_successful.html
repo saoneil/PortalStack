@@ -16,17 +16,19 @@
       font-family: monospace, serif;
       letter-spacing: 0.05em;
       margin: 0;
-      padding: 0;
-      height: 100vh;
+      padding: 16px;
+      min-height: 100dvh;
       display: flex;
       justify-content: center;
       align-items: center;
       text-align: center;
+      box-sizing: border-box;
     }
 
     .center-wrapper {
-      max-width: 300px;
+      max-width: min(300px, 100%);
       padding: 20px;
+      width: 100%;
     }
 
     p {

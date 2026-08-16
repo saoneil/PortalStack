@@ -259,6 +259,154 @@ function getEventField(eventRow, fieldName) {
   return lowerKey ? eventRow[lowerKey] : '';
 }
 
+function isTruthyFlag(value) {
+  return value === true || value === 1 || value === '1';
+}
+
+function eventRequiresWaiver(eventId) {
+  var eventRow = eventsById[eventId];
+  if (!eventRow) return false;
+  return isTruthyFlag(eventRow.waiver_required) && isTruthyFlag(eventRow.has_waiver);
+}
+
+function hasAcceptedWaiverForEvent(eventId) {
+  return eventId != null && String(waiverAcceptedForEventId) === String(eventId);
+}
+
+function clearWaiverAcceptance() {
+  waiverAcceptedForEventId = null;
+  pendingWaiverEventId = null;
+}
+
+function hideWaiverModal() {
+  if (!waiverOverlay) return;
+  waiverOverlay.hidden = true;
+  if (waiverDocument) waiverDocument.textContent = '';
+  pendingWaiverEventId = null;
+}
+
+function showWaiverModal(waiverText) {
+  if (!waiverOverlay || !waiverDocument) return;
+  waiverDocument.textContent = waiverText || '';
+  waiverOverlay.hidden = false;
+  if (waiverDocument.focus) {
+    try { waiverDocument.focus(); } catch (e) {}
+  }
+}
+
+function setReviewWaiverButtonLabel(accepted) {
+  if (!reviewWaiverBtn) return;
+  var textEl = reviewWaiverBtn.querySelector('.text');
+  if (textEl) textEl.textContent = accepted ? 'waiver accepted' : 'accept waiver';
+}
+
+function syncWaiverSubmitState() {
+  var requires = eventRequiresWaiver(selectedEventId);
+  var accepted = hasAcceptedWaiverForEvent(selectedEventId);
+  var formReady = !validateRegistration();
+
+  if (reviewWaiverBtn) {
+    if (!requires || submitRow.hidden) {
+      reviewWaiverBtn.hidden = true;
+      reviewWaiverBtn.disabled = true;
+      setReviewWaiverButtonLabel(false);
+    } else {
+      reviewWaiverBtn.hidden = false;
+      reviewWaiverBtn.disabled = !formReady || accepted;
+      setReviewWaiverButtonLabel(accepted);
+    }
+  }
+
+  if (submitRegistrationBtn) {
+    var canSubmit = !requires || accepted;
+    submitRegistrationBtn.disabled = !canSubmit;
+    submitRegistrationBtn.classList.toggle('is-disabled', !canSubmit);
+    if (!canSubmit) {
+      submitRegistrationBtn.title = 'Accept the event waiver to submit registration.';
+    } else {
+      submitRegistrationBtn.title = '';
+    }
+  }
+}
+
+function openWaiverForSubmit() {
+  if (!eventRequiresWaiver(selectedEventId)) return;
+
+  var validationError = validateRegistration();
+  if (validationError) {
+    setFormStatus(validationError, 'error');
+    syncWaiverSubmitState();
+    return;
+  }
+
+  pendingWaiverEventId = selectedEventId;
+  if (waiverAcceptBtn) waiverAcceptBtn.disabled = true;
+  if (waiverDeclineBtn) waiverDeclineBtn.disabled = true;
+
+  fetch('/api/registration/events/' + encodeURIComponent(selectedEventId) + '/waiver', {
+    headers: { Accept: 'application/json' }
+  })
+    .then(function(res) {
+      return res.json().then(function(data) {
+        return { ok: res.ok, data: data || {} };
+      }).catch(function() {
+        return { ok: res.ok, data: {} };
+      });
+    })
+    .then(function(result) {
+      if (waiverAcceptBtn) waiverAcceptBtn.disabled = false;
+      if (waiverDeclineBtn) waiverDeclineBtn.disabled = false;
+      if (String(pendingWaiverEventId) !== String(selectedEventId)) return;
+      if (!result.ok || !result.data.waiverText) {
+        setFormStatus(result.data.error || 'Unable to load the event waiver. Please try again.', 'error');
+        syncWaiverSubmitState();
+        return;
+      }
+      showWaiverModal(result.data.waiverText);
+      logInteraction('waiver_shown', {
+        eventId: selectedEventId,
+        eventName: getEventField(eventsById[selectedEventId], 'Event Name')
+      });
+    })
+    .catch(function() {
+      if (waiverAcceptBtn) waiverAcceptBtn.disabled = false;
+      if (waiverDeclineBtn) waiverDeclineBtn.disabled = false;
+      if (String(pendingWaiverEventId) !== String(selectedEventId)) return;
+      setFormStatus('Unable to load the event waiver. Please try again.', 'error');
+      syncWaiverSubmitState();
+    });
+}
+
+function acceptWaiver() {
+  if (!pendingWaiverEventId || String(selectedEventId) !== String(pendingWaiverEventId)) {
+    hideWaiverModal();
+    return;
+  }
+  var eventId = pendingWaiverEventId;
+  waiverAcceptedForEventId = eventId;
+  hideWaiverModal();
+  setFormStatus('waiver accepted. you can submit your registration.', 'success');
+  syncWaiverSubmitState();
+  logInteraction('waiver_accepted', {
+    eventId: eventId,
+    eventName: getEventField(eventsById[eventId], 'Event Name')
+  });
+}
+
+function declineWaiver() {
+  var eventId = pendingWaiverEventId || selectedEventId;
+  hideWaiverModal();
+  clearWaiverAcceptance();
+  if (eventId) {
+    logInteraction('waiver_declined', {
+      eventId: eventId,
+      eventName: getEventField(eventsById[eventId], 'Event Name')
+    });
+  }
+  setFormStatus('you must accept the event waiver before submitting registration.', 'error');
+  syncWaiverSubmitState();
+}
+
 function formatEventDateRange(eventRow) {
   var start = getEventDateFromRow(eventRow, 'event_date_start', ['Start Date', 'Event Date Start']);
   var end = getEventDateFromRow(eventRow, 'event_date_end', ['End Date', 'Event Date End']);
@@ -306,6 +454,7 @@ var registrationFlow = document.getElementById('registrationFlow');
 var entryForm = document.getElementById('entryFieldsForm');
 var formStatus = document.getElementById('formStatus');
 var submitRegistrationBtn = document.getElementById('submitRegistrationBtn');
+var reviewWaiverBtn = document.getElementById('reviewWaiverBtn');
 var roleSelect = document.getElementById('reg-role');
 var roleDivider = document.getElementById('roleDivider');
 var athleteFields = document.getElementById('athleteFields');
@@ -324,9 +473,15 @@ var confirmSubmitBtn = document.getElementById('confirmSubmitBtn');
 var confirmCancelBtn = document.getElementById('confirmCancelBtn');
 var successOverlay = document.getElementById('successOverlay');
 var successOkBtn = document.getElementById('successOkBtn');
+var waiverOverlay = document.getElementById('waiverOverlay');
+var waiverDocument = document.getElementById('waiverDocument');
+var waiverAcceptBtn = document.getElementById('waiverAcceptBtn');
+var waiverDeclineBtn = document.getElementById('waiverDeclineBtn');
 var eventsById = Object.create(null);
 var selectedEventId = null;
 var pendingPayload = null;
+var waiverAcceptedForEventId = null;
+var pendingWaiverEventId = null;
 
 function setStatus(message, isError) {
   eventStatus.textContent = message || '';
@@ -663,14 +818,18 @@ function hideRoleFields() {
   if (staffFields) staffFields.hidden = true;
   simpleFields.hidden = true;
   submitRow.hidden = true;
+  if (reviewWaiverBtn) reviewWaiverBtn.hidden = true;
 }
 
 function onRoleChange() {
   hideRoleFields();
   setFormStatus('');
+  clearWaiverAcceptance();
+  hideWaiverModal();
 
   if (!roleSelect.value) {
     syncFieldEmptyStates();
+    syncWaiverSubmitState();
     return;
   }
 
@@ -691,6 +850,7 @@ function onRoleChange() {
 
   submitRow.hidden = false;
   syncFieldEmptyStates();
+  syncWaiverSubmitState();
   logInteraction('role_selected', { role: roleSelect.value });
 }
 
@@ -812,6 +972,10 @@ function collectRegistrationPayload() {
     payload.firstName = scrubFieldValue(entryForm.simpleFirstName.value);
     payload.lastName = scrubFieldValue(entryForm.simpleLastName.value);
   }
+
+  payload.waiverAccepted = eventRequiresWaiver(selectedEventId)
+    ? hasAcceptedWaiverForEvent(selectedEventId)
+    : false;
 
   return payload;
 }
@@ -1004,7 +1168,7 @@ function submitRegistration(payload) {
       });
     })
     .finally(function() {
-      submitRegistrationBtn.disabled = false;
+      syncWaiverSubmitState();
     });
 }
 
@@ -1236,6 +1400,8 @@ function syncGridFocusState() {
 
 function deselectEvent() {
   var previousEventId = selectedEventId;
+  hideWaiverModal();
+  clearWaiverAcceptance();
   selectedEventId = null;
   registrationFlow.hidden = true;
   registrationClosedWarning.hidden = true;
@@ -1243,6 +1409,7 @@ function deselectEvent() {
   setFormStatus('');
   updateEventUrl('');
   syncGridFocusState();
+  syncWaiverSubmitState();
   logInteraction('event_deselected', {
     eventId: previousEventId,
     eventName: eventsById[previousEventId] ? getEventField(eventsById[previousEventId], 'Event Name') : ''
@@ -1254,11 +1421,13 @@ function selectEvent(eventId) {
     deselectEvent();
     return;
   }
-  
+
+  hideWaiverModal();
+  clearWaiverAcceptance();
   selectedEventId = eventId;
-  
+
   var isClosed = isRegistrationClosed(eventId);
-  
+
   if (isClosed) {
     registrationFlow.hidden = true;
     registrationClosedWarning.hidden = false;
@@ -1266,6 +1435,7 @@ function selectEvent(eventId) {
     setFormStatus('');
     updateEventUrl(eventId);
     syncGridFocusState();
+    syncWaiverSubmitState();
     logInteraction('event_selected_closed', {
       eventId: eventId,
       eventName: getEventField(eventsById[eventId], 'Event Name')
@@ -1278,6 +1448,7 @@ function selectEvent(eventId) {
     setFormStatus('');
     updateEventUrl(eventId);
     syncGridFocusState();
+    syncWaiverSubmitState();
     logInteraction('event_selected', {
       eventId: eventId,
       eventName: getEventField(eventsById[eventId], 'Event Name')
@@ -1288,9 +1459,15 @@ function selectEvent(eventId) {
 
 entryForm.addEventListener('submit', function(e) {
   e.preventDefault();
+  if (eventRequiresWaiver(selectedEventId) && !hasAcceptedWaiverForEvent(selectedEventId)) {
+    setFormStatus('please accept the event waiver before submitting registration.', 'error');
+    syncWaiverSubmitState();
+    return;
+  }
   var validationError = validateRegistration();
   if (validationError) {
     setFormStatus(validationError, 'error');
+    syncWaiverSubmitState();
     return;
   }
   showConfirmModal(collectRegistrationPayload());
@@ -1304,9 +1481,29 @@ confirmSubmitBtn.addEventListener('click', function() {
   submitRegistration(payload);
 });
 
+if (reviewWaiverBtn) {
+  reviewWaiverBtn.addEventListener('click', function() {
+    openWaiverForSubmit();
+  });
+}
+
+if (waiverAcceptBtn) {
+  waiverAcceptBtn.addEventListener('click', acceptWaiver);
+}
+if (waiverDeclineBtn) {
+  waiverDeclineBtn.addEventListener('click', declineWaiver);
+}
+if (waiverOverlay) {
+  waiverOverlay.addEventListener('click', function(evt) {
+    if (evt.target === waiverOverlay) {
+      declineWaiver();
+    }
+  });
+}
+
 successOkBtn.addEventListener('click', function() {
   successOverlay.hidden = true;
-  window.location.href = '/';
+  window.location.href = '/registration';
 });
 
 if (backToEventsBtn) {
@@ -1334,6 +1531,18 @@ fetch('/api/registration/events')
     eventGrid.innerHTML = '<p class="event-grid-loading">unable to load events.</p>';
   });
 roleSelect.addEventListener('change', onRoleChange);
+entryForm.addEventListener('input', function() {
+  if (hasAcceptedWaiverForEvent(selectedEventId)) {
+    clearWaiverAcceptance();
+  }
+  syncWaiverSubmitState();
+});
+entryForm.addEventListener('change', function() {
+  if (hasAcceptedWaiverForEvent(selectedEventId)) {
+    clearWaiverAcceptance();
+  }
+  syncWaiverSubmitState();
+});
 entryForm.rank.addEventListener('change', syncFieldEmptyStates);
 entryForm.gender.addEventListener('change', syncFieldEmptyStates);
 if (teamAgeRangeSelect) teamAgeRangeSelect.addEventListener('change', syncFieldEmptyStates);
@@ -1343,3 +1552,196 @@ if (staffRankSelect) staffRankSelect.addEventListener('change', syncFieldEmptySt
 if (staffGenderSelect) staffGenderSelect.addEventListener('change', syncFieldEmptyStates);
 initDobField();
 initFieldHints();
+initTeamNamePickers();
+
+var registrationTeamsDirectory = { countries: [], clubs: [], provinces: [] };
+
+function filterTeamNames(names, query) {
+  var q = String(query || '').trim().toLowerCase();
+  var list = Array.isArray(names) ? names.slice() : [];
+  if (!q) return list;
+
+  var starts = [];
+  var contains = [];
+  list.forEach(function(name) {
+    var lower = String(name).toLowerCase();
+    if (lower.indexOf(q) === 0) starts.push(name);
+    else if (lower.indexOf(q) !== -1) contains.push(name);
+  });
+  return starts.concat(contains);
+}
+
+function renderTeamPickerPanel(panel, query) {
+  if (!panel) return;
+  var q = String(query || '').trim();
+  var groups = [
+    { label: 'Country', names: filterTeamNames(registrationTeamsDirectory.countries || [], q) },
+    { label: 'Club', names: filterTeamNames(registrationTeamsDirectory.clubs || [], q) },
+    { label: 'Province', names: filterTeamNames(registrationTeamsDirectory.provinces || [], q) }
+  ];
+  var total = groups.reduce(function(sum, group) { return sum + group.names.length; }, 0);
+  var html = groups.map(function(group) {
+    if (!group.names.length) return '';
+    return '<div class="team-picker-group">' +
+      '<div class="team-picker-group-label">' + escapeHtml(group.label) +
+      ' <span class="team-picker-count">(' + group.names.length + ')</span></div>' +
+      group.names.map(function(name) {
+        return '<button type="button" class="team-picker-option" role="option" data-value="' +
+          escapeHtml(name) + '">' + escapeHtml(name) + '</button>';
+      }).join('') +
+      '</div>';
+  }).join('');
+
+  if (!html) {
+    panel.innerHTML = '<div class="team-picker-empty">no matches — keep typing a custom name</div>';
+    return;
+  }
+  panel.innerHTML = (q
+    ? '<div class="team-picker-status">' + total + ' match' + (total === 1 ? '' : 'es') + ' for “' + escapeHtml(q) + '”</div>'
+    : '') + html;
+}
+
+function closeTeamPicker(root) {
+  if (!root) return;
+  var panel = root.querySelector('.team-picker-panel');
+  var input = root.querySelector('.team-picker-input');
+  if (panel) panel.hidden = true;
+  if (input) input.setAttribute('aria-expanded', 'false');
+  root.classList.remove('is-open');
+}
+
+function openTeamPicker(root) {
+  if (!root) return;
+  var panel = root.querySelector('.team-picker-panel');
+  var input = root.querySelector('.team-picker-input');
+  if (!panel || !input) return;
+  renderTeamPickerPanel(panel, input.value);
+  panel.hidden = false;
+  input.setAttribute('aria-expanded', 'true');
+  root.classList.add('is-open');
+}
+
+function refreshOpenTeamPickers() {
+  document.querySelectorAll('[data-team-picker].is-open').forEach(function(root) {
+    var panel = root.querySelector('.team-picker-panel');
+    var input = root.querySelector('.team-picker-input');
+    if (panel && input && !panel.hidden) {
+      renderTeamPickerPanel(panel, input.value);
+    }
+  });
+}
+
+function bindTeamNamePicker(root) {
+  if (!root || root.dataset.teamPickerBound === '1') return;
+  var input = root.querySelector('.team-picker-input');
+  var toggle = root.querySelector('.team-picker-toggle');
+  var panel = root.querySelector('.team-picker-panel');
+  if (!input || !panel) return;
+  root.dataset.teamPickerBound = '1';
+
+  function chooseValue(value) {
+    input.value = value;
+    closeTeamPicker(root);
+    input.focus();
+  }
+
+  input.addEventListener('focus', function() {
+    openTeamPicker(root);
+  });
+
+  input.addEventListener('click', function() {
+    openTeamPicker(root);
+  });
+
+  input.addEventListener('input', function() {
+    // Keep the panel open and narrow results as the user types.
+    renderTeamPickerPanel(panel, input.value);
+    panel.hidden = false;
+    input.setAttribute('aria-expanded', 'true');
+    root.classList.add('is-open');
+  });
+
+  input.addEventListener('keydown', function(evt) {
+    if (evt.key === 'Escape') {
+      closeTeamPicker(root);
+    } else if (evt.key === 'ArrowDown') {
+      openTeamPicker(root);
+      var first = panel.querySelector('.team-picker-option');
+      if (first) {
+        evt.preventDefault();
+        first.focus();
+      }
+    }
+  });
+
+  if (toggle) {
+    toggle.addEventListener('mousedown', function(evt) {
+      evt.preventDefault();
+    });
+    toggle.addEventListener('click', function() {
+      if (panel.hidden) {
+        openTeamPicker(root);
+        input.focus();
+      } else {
+        closeTeamPicker(root);
+      }
+    });
+  }
+
+  panel.addEventListener('mousedown', function(evt) {
+    // Prevent input blur from closing before option click registers.
+    evt.preventDefault();
+  });
+
+  panel.addEventListener('click', function(evt) {
+    var option = evt.target.closest('.team-picker-option');
+    if (!option) return;
+    chooseValue(option.getAttribute('data-value') || option.textContent || '');
+  });
+
+  panel.addEventListener('keydown', function(evt) {
+    var option = evt.target.closest('.team-picker-option');
+    if (!option) return;
+    if (evt.key === 'Enter' || evt.key === ' ') {
+      evt.preventDefault();
+      chooseValue(option.getAttribute('data-value') || option.textContent || '');
+    } else if (evt.key === 'Escape') {
+      closeTeamPicker(root);
+      input.focus();
+    } else if (evt.key === 'ArrowDown' || evt.key === 'ArrowUp') {
+      evt.preventDefault();
+      var options = Array.prototype.slice.call(panel.querySelectorAll('.team-picker-option'));
+      var idx = options.indexOf(option);
+      var next = evt.key === 'ArrowDown' ? options[idx + 1] : options[idx - 1];
+      if (next) next.focus();
+    }
+  });
+}
+
+function initTeamNamePickers() {
+  var pickers = document.querySelectorAll('[data-team-picker]');
+  pickers.forEach(bindTeamNamePicker);
+
+  document.addEventListener('mousedown', function(evt) {
+    pickers.forEach(function(root) {
+      if (!root.contains(evt.target)) closeTeamPicker(root);
+    });
+  });
+
+  fetch('/api/registration/teams')
+    .then(function(res) {
+      if (!res.ok) throw new Error('Unable to load teams');
+      return res.json();
+    })
+    .then(function(teams) {
+      registrationTeamsDirectory = {
+        countries: (teams && teams.countries) || [],
+        clubs: (teams && teams.clubs) || [],
+        provinces: (teams && teams.provinces) || []
+      };
+      refreshOpenTeamPickers();
+    })
+    .catch(function() {
+      // Manual entry still works if the directory fails to load.
+    });
+}

@@ -5,558 +5,308 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" type="image/png" href="/images/PMA_Score_8.png">
-  <title>Advanced Division Creation</title>
+  <title>Draw Creation</title>
   <link rel="stylesheet" href="/css/landing.css">
   <link rel="stylesheet" href="/css/division-advanced.css">
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      if (params.has('embed')) document.documentElement.classList.add('da-embed');
+      document.documentElement.classList.add('da-start-screen');
+    }());
+  </script>
 </head>
 <body class="division-advanced-page">
   <main class="division-advanced-main">
     <div class="division-advanced-top">
       <div class="division-advanced-heading">
-        <h1 class="division-advanced-title">advanced division creation</h1>
-        <p class="division-advanced-subtitle">build divisions, import athletes, create groupings, draws, and schedules</p>
+        <h1 class="division-advanced-title">Draw Creation</h1>
+        <p class="division-advanced-subtitle">select an event, then choose how to build divisions</p>
       </div>
       <a href="/landing" class="action-btn division-advanced-back-btn">← back to portal</a>
     </div>
 
     <div id="daToast" class="da-toast" hidden></div>
 
-    <nav class="da-tabs" role="tablist">
-      <button type="button" class="da-tab active" data-tab="workflow" role="tab">workflow</button>
-      <button type="button" class="da-tab" data-tab="divisions" role="tab">divisions</button>
-      <button type="button" class="da-tab" data-tab="athletes" role="tab">athletes</button>
-      <button type="button" class="da-tab" data-tab="groupings" role="tab">groupings</button>
-      <button type="button" class="da-tab" data-tab="draws" role="tab">draws</button>
-      <button type="button" class="da-tab" data-tab="schedule" role="tab">schedule</button>
-    </nav>
-
-    <div id="divisionAdvancedWorkspace" class="division-advanced-workspace">
-      <section id="tab-workflow" class="da-panel active" data-panel="workflow">
-        <h2>workflow</h2>
-
-        <div class="da-workflow-layout">
-          <div class="da-workflow-path" id="workflowPath">
-            <article class="da-workflow-step" data-workflow-step="0" data-step-key="event">
-              <div class="da-workflow-step-index">0</div>
-              <div class="da-workflow-step-body">
-                <h3>select event</h3>
-                <p>choose which competition this session belongs to</p>
-                <div class="da-event-bar da-event-bar-inline">
-                  <label for="eventSelect">event</label>
-                  <select id="eventSelect" class="da-select da-event-select">
-                    <option value="">— select an event —</option>
-                  </select>
-                  <span id="eventStatus" class="da-status-text"></span>
-                </div>
-              </div>
-            </article>
-
-            <article class="da-workflow-step" data-workflow-step="1" data-step-key="divisions">
-              <div class="da-workflow-step-index">1</div>
-              <div class="da-workflow-step-body">
-                <h3>divisions</h3>
-                <p>create the full default division set for all events</p>
-                <button type="button" class="da-btn da-btn-primary" data-run-step="divisions">run divisions</button>
-              </div>
-            </article>
-
-            <article class="da-workflow-step" data-workflow-step="2" data-step-key="athletes">
-              <div class="da-workflow-step-index">2</div>
-              <div class="da-workflow-step-body">
-                <h3>athletes</h3>
-                <p>import registered athletes for the selected event</p>
-                <button type="button" class="da-btn da-btn-primary" data-run-step="athletes">run athletes</button>
-              </div>
-            </article>
-
-            <article class="da-workflow-step" data-workflow-step="3" data-step-key="groupings">
-              <div class="da-workflow-step-index">3</div>
-              <div class="da-workflow-step-body">
-                <h3>groupings</h3>
-                <p>assign athletes into divisions</p>
-                <button type="button" class="da-btn da-btn-primary" data-run-step="groupings">run groupings</button>
-              </div>
-            </article>
-
-            <article class="da-workflow-step" data-workflow-step="4" data-step-key="draws">
-              <div class="da-workflow-step-index">4</div>
-              <div class="da-workflow-step-body">
-                <h3>draws</h3>
-                <p>build draws from the current groupings</p>
-                <div class="da-workflow-step-actions">
-                  <button type="button" id="workflowDownloadZipBtn" class="da-btn da-btn-accent" hidden>download zip</button>
-                  <button type="button" class="da-btn da-btn-primary" data-run-step="draws">run draws</button>
-                </div>
-              </div>
-            </article>
-
-            <article class="da-workflow-step" data-workflow-step="5" data-step-key="schedule">
-              <div class="da-workflow-step-index">5</div>
-              <div class="da-workflow-step-body">
-                <h3>schedule</h3>
-                <p>pack the divisions into a schedule — set durations, order, and rings</p>
-                <button type="button" class="da-btn da-btn-primary" data-run-step="schedule">run schedule</button>
-              </div>
-            </article>
+    <div class="da-start" id="divisionAdvancedWorkspace">
+      <div class="da-status-ring" id="workflowStatusRing">
+        <div class="da-status-ring-content">
+          <p id="workflowProgressText" class="da-status-ring-msg">select an event</p>
+          <div class="da-event-gate">
+            <label for="eventSelect">event</label>
+            <select id="eventSelect" class="da-select da-event-select">
+              <option value="">— select an event —</option>
+            </select>
           </div>
 
-          <aside class="da-workflow-meter" id="workflowProgress" aria-live="polite">
-            <div class="da-status-ring" id="workflowStatusRing" style="--p:0"><span>0%</span></div>
-          </aside>
+          <div id="daDivisionChoice" class="da-division-choice" hidden>
+            <button type="button" id="useDefaultDivisionsBtn" class="da-choice-btn da-choice-btn-default">
+              Use Default Divisions
+            </button>
+            <div class="da-choice-split">
+              <div class="da-template-picker" id="wheelTemplatePicker">
+                <button type="button" id="wheelTemplateToggle" class="da-select da-choice-select da-template-toggle" aria-haspopup="listbox" aria-expanded="false" aria-controls="wheelTemplateMenu">
+                  — division templates —
+                </button>
+                <ul id="wheelTemplateMenu" class="da-template-menu" role="listbox" hidden></ul>
+              </div>
+              <button type="button" id="customizeDivisionsBtn" class="da-choice-btn da-choice-btn-custom">
+                Customize
+              </button>
+            </div>
+          </div>
+
+          <div id="daCreateDrawsChoice" class="da-division-choice" hidden>
+            <button type="button" id="createDrawsBtn" class="da-choice-btn da-choice-btn-default">
+              Create Draws
+            </button>
+            <button type="button" id="backToDivisionsChoiceBtn" class="da-choice-btn da-choice-btn-neutral">
+              Back
+            </button>
+            <button type="button" id="startOverReadyBtn" class="da-choice-btn da-choice-btn-custom">
+              Start Over
+            </button>
+          </div>
+
+          <div id="daCompleteChoice" class="da-division-choice" hidden>
+            <p id="daCompleteLabel" class="da-complete-label">Complete - Please proceed to scoring application</p>
+            <button type="button" id="modifyDrawsBtn" class="da-choice-btn da-choice-btn-default">
+              Modify Draws
+            </button>
+            <button type="button" id="combineSoloDrawsBtn" class="da-choice-btn da-choice-btn-neutral">
+              Combine Solo Divisions
+            </button>
+            <button type="button" id="downloadDrawPdfsBtn" class="da-choice-btn da-choice-btn-neutral">
+              Download PDFs
+            </button>
+            <button type="button" id="saveDivisionTemplateBtn" class="da-choice-btn da-choice-btn-neutral">
+              Save Division Template
+            </button>
+            <button type="button" id="startOverCompleteBtn" class="da-choice-btn da-choice-btn-custom">
+              Start Over
+            </button>
+          </div>
         </div>
+      </div>
+    </div>
 
-        <div class="da-actions-row">
-          <button type="button" id="runAllWorkflowBtn" class="da-btn">run all steps 1→5</button>
-          <button type="button" id="workflowSaveToProfileBtn" class="da-btn da-btn-primary" hidden>
-            save all files to profile
-          </button>
-          <button type="button" id="workflowRemoveFromProfileBtn" class="da-btn da-btn-danger" hidden>
-            remove files from profile
-          </button>
-          <button type="button" id="clearAllWorkflowBtn" class="da-btn da-btn-danger">clear all tabs</button>
-        </div>
-        <div id="workflowResult" class="da-result" hidden></div>
-      </section>
+    <section id="tab-divisions" class="da-panel da-edit-panel" data-panel="divisions" hidden>
+      <div class="da-edit-panel-top">
+        <h2>customize divisions</h2>
+      </div>
 
-      <section id="tab-divisions" class="da-panel" data-panel="divisions" hidden>
-        <h2>divisions</h2>
-
-        <div class="da-pattern-panel" id="patternPanel">
-          <div class="da-pattern-controls">
-            <div class="da-pattern-field">
-              <label for="patternEvent">event</label>
+      <div class="da-pattern-panel" id="patternPanel">
+        <div class="da-pattern-bands">
+          <div class="da-pattern-section da-pattern-options">
+            <div class="da-pattern-option-group">
+              <label class="da-pattern-label" for="patternEvent">event</label>
               <select id="patternEvent" class="da-select da-select-sm"></select>
             </div>
-            <div class="da-pattern-field">
-              <label for="patternDrawType">draw type</label>
+            <div class="da-pattern-option-group">
+              <label class="da-pattern-label" for="patternDrawType">draw type</label>
               <select id="patternDrawType" class="da-select da-select-sm"></select>
             </div>
-            <button type="button" id="generatePatternBtn" class="da-btn da-btn-primary">generate divisions</button>
-          </div>
-
-          <div class="da-pattern-bands">
-            <div class="da-pattern-section da-pattern-options">
-              <div class="da-pattern-option-group">
-                <span class="da-pattern-label">belt</span>
-                <div class="da-pattern-inline">
-                  <label class="da-check-label"><input type="radio" name="patternBelt" value="color" checked> gup</label>
-                  <label class="da-check-label"><input type="radio" name="patternBelt" value="black"> dan</label>
-                </div>
-              </div>
-              <div class="da-pattern-option-group">
-                <span class="da-pattern-label">gender</span>
-                <div class="da-pattern-inline">
-                  <label class="da-check-label"><input type="checkbox" id="patternGenderMale" checked> male</label>
-                  <label class="da-check-label"><input type="checkbox" id="patternGenderFemale" checked> female</label>
-                  <span class="da-hint-inline">(neither = MIXED)</span>
-                </div>
+            <div class="da-pattern-option-group">
+              <span class="da-pattern-label">belt</span>
+              <div class="da-pattern-inline">
+                <label class="da-check-label"><input type="radio" name="patternBelt" value="color" checked> gup</label>
+                <label class="da-check-label"><input type="radio" name="patternBelt" value="black"> dan</label>
               </div>
             </div>
-
-            <div class="da-pattern-section">
-              <div class="da-pattern-section-head">
-                <div class="da-pattern-section-title">
-                  <h3>age bands</h3>
-                  <span class="da-hint-inline">(max 0 with min &gt; 0 = open upper)</span>
-                </div>
-                <div class="da-pattern-section-actions">
-                  <button type="button" id="patternAgeDefaultBtn" class="da-btn da-btn-sm">default</button>
-                  <button type="button" id="patternAgeAddBtn" class="da-btn da-btn-sm">+</button>
-                  <button type="button" id="patternAgeRemoveBtn" class="da-btn da-btn-sm">−</button>
-                </div>
-              </div>
-              <div id="patternAgeRows" class="da-pattern-rows"></div>
-            </div>
-
-            <div class="da-pattern-section">
-              <div class="da-pattern-section-head">
-                <div class="da-pattern-section-title">
-                  <h3>rank bands</h3>
-                </div>
-                <div class="da-pattern-section-actions">
-                  <button type="button" id="patternRankDefaultBtn" class="da-btn da-btn-sm">default</button>
-                  <button type="button" id="patternRankAddBtn" class="da-btn da-btn-sm">+</button>
-                  <button type="button" id="patternRankRemoveBtn" class="da-btn da-btn-sm">−</button>
-                </div>
-              </div>
-              <div id="patternRankRows" class="da-pattern-rows"></div>
-            </div>
-
-            <div class="da-pattern-section" id="patternWeightSection" hidden>
-              <div class="da-pattern-section-head">
-                <div class="da-pattern-section-title">
-                  <h3>weight</h3>
-                  <span class="da-hint-inline">(0 / 0 = all)</span>
-                </div>
-              </div>
-              <div class="da-pattern-inline" id="patternWeightModeRow">
-                <label class="da-check-label"><input type="radio" name="patternWeightMode" value="light_middle_heavy" checked> L/M/H</label>
-                <label class="da-check-label"><input type="radio" name="patternWeightMode" value="fixed_kg"> fixed kg</label>
-              </div>
-              <div id="patternLmhBlock" class="da-pattern-inline">
-                <label class="da-check-label"><input type="checkbox" id="patternLmhLight" checked> light</label>
-                <label class="da-check-label"><input type="checkbox" id="patternLmhMiddle" checked> middle</label>
-                <label class="da-check-label"><input type="checkbox" id="patternLmhHeavy" checked> heavy</label>
-              </div>
-              <div id="patternFixedKgBlock" hidden>
-                <div class="da-pattern-subhead">
-                  male
-                  <button type="button" id="patternMaleWeightAddBtn" class="da-btn da-btn-sm">+</button>
-                  <button type="button" id="patternMaleWeightRemoveBtn" class="da-btn da-btn-sm">−</button>
-                </div>
-                <div id="patternMaleWeightRows" class="da-pattern-rows"></div>
-                <div class="da-pattern-subhead">
-                  female
-                  <button type="button" id="patternFemaleWeightAddBtn" class="da-btn da-btn-sm">+</button>
-                  <button type="button" id="patternFemaleWeightRemoveBtn" class="da-btn da-btn-sm">−</button>
-                </div>
-                <div id="patternFemaleWeightRows" class="da-pattern-rows"></div>
-              </div>
-            </div>
-
-            <div class="da-pattern-section" id="patternHeightSection" hidden>
-              <div class="da-pattern-section-head">
-                <div class="da-pattern-section-title">
-                  <h3>height</h3>
-                  <span class="da-hint-inline">(0 / 0 = all)</span>
-                </div>
-                <div class="da-pattern-section-actions">
-                  <button type="button" id="patternHeightDefaultBtn" class="da-btn da-btn-sm">default</button>
-                  <button type="button" id="patternHeightAddBtn" class="da-btn da-btn-sm">+</button>
-                  <button type="button" id="patternHeightRemoveBtn" class="da-btn da-btn-sm">−</button>
-                </div>
-              </div>
-              <div id="patternHeightModeBlock" class="da-pattern-inline">
-                <label id="patternHeightNoneLabel" class="da-check-label" hidden>
-                  <input type="radio" name="patternHeightMode" value="none" checked> none
-                </label>
-                <label class="da-check-label"><input type="radio" name="patternHeightMode" value="fixed_cm"> fixed cm</label>
-                <label class="da-check-label"><input type="radio" name="patternHeightMode" value="short_medium_tall"> S/M/T</label>
-              </div>
-              <div id="patternHeightFixedBlock" hidden>
-                <div id="patternHeightRows" class="da-pattern-rows"></div>
-              </div>
-              <div id="patternHeightSmtBlock" class="da-pattern-inline" hidden>
-                <label class="da-check-label"><input type="checkbox" id="patternSmtShort" checked> short</label>
-                <label class="da-check-label"><input type="checkbox" id="patternSmtMedium" checked> medium</label>
-                <label class="da-check-label"><input type="checkbox" id="patternSmtTall" checked> tall</label>
+            <div class="da-pattern-option-group">
+              <span class="da-pattern-label">gender</span>
+              <div class="da-pattern-inline">
+                <label class="da-check-label"><input type="checkbox" id="patternGenderMale" checked> male</label>
+                <label class="da-check-label"><input type="checkbox" id="patternGenderFemale" checked> female</label>
+                <span class="da-hint-inline">(neither = MIXED)</span>
               </div>
             </div>
           </div>
-        </div>
 
-        <div class="da-actions-row">
-          <button type="button" id="createAllDefaultsBtn" class="da-btn da-btn-primary">create all defaults</button>
-          <select id="templateSelect" class="da-select"><option value="">— template —</option></select>
-          <button type="button" id="loadTemplateBtn" class="da-btn">load template</button>
-          <button type="button" id="saveTemplateBtn" class="da-btn">save template</button>
-          <button type="button" id="clearDivisionsBtn" class="da-btn da-btn-danger">clear</button>
+          <div class="da-pattern-section">
+            <div class="da-pattern-section-head">
+              <div class="da-pattern-section-title">
+                <h3>age bands</h3>
+                <span class="da-hint-inline">(max 0 with min &gt; 0 = open upper)</span>
+              </div>
+              <div class="da-pattern-section-actions">
+                <button type="button" id="patternAgeDefaultBtn" class="da-btn da-btn-sm">default</button>
+                <button type="button" id="patternAgeAddBtn" class="da-btn da-btn-sm">+</button>
+                <button type="button" id="patternAgeRemoveBtn" class="da-btn da-btn-sm">−</button>
+              </div>
+            </div>
+            <div id="patternAgeRows" class="da-pattern-rows"></div>
+          </div>
+
+          <div class="da-pattern-section">
+            <div class="da-pattern-section-head">
+              <div class="da-pattern-section-title">
+                <h3>rank bands</h3>
+              </div>
+              <div class="da-pattern-section-actions">
+                <button type="button" id="patternRankDefaultBtn" class="da-btn da-btn-sm">default</button>
+                <button type="button" id="patternRankAddBtn" class="da-btn da-btn-sm">+</button>
+                <button type="button" id="patternRankRemoveBtn" class="da-btn da-btn-sm">−</button>
+              </div>
+            </div>
+            <div id="patternRankRows" class="da-pattern-rows"></div>
+          </div>
+
+          <div class="da-pattern-section" id="patternWeightSection" hidden>
+            <div class="da-pattern-section-head">
+              <div class="da-pattern-section-title">
+                <h3>weight</h3>
+                <span class="da-hint-inline">(0 / 0 = all)</span>
+              </div>
+            </div>
+            <div class="da-pattern-inline" id="patternWeightModeRow">
+              <label class="da-check-label"><input type="radio" name="patternWeightMode" value="light_middle_heavy" checked> L/M/H</label>
+              <label class="da-check-label"><input type="radio" name="patternWeightMode" value="fixed_kg"> fixed kg</label>
+            </div>
+            <div id="patternLmhBlock" class="da-pattern-inline">
+              <label class="da-check-label"><input type="checkbox" id="patternLmhLight" checked> light</label>
+              <label class="da-check-label"><input type="checkbox" id="patternLmhMiddle" checked> middle</label>
+              <label class="da-check-label"><input type="checkbox" id="patternLmhHeavy" checked> heavy</label>
+            </div>
+            <div id="patternFixedKgBlock" hidden>
+              <div class="da-pattern-subhead">
+                male
+                <button type="button" id="patternMaleWeightAddBtn" class="da-btn da-btn-sm">+</button>
+                <button type="button" id="patternMaleWeightRemoveBtn" class="da-btn da-btn-sm">−</button>
+              </div>
+              <div id="patternMaleWeightRows" class="da-pattern-rows"></div>
+              <div class="da-pattern-subhead">
+                female
+                <button type="button" id="patternFemaleWeightAddBtn" class="da-btn da-btn-sm">+</button>
+                <button type="button" id="patternFemaleWeightRemoveBtn" class="da-btn da-btn-sm">−</button>
+              </div>
+              <div id="patternFemaleWeightRows" class="da-pattern-rows"></div>
+            </div>
+          </div>
+
+          <div class="da-pattern-section" id="patternHeightSection" hidden>
+            <div class="da-pattern-section-head">
+              <div class="da-pattern-section-title">
+                <h3>height</h3>
+                <span class="da-hint-inline">(0 / 0 = all)</span>
+              </div>
+              <div class="da-pattern-section-actions">
+                <button type="button" id="patternHeightDefaultBtn" class="da-btn da-btn-sm">default</button>
+                <button type="button" id="patternHeightAddBtn" class="da-btn da-btn-sm">+</button>
+                <button type="button" id="patternHeightRemoveBtn" class="da-btn da-btn-sm">−</button>
+              </div>
+            </div>
+            <div id="patternHeightModeBlock" class="da-pattern-inline">
+              <label id="patternHeightNoneLabel" class="da-check-label" hidden>
+                <input type="radio" name="patternHeightMode" value="none" checked> none
+              </label>
+              <label class="da-check-label"><input type="radio" name="patternHeightMode" value="fixed_cm"> fixed cm</label>
+              <label class="da-check-label"><input type="radio" name="patternHeightMode" value="short_medium_tall"> S/M/T</label>
+            </div>
+            <div id="patternHeightFixedBlock" hidden>
+              <div id="patternHeightRows" class="da-pattern-rows"></div>
+            </div>
+            <div id="patternHeightSmtBlock" class="da-pattern-inline" hidden>
+              <label class="da-check-label"><input type="checkbox" id="patternSmtShort" checked> short</label>
+              <label class="da-check-label"><input type="checkbox" id="patternSmtMedium" checked> medium</label>
+              <label class="da-check-label"><input type="checkbox" id="patternSmtTall" checked> tall</label>
+            </div>
+          </div>
         </div>
-        <p id="divisionsSummary" class="da-summary">0 division leaves</p>
-        <div class="da-table-wrap">
-          <table class="da-table" id="divisionsTable">
+      </div>
+
+      <div class="da-actions-row">
+        <button type="button" id="generatePatternBtn" class="da-btn da-btn-accent">generate divisions</button>
+        <button type="button" id="clearDivisionsBtn" class="da-btn da-btn-danger">clear</button>
+        <p id="divisionsSummary" class="da-summary da-summary-inline">0 division leaves</p>
+        <div class="da-actions-row-end">
+          <button type="button" id="saveDivisionsContinueBtn" class="da-btn da-btn-primary">save &amp; continue</button>
+          <button type="button" id="startOverDivisionsBtn" class="da-btn da-btn-danger">start over</button>
+        </div>
+      </div>
+      <div class="da-table-wrap">
+        <table class="da-table" id="divisionsTable">
+          <thead>
+            <tr>
+              <th>enabled</th>
+              <th>division</th>
+              <th>event</th>
+              <th>draw type</th>
+              <th>gender</th>
+              <th>age</th>
+              <th>rank</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="tab-draws" class="da-panel da-edit-panel" data-panel="draws" hidden>
+      <div class="da-edit-panel-top">
+        <div class="da-edit-panel-actions">
+          <button type="button" id="saveDrawsBtn" class="da-btn da-btn-primary" disabled>save</button>
+          <button type="button" id="startOverDrawsBtn" class="da-btn da-btn-danger">start over</button>
+          <p id="drawDirtyHint" class="da-hint da-draw-dirty-hint" hidden>unsaved changes — save to apply</p>
+        </div>
+      </div>
+      <nav class="da-subtabs da-draws-view-tabs" role="tablist" aria-label="draw view">
+        <button type="button" class="da-subtab active" data-subtab="pool">athletes</button>
+        <button type="button" class="da-subtab" data-subtab="matches">draw</button>
+        <button type="button" class="da-subtab" data-subtab="edit">edit</button>
+      </nav>
+      <div class="da-split da-draws-layout">
+        <div class="da-table-wrap da-split-list">
+          <table class="da-table" id="drawsTable">
             <thead>
               <tr>
-                <th>enabled</th>
-                <th>division</th>
-                <th>event</th>
+                <th>draw name</th>
                 <th>draw type</th>
-                <th>gender</th>
-                <th>age</th>
-                <th>rank</th>
+                <th id="drawsAthletesHeader" class="da-th-athletes" title="right-click to filter"># athletes</th>
               </tr>
             </thead>
             <tbody></tbody>
           </table>
         </div>
-      </section>
-
-      <section id="tab-athletes" class="da-panel" data-panel="athletes" hidden>
-        <h2>athletes</h2>
-        <div class="da-event-bar">
-          <label for="athletesEventSelect">event</label>
-          <select id="athletesEventSelect" class="da-select da-event-select">
-            <option value="">— select an event —</option>
-          </select>
-          <span id="athletesEventStatus" class="da-status-text"></span>
-        </div>
-        <div class="da-actions-row">
-          <button type="button" id="importAthletesBtn" class="da-btn da-btn-primary">import from database</button>
-          <input type="search" id="athleteSearch" class="da-input" placeholder="search name, club, rank…">
-          <button type="button" id="clearAthletesBtn" class="da-btn da-btn-danger">clear</button>
-        </div>
-        <p id="athletesSummary" class="da-summary">no athletes loaded</p>
-        <div class="da-table-wrap">
-          <table class="da-table" id="athletesTable">
-            <thead>
-              <tr>
-                <th>name</th>
-                <th>dob</th>
-                <th>rank</th>
-                <th>gender</th>
-                <th>weight</th>
-                <th>height</th>
-                <th>club</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section id="tab-groupings" class="da-panel" data-panel="groupings" hidden>
-        <h2>groupings</h2>
-        <div class="da-event-bar">
-          <label for="groupingsEventSelect">event</label>
-          <select id="groupingsEventSelect" class="da-select da-event-select">
-            <option value="">— select an event —</option>
-          </select>
-          <span id="groupingsEventStatus" class="da-status-text"></span>
-        </div>
-        <div class="da-actions-row">
-          <button type="button" id="generateGroupingsBtn" class="da-btn da-btn-primary">generate groupings</button>
-          <button type="button" id="saveGroupingsBtn" class="da-btn">save groupings</button>
-          <button type="button" id="clearGroupingsBtn" class="da-btn da-btn-danger">clear</button>
-        </div>
-        <div class="da-groupings-filters">
-          <input type="search" id="groupingsSearch" class="da-input da-input-narrow" placeholder="division name…">
-          <input type="search" id="groupingsAthleteSearch" class="da-input da-input-narrow" placeholder="athlete search…">
-          <select id="groupingsEventFilter" class="da-select da-select-compact">
-            <option value="">all events</option>
-          </select>
-          <select id="groupingsTypeFilter" class="da-select da-select-compact">
-            <option value="">all types</option>
-            <option value="Single Elimination">single elimination</option>
-            <option value="Round Robin">round robin</option>
-            <option value="Premier League">premier league</option>
-            <option value="List">list</option>
-          </select>
-          <select id="groupingsSort" class="da-select da-select-compact">
-            <option value="name">sort: name</option>
-            <option value="athletes-desc">sort: athletes ↓</option>
-            <option value="athletes-asc">sort: athletes ↑</option>
-            <option value="type">sort: type</option>
-          </select>
-          <button type="button" id="groupingsClearFiltersBtn" class="da-btn da-btn-sm">clear filters</button>
-        </div>
-        <p id="groupingsSummary" class="da-summary">no groupings</p>
-        <div class="da-split da-groupings-layout">
-          <div class="da-table-wrap da-split-list">
-            <table class="da-table" id="groupingsTable">
-              <thead>
-                <tr><th>division</th><th>type</th><th>athletes</th></tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-          <div class="da-groupings-detail" id="groupingsDetailPane">
-            <div class="da-groupings-pane da-groupings-source" id="groupingsSourcePane">
-              <div class="da-groupings-pane-head">
-                <h3>source division</h3>
-                <span id="groupingsSourceMeta" class="da-hint-inline">select a division</span>
+        <div class="da-draws-right">
+          <div class="da-draws-upper">
+            <div class="da-draws-upper-bar">
+              <span id="selectedDrawName" class="da-selected-draw-name" hidden></span>
+            </div>
+            <div class="da-subpanel active" data-subpanel="pool">
+              <div id="drawAthletesList" class="da-draw-athletes da-draw-pool"></div>
+            </div>
+            <div class="da-subpanel" data-subpanel="matches" hidden>
+              <div id="drawMatchesViewport" class="da-matches-viewport">
+                <div class="da-matches-zoom" aria-label="draw zoom">
+                  <button type="button" id="matchesZoomOut" class="da-btn da-btn-sm" title="zoom out">−</button>
+                  <button type="button" id="matchesZoomIn" class="da-btn da-btn-sm" title="zoom in">+</button>
+                  <button type="button" id="matchesZoomFit" class="da-btn da-btn-sm" title="fit">fit</button>
+                </div>
+                <div id="drawMatchesContent" class="da-matches-content"></div>
               </div>
-              <div id="groupingsSourceAthletes" class="da-groupings-athletes">
-                <p class="da-hint">select a division to view athletes.</p>
+              <p id="drawMatchesHint" class="da-hint">select a draw to view.</p>
+            </div>
+            <div class="da-subpanel" data-subpanel="edit" hidden>
+              <div id="drawEditTypeBar" class="da-edit-type-bar" hidden>
+                <label class="da-inline-label" for="drawEditTypeSelect">draw type</label>
+                <select id="drawEditTypeSelect" class="da-select" disabled></select>
               </div>
-            </div>
-            <div class="da-move-bar" id="moveBar" hidden>
-              <label for="moveTargetSelect">move to</label>
-              <select id="moveTargetSelect" class="da-select"></select>
-              <button type="button" id="moveAthleteBtn" class="da-btn">↓ move</button>
-            </div>
-            <div class="da-groupings-pane da-groupings-target" id="groupingsTargetPane">
-              <div class="da-groupings-pane-head">
-                <h3>target division</h3>
-                <span id="groupingsTargetMeta" class="da-hint-inline">—</span>
-              </div>
-              <div id="groupingsTargetAthletes" class="da-groupings-athletes">
-                <p class="da-hint">choose a target division above.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="tab-draws" class="da-panel" data-panel="draws" hidden>
-        <h2>draws</h2>
-        <div class="da-event-bar">
-          <label for="drawsEventSelect">event</label>
-          <select id="drawsEventSelect" class="da-select da-event-select">
-            <option value="">— select an event —</option>
-          </select>
-          <span id="drawsEventStatus" class="da-status-text"></span>
-        </div>
-        <div class="da-actions-row">
-          <button type="button" id="generateDrawsBtn" class="da-btn da-btn-primary">create / regenerate draws</button>
-          <button type="button" id="saveDrawsBtn" class="da-btn">save draws</button>
-          <button type="button" id="downloadZipBtn" class="da-btn da-btn-accent" hidden>download zip</button>
-          <button type="button" id="clearDrawsBtn" class="da-btn da-btn-danger">clear</button>
-        </div>
-        <p id="drawsSummary" class="da-summary">no draws</p>
-        <div class="da-split da-draws-layout">
-          <div class="da-table-wrap da-split-list">
-            <table class="da-table" id="drawsTable">
-              <thead>
-                <tr><th>division</th><th>type</th><th>athletes</th></tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-          <div class="da-draws-right">
-            <div class="da-draw-info" id="drawInfoHeader">
-              <div><span class="da-draw-info-label">division:</span> <span id="drawInfoName">—</span></div>
-              <div><span class="da-draw-info-label">type:</span> <span id="drawInfoType">—</span></div>
-              <div><span class="da-draw-info-label">event:</span> <span id="drawInfoEvent">—</span></div>
-              <div><span class="da-draw-info-label">athletes:</span> <span id="drawInfoAthletes">—</span></div>
-            </div>
-            <div class="da-draw-edit-actions">
-              <button type="button" id="revertDrawBtn" class="da-btn" disabled>revert draw</button>
-              <button type="button" id="saveDrawBtn" class="da-btn da-btn-primary" disabled>save draw changes</button>
-            </div>
-            <nav class="da-subtabs" role="tablist" aria-label="draw preview">
-              <button type="button" class="da-subtab active" data-subtab="text">text file</button>
-              <button type="button" class="da-subtab" data-subtab="pdf">PDF file</button>
-              <button type="button" class="da-subtab" data-subtab="interactive">interactive file</button>
-            </nav>
-            <div class="da-subpanel active" data-subpanel="text">
-              <pre class="da-preview" id="drawPreview">select a division to preview plain-text draw.</pre>
-            </div>
-            <div class="da-subpanel" data-subpanel="pdf" hidden>
-              <iframe id="drawPdfPreview" class="da-pdf-frame" title="PDF preview"></iframe>
-              <p id="drawPdfHint" class="da-hint">select a division to preview the PDF.</p>
-            </div>
-            <div class="da-subpanel" data-subpanel="interactive" hidden>
-              <p id="drawEditHint" class="da-hint">drag rows to edit draws. use save draws to persist to the database.</p>
+              <p id="drawEditHint" class="da-hint da-edit-hint">select a draw to edit.</p>
               <div id="drawInteractiveEditor" class="da-interactive-editor"></div>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section id="tab-schedule" class="da-panel" data-panel="schedule" hidden>
-        <h2>schedule</h2>
-        <div class="da-event-bar">
-          <label for="scheduleEventSelect">event</label>
-          <select id="scheduleEventSelect" class="da-select da-event-select">
-            <option value="">— select an event —</option>
-          </select>
-          <span id="scheduleEventStatus" class="da-status-text"></span>
-        </div>
-        <div class="da-actions-row">
-          <button type="button" id="refreshScheduleFromDrawsBtn" class="da-btn da-btn-primary">
-            generate / refresh from draws
-          </button>
-          <button type="button" id="saveScheduleBtn" class="da-btn">save schedule</button>
-          <label class="da-inline-label" for="scheduleRingCount">rings
-            <input type="number" id="scheduleRingCount" class="da-input da-input-sm" min="1" max="32" value="3">
-          </label>
-          <button type="button" id="clearScheduleBtn" class="da-btn da-btn-danger">clear</button>
-        </div>
-
-        <div class="da-schedule-layout" id="scheduleLayout">
-          <div class="da-schedule-left" id="scheduleLeftPane">
-            <div class="da-schedule-filters">
-              <div class="da-schedule-filter-row">
-                <span class="da-schedule-filter-label">belt</span>
-                <label class="da-inline-label"><input type="checkbox" id="schedFilterColor" checked> color</label>
-                <label class="da-inline-label"><input type="checkbox" id="schedFilterBlack" checked> black</label>
-              </div>
-              <div class="da-schedule-filter-row">
-                <span class="da-schedule-filter-label">age</span>
-                <input type="number" id="schedAgeMin" class="da-input da-input-sm" placeholder="min" min="0" max="99">
-                <span class="da-hint">to</span>
-                <input type="number" id="schedAgeMax" class="da-input da-input-sm" placeholder="max" min="0" max="99">
-              </div>
-              <div class="da-schedule-filter-row">
-                <span class="da-schedule-filter-label">sort</span>
-                <select id="schedSortMode" class="da-select da-input-sm">
-                  <option value="pack">pack order</option>
-                  <option value="age">age</option>
-                  <option value="rank">gup/dan</option>
-                  <option value="age_rank">age then gup/dan</option>
-                  <option value="rank_age">gup/dan then age</option>
-                  <option value="name">name</option>
-                </select>
-                <button type="button" id="schedOrderUpBtn" class="da-btn da-btn-sm" title="move selected earlier in pack order">↑ order</button>
-                <button type="button" id="schedOrderDownBtn" class="da-btn da-btn-sm" title="move selected later in pack order">↓ order</button>
-              </div>
-              <div class="da-schedule-filter-row da-schedule-bulk">
-                <span class="da-schedule-filter-label">bulk</span>
-                <label class="da-inline-label">match
-                  <input type="number" id="schedBulkMatch" class="da-input da-input-sm" min="0" step="0.1" placeholder="min">
-                </label>
-                <label class="da-inline-label">buffer
-                  <input type="number" id="schedBulkBuffer" class="da-input da-input-sm" min="0" step="0.1" placeholder="min">
-                </label>
-                <button type="button" id="schedBulkSelectedBtn" class="da-btn da-btn-sm">apply selected</button>
-                <button type="button" id="schedBulkShownBtn" class="da-btn da-btn-sm">apply shown</button>
-                <button type="button" id="schedClearDurationsBtn" class="da-btn da-btn-sm" title="clear match/buffer for selected, or all shown if none selected">clear durations</button>
-              </div>
+          <button type="button" id="drawMoveArrowBtn" class="da-move-arrow" disabled title="move selected athletes to target division" aria-label="move selected athletes down">↓</button>
+          <div class="da-draws-lower">
+            <div class="da-draws-lower-bar">
+              <label class="da-inline-label" for="drawMoveTargetSelect">target division</label>
+              <select id="drawMoveTargetSelect" class="da-select"></select>
             </div>
-
-            <div class="da-table-scroll da-schedule-catalog-wrap">
-              <table class="da-table" id="scheduleCatalogTable">
-                <thead>
-                  <tr>
-                    <th class="da-col-check"><input type="checkbox" id="schedSelectAllShown" title="select all shown"></th>
-                    <th>#</th>
-                    <th>division</th>
-                    <th>type</th>
-                    <th>n</th>
-                    <th>age</th>
-                    <th>belt</th>
-                    <th>match</th>
-                    <th>buffer</th>
-                    <th>total</th>
-                    <th>status</th>
-                  </tr>
-                </thead>
-                <tbody id="scheduleCatalogBody"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="da-schedule-splitter" id="scheduleSplitter" role="separator" aria-orientation="vertical" aria-label="resize schedule panes" tabindex="0"></div>
-
-          <div class="da-schedule-right" id="scheduleRightPane">
-            <div class="da-schedule-board-toolbar">
-              <div class="da-schedule-board-toolbar-row">
-                <label class="da-inline-label" for="schedDaySelect">schedule days
-                  <select id="schedDaySelect" class="da-select da-input-sm"></select>
-                </label>
-                <button type="button" id="schedAddDayBtn" class="da-btn da-btn-sm">add day</button>
-                <button type="button" id="schedRemoveDayBtn" class="da-btn da-btn-sm">remove day</button>
-                <label class="da-inline-label" for="schedDayStart">start
-                  <input type="text" id="schedDayStart" class="da-input da-input-sm da-input-time" value="08:00" placeholder="HH:MM" maxlength="5">
-                </label>
-                <label class="da-inline-label" for="schedDayEnd">end
-                  <input type="text" id="schedDayEnd" class="da-input da-input-sm da-input-time" value="18:00" placeholder="HH:MM" maxlength="5">
-                </label>
-                <button type="button" id="schedApplyDayTimesBtn" class="da-btn da-btn-sm">apply times</button>
-              </div>
-              <div class="da-schedule-board-toolbar-row">
-                <button type="button" id="schedPlaceAllBtn" class="da-btn da-btn-sm" title="place all divisions; adds days when needed">place all</button>
-                <button type="button" id="schedClearDayBtn" class="da-btn da-btn-sm" title="clear placements on the active day only">clear this day</button>
-                <button type="button" id="schedClearPlacementsBtn" class="da-btn da-btn-sm">clear all days</button>
-              </div>
-            </div>
-            <div class="da-schedule-stage">
-              <div class="da-schedule-board-wrap" id="scheduleBoardDrop">
-                <h3 class="da-schedule-section-title">ring board</h3>
-                <div id="scheduleBoard" class="da-schedule-board"></div>
-              </div>
-              <div class="da-schedule-scratch" id="scheduleScratchDrop">
-                <div class="da-schedule-scratch-head">
-                  <h3 class="da-schedule-section-title">scratch pad</h3>
-                </div>
-                <p class="da-hint">drag blocks here from the board; drag back to place.</p>
-                <ul id="scheduleScratchList" class="da-schedule-scratch-list"></ul>
-              </div>
-            </div>
+            <div id="drawTargetAthletesList" class="da-draw-athletes da-draw-pool"></div>
           </div>
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
   </main>
 
   <div id="daConfirmModal" class="confirm-dialog-overlay" hidden>
@@ -572,6 +322,69 @@
     </div>
   </div>
 
+  <div id="daPromptModal" class="confirm-dialog-overlay" hidden>
+    <div class="confirm-dialog-card" role="dialog" aria-labelledby="daPromptTitle" aria-modal="true">
+      <h2 id="daPromptTitle" class="confirm-dialog-title">save division template</h2>
+      <div class="confirm-dialog-body">
+        <p id="daPromptMessage"></p>
+        <label class="da-sr-only" for="daPromptInput">template name</label>
+        <input type="text" id="daPromptInput" class="da-prompt-input" autocomplete="off" maxlength="120">
+      </div>
+      <div class="confirm-dialog-actions">
+        <button type="button" id="daPromptCancelBtn" class="action-btn confirm-dialog-btn">cancel</button>
+        <button type="button" id="daPromptOkBtn" class="action-btn confirm-dialog-btn">save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="daDrawsAthletesMenu" class="da-context-menu" hidden role="menu" aria-label="athletes column filter">
+    <button type="button" data-action="filter-solo" role="menuitem">filter to solo divisions</button>
+    <button type="button" data-action="show-all" role="menuitem" hidden>show all divisions</button>
+  </div>
+
+  <script>
+    // Classic script: same event fetch as Event Management (landing.html loadClientEvents).
+    (function () {
+      window.__daClientEvents = [];
+
+      function populateEventSelect(events) {
+        var select = document.getElementById('eventSelect');
+        if (!select) return;
+        select.innerHTML = '<option value="">— select an event —</option>';
+        (events || []).forEach(function (event) {
+          var option = document.createElement('option');
+          option.value = event.id;
+          var startDate = event.event_date_start
+            ? new Date(event.event_date_start).toLocaleDateString()
+            : '';
+          option.textContent = event.event_name + (startDate ? ' (' + startDate + ')' : '');
+          select.appendChild(option);
+        });
+      }
+
+      function loadClientEvents() {
+        fetch('/api/client-events', { credentials: 'same-origin' })
+          .then(function (res) {
+            var ct = res.headers.get('content-type') || '';
+            if (res.redirected || /text\/html/i.test(ct) || !res.ok) {
+              throw new Error('Unable to load events');
+            }
+            return res.json();
+          })
+          .then(function (events) {
+            window.__daClientEvents = events || [];
+            populateEventSelect(window.__daClientEvents);
+          })
+          .catch(function () { /* module loadEvents will retry */ });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadClientEvents);
+      } else {
+        loadClientEvents();
+      }
+    }());
+  </script>
   <script type="module" src="/js/division-advanced/main.js"></script>
 </body>
 </html>

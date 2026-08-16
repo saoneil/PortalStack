@@ -17,13 +17,39 @@
       font-size: 16px;
       line-height: 1.35;
     }
+    #pricingOverlay th:nth-child(1),
+    #pricingOverlay td:nth-child(1) { width: 20%; }
+    #pricingOverlay th:nth-child(2),
+    #pricingOverlay td:nth-child(2) { width: 14%; }
+    #pricingOverlay th:nth-child(3),
+    #pricingOverlay td:nth-child(3) { width: 48%; text-align: left; }
+    #pricingOverlay th:nth-child(4),
+    #pricingOverlay td:nth-child(4) { width: 18%; }
     #pricingOverlay h1 { display: none; }
     @media (max-width: 768px) {
-      #pricingOverlay th, #pricingOverlay td { padding: 7px 8px; font-size: 14px; }
+      #pricingOverlay th, #pricingOverlay td { padding: 6px 5px; font-size: 13px; }
+      #pricingOverlay th:nth-child(1),
+      #pricingOverlay td:nth-child(1) { width: 16%; }
+      #pricingOverlay th:nth-child(2),
+      #pricingOverlay td:nth-child(2) { width: 12%; }
+      #pricingOverlay th:nth-child(3),
+      #pricingOverlay td:nth-child(3) { width: 58%; text-align: left; }
+      #pricingOverlay th:nth-child(4),
+      #pricingOverlay td:nth-child(4) { width: 14%; padding: 6px 3px; }
+      #pricingOverlay .paypal-link { padding: 2px; }
+      #pricingOverlay .paypal-logo { height: 28px !important; }
     }
     @media (max-width: 480px) {
-      #pricingOverlay th, #pricingOverlay td { padding: 5px 6px; font-size: 12px; }
-      #pricingOverlay .paypal-logo { height: 34px !important; }
+      #pricingOverlay th, #pricingOverlay td { padding: 5px 4px; font-size: 11px; }
+      #pricingOverlay th:nth-child(1),
+      #pricingOverlay td:nth-child(1) { width: 14%; }
+      #pricingOverlay th:nth-child(2),
+      #pricingOverlay td:nth-child(2) { width: 11%; }
+      #pricingOverlay th:nth-child(3),
+      #pricingOverlay td:nth-child(3) { width: 62%; text-align: left; }
+      #pricingOverlay th:nth-child(4),
+      #pricingOverlay td:nth-child(4) { width: 13%; padding: 4px 2px; }
+      #pricingOverlay .paypal-logo { height: 24px !important; }
     }
   </style>
 </head>
@@ -33,57 +59,70 @@
     <img src="/images/PMA_Score_8.png" alt="render_error" class="header-image">
   </div>
 
-  <div id="clientHeader" style="display:flex; justify-content:center; align-items:center; gap:10px; margin-top:24px;">
+  <div id="clientHeader" class="client-header">
     <button id="openPricingPaymentsBtn" class="action-btn ellipsis-btn" hidden><span class="ellipsis-text">&nbsp;&nbsp;&nbsp;</span></button>
-    <div id="profileLabel" style="text-align:center; color:#fff; font-size:28px; font-weight:bold; display:none; text-shadow: 0 0 10px #00d4ff55, 0 0 20px #00d4ff55;">
-      Client: <span id="profileClientName" style="color:#00d4ff; text-shadow: 0 0 10px #00d4ff88, 0 0 20px #00d4ff55;"></span>
+    <div id="profileLabel" class="profile-label">
+      Client: <span id="profileClientName" class="profile-client-name"></span>
     </div>
   </div>
 
-  <div id="loggedInUser" class="logged-in-user" hidden>user: <span id="loggedInUsername"></span></div>
+  <div id="loggedInUser" class="logged-in-user" hidden>
+    <span class="logged-in-user-label">user: <span id="loggedInUsername"></span></span>
+    <form id="logoutForm" action="/logout" method="get" class="logout-form">
+      <button type="submit" class="logout-link">logout</button>
+    </form>
+  </div>
 
   <div id="release-notes-section" style="text-align:center; margin-top:16px;">
     <button id="openReleaseNotesBtn" class="action-btn" style="margin-right:16px; display:none;">release notes/user guide</button>
   </div>
 
-  <div id="organizerToolsSection" hidden>
-    <div class="scoring-system-text">organizer tools:</div>
-    <div class="scoring-table-container">
-      <table id="organizerToolsGrid">
-        <tr>
-          <th>Type</th>
-          <th>Tool</th>
-        </tr>
-        <tr>
-          <td>Events</td>
-          <td>
-            <a href="#" id="openEventCreationBtn">Event Creation</a>
-            -
-            <a href="#" id="openEventRegistrationBtn">Event Management</a>
-          </td>
-        </tr>
-        <tr>
-          <td>Division Creation Tool</td>
-          <td>
-            <a href="#" id="openDivisionCreationToolBtn">Basic</a>
-            -
-            <a href="/division-advanced" id="openAdvancedDivisionCreationBtn">Advanced</a>
-          </td>
-        </tr>
-        <tr>
-          <td>Live Event Schedule</td>
-          <td>
-            <a href="/live-schedule" id="openLiveEventScheduleBtn" target="_blank" rel="noopener noreferrer">Open</a>
-          </td>
-        </tr>
-      </table>
+  <div class="landing-tables-row">
+    <div id="organizerToolsSection" class="landing-table-panel" hidden>
+      <div class="scoring-system-text">organizer tools:</div>
+      <div class="scoring-table-container">
+        <table id="organizerToolsGrid">
+          <tr>
+            <th>Type</th>
+            <th>Tool</th>
+          </tr>
+          <tr>
+            <td>Event Creation/Management</td>
+            <td>
+              <a href="#" id="openEventCreationBtn">Creation</a>/<a href="#" id="openEventRegistrationBtn">Management</a>
+            </td>
+          </tr>
+          <tr>
+            <td>Draw Creation</td>
+            <td>
+              <a href="#" id="openDrawCreationBtn">Open Tool</a>
+            </td>
+          </tr>
+          <tr>
+            <td>Live Event Schedule</td>
+            <td>
+              <a href="#" id="openLiveScheduleToolBtn">Tool</a>/<a href="#" id="openLiveScheduleViewerBtn">Viewer</a>
+            </td>
+          </tr>
+          <tr>
+            <td>Umpire Management</td>
+            <td>coming soon</td>
+          </tr>
+          <tr>
+            <td>Digital ID Card</td>
+            <td>coming soon</td>
+          </tr>
+        </table>
+      </div>
     </div>
-  </div>
 
-  <!-- <h2 class="heading">please select a scoring system to continue:</h2> -->
-  <div class="scoring-system-text">select a scoring system:</div>
-  <div class="scoring-table-container">
-    <table id="grid"></table>
+    <div class="landing-table-panel scoring-system-section">
+      <!-- <h2 class="heading">please select a scoring system to continue:</h2> -->
+      <div class="scoring-system-text">select a scoring system:</div>
+      <div class="scoring-table-container">
+        <table id="grid"></table>
+      </div>
+    </div>
   </div>
 
   <div id="qrOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:9999;">
@@ -94,9 +133,9 @@
     </div>
   </div>
 
-  <div id="releaseNotesOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); justify-content:center; align-items:center; z-index:10000;">
-    <div style="background:rgba(33,33,33,0.95); padding:32px 40px; border-radius:16px; min-width:320px; max-width:90vw; max-height:80vh; overflow-y:auto; position:relative; box-shadow:0 0 40px #00d4ff55; display:flex; flex-direction:column; align-items:center; justify-content:center;">
-      <button id="closeReleaseNotesOverlayBtn" style="position:absolute; top:16px; right:16px; background:none; border:none; color:#fff; font-size:28px; cursor:pointer;">✕</button>
+  <div id="releaseNotesOverlay" class="release-notes-overlay" style="display:none;">
+    <div class="release-notes-modal">
+      <button id="closeReleaseNotesOverlayBtn" class="modal-close-btn" type="button" aria-label="Close release notes">✕</button>
       <h2 class="heading" style="color:#fff;">release notes</h2>
       <ul id="releaseNotesList" style="list-style:disc; padding:0; text-align:center; margin:0 auto; display:inline-block;"></ul>
     </div>
@@ -154,8 +193,8 @@
         </div>
         
         <div id="eventDetailsContainer" style="display:none; margin-top:24px; padding-top:24px; border-top:1px solid rgba(0,212,255,0.25);">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-            <h3 style="color:#00d4ff; margin:0;">event details</h3>
+          <div class="modal-section-header">
+            <h3>event details</h3>
             <button id="downloadQrBtn" class="action-btn" style="margin:0;">download QR code</button>
           </div>
           
@@ -227,6 +266,15 @@
               <div id="currentPosterInfo" style="margin-top:8px; color:#aaa; font-size:12px;"></div>
             </div>
 
+            <div class="form-group">
+              <label for="editEventWaiverRequired" style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                <input type="checkbox" id="editEventWaiverRequired" style="width:auto; margin:0;" />
+                Require waiver for registration
+              </label>
+              <label for="editEventWaiverText">Waiver document (required if waiver is required)</label>
+              <textarea id="editEventWaiverText" rows="8" maxlength="50000" placeholder="Paste or type the waiver participants must accept before registering."></textarea>
+            </div>
+
             <button type="submit" class="action-btn event-form-submit">
               save changes
             </button>
@@ -234,8 +282,8 @@
         </div>
         
         <div id="regTableContainer" style="display:none; margin-top:24px; padding-top:24px; border-top:1px solid rgba(0,212,255,0.25);">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-            <h3 style="color:#00d4ff; margin:0;">registrations</h3>
+          <div class="modal-section-header">
+            <h3>registrations</h3>
             <button id="downloadRegCsvBtn" class="action-btn" style="margin:0;">download CSV</button>
           </div>
           <div class="scrollable-table-wrapper">
@@ -245,6 +293,19 @@
             no registrations found for this event
           </div>
         </div>
+      </div>
+
+      <div id="eventManagementSuccess" class="modal-placeholder-message" hidden>
+        <div class="modal-success-title">
+          event updated successfully
+        </div>
+        <div class="modal-success-text">
+          your changes have been submitted.<br/>
+          the event will be reviewed and reactivated, usually within 24-48 hours.
+        </div>
+        <button id="manageAnotherEventBtn" class="action-btn" style="margin-top:24px;">
+          manage another event
+        </button>
       </div>
     </div>
   </div>
@@ -321,6 +382,15 @@
           <input type="file" id="eventPosterInput" name="eventPoster" accept="image/png" />
         </div>
 
+        <div class="form-group">
+          <label for="eventWaiverRequiredInput" style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+            <input type="checkbox" id="eventWaiverRequiredInput" name="waiverRequired" style="width:auto; margin:0;" />
+            Require waiver for registration
+          </label>
+          <label for="eventWaiverTextInput">Waiver document (required if waiver is required)</label>
+          <textarea id="eventWaiverTextInput" name="waiverText" rows="8" maxlength="50000" placeholder="Paste or type the waiver participants must accept before registering."></textarea>
+        </div>
+
         <button type="submit" class="action-btn event-form-submit">
           submit event request
         </button>
@@ -341,68 +411,33 @@
     </div>
   </div>
 
-  <div id="basicDivisionCreationOverlay" class="large-modal-overlay">
-    <div class="large-modal-content">
-      <button id="closeBasicDivisionCreationBtn" class="modal-close-btn">✕</button>
-      <h2 class="modal-title">basic division creation</h2>
-
-      <div class="division-creation-form">
-        <div class="form-field-row">
-          <div class="form-field">
-            <label for="divisionName">Division Name</label>
-            <input type="text" id="divisionName" maxlength="100" value="Test Division">
-          </div>
-
-          <div class="form-field">
-            <label for="divisionType">Division Type</label>
-            <select id="divisionType">
-              <option value="single elimination" selected>single elimination</option>
-              <option value="round robin">round robin</option>
-              <option value="Premier League">Premier League</option>
-              <option value="list">list</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-field-row">
-          <div class="form-field">
-            <label for="ringNumber">Ring Number</label>
-            <input type="text" id="ringNumber" maxlength="50" value="Ring 1">
-          </div>
-
-          <div class="form-field">
-            <label for="divisionSize">Division Size</label>
-            <input type="text" id="divisionSize" readonly value="4">
-          </div>
-        </div>
-
-        <div class="athletes-section">
-          <div class="athletes-header">
-            <h3>Athletes</h3>
-            <div class="athlete-controls">
-              <button type="button" id="addAthleteBtn" class="control-btn">+</button>
-              <button type="button" id="removeAthleteBtn" class="control-btn">−</button>
-            </div>
-          </div>
-          <div id="athleteEntries"></div>
-        </div>
-
-        <div class="form-actions">
-          <button type="button" id="clearDivisionBtn" class="secondary-btn">Clear</button>
-          <button type="button" id="confirmDivisionBtn" class="primary-btn">Create Division</button>
-        </div>
-      </div>
+  <div id="drawCreationOverlay" class="large-modal-overlay">
+    <div class="large-modal-content draw-creation-modal-content">
+      <button type="button" id="closeDrawCreationBtn" class="modal-close-btn">✕</button>
+      <iframe id="drawCreationFrame" class="draw-creation-frame" title="Draw Creation" src="about:blank"></iframe>
     </div>
   </div>
 
-  <div id="complexDivisionModal" class="confirm-dialog-overlay" hidden>
-    <div class="confirm-dialog-card" role="dialog" aria-labelledby="complexDivisionTitle" aria-modal="true">
-      <h2 id="complexDivisionTitle" class="confirm-dialog-title">Complex Divisions</h2>
-      <div class="confirm-dialog-body">
-        <p>In order to create more complex divisions, please contact <a href="mailto:performance.ma.can@gmail.com" style="color: #00d4ff; text-decoration: underline;">PMA Score</a>.</p>
+  <div id="liveScheduleToolOverlay" class="large-modal-overlay">
+    <div class="large-modal-content draw-creation-modal-content">
+      <button type="button" id="closeLiveScheduleToolBtn" class="modal-close-btn">✕</button>
+      <iframe id="liveScheduleToolFrame" class="draw-creation-frame" title="Live Event Schedule Tool" src="about:blank"></iframe>
+    </div>
+  </div>
+
+  <div id="liveScheduleViewerPickerOverlay" class="confirm-dialog-overlay" hidden>
+    <div class="confirm-dialog-card" role="dialog" aria-labelledby="liveScheduleViewerPickerTitle" aria-modal="true">
+      <h3 id="liveScheduleViewerPickerTitle" class="confirm-dialog-title">view live schedule</h3>
+      <p class="confirm-dialog-text">Choose an event with a saved schedule to open the public viewer.</p>
+      <div class="event-select-container" style="margin: 0 0 8px;">
+        <select id="liveScheduleViewerSelect" class="event-select" aria-label="Select saved schedule">
+          <option value="">— loading —</option>
+        </select>
       </div>
+      <p id="liveScheduleViewerPickerHint" class="confirm-dialog-text" hidden></p>
       <div class="confirm-dialog-actions">
-        <button id="closeComplexDivisionModal" class="confirm-dialog-btn confirm-dialog-btn-primary">OK</button>
+        <button type="button" id="liveScheduleViewerPickerCancelBtn" class="action-btn confirm-dialog-btn">cancel</button>
+        <button type="button" id="liveScheduleViewerPickerOpenBtn" class="action-btn confirm-dialog-btn confirm-dialog-btn-primary" disabled>open viewer</button>
       </div>
     </div>
   </div>
@@ -415,19 +450,6 @@
       </div>
       <div class="confirm-dialog-actions">
         <button type="button" id="closeAdvancedAccessDeniedModal" class="confirm-dialog-btn confirm-dialog-btn-primary">ok</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="divisionCreatedModal" class="confirm-dialog-overlay" hidden>
-    <div class="confirm-dialog-card" role="dialog" aria-labelledby="divisionCreatedTitle" aria-modal="true">
-      <h2 id="divisionCreatedTitle" class="confirm-dialog-title">Division Created</h2>
-      <div class="confirm-dialog-body">
-        <p>Division created successfully! Would you like to clear the form and create another division?</p>
-      </div>
-      <div class="confirm-dialog-actions">
-        <button type="button" id="divisionCreatedNoBtn" class="action-btn confirm-dialog-btn">no</button>
-        <button type="button" id="divisionCreatedYesBtn" class="action-btn confirm-dialog-btn">yes, create another</button>
       </div>
     </div>
   </div>
@@ -453,16 +475,6 @@
     </div>
   </div>
 
-  <form id="logoutForm" action="/logout" method="get" class="logout-form">
-    <button class="btn block-cube block-cube-hover" type="submit">
-      <div class="bg-top"><div class="bg-inner"></div></div>
-      <div class="bg-right"><div class="bg-inner"></div></div>
-      <div class="bg"><div class="bg-inner"></div></div>
-      <div class="text">logout</div>
-    </button>
-  </form>
-
-
   <script>
     // Logging helper: sends interaction data to the server
     function logInteraction(action, details) {
@@ -481,7 +493,8 @@
     var hasPrincipleUserAdvancedAccess = false;
     var principleUserCheckInFlight = null;
     var PRINCIPLE_USER_OVERLAYS = [
-      'basicDivisionCreationOverlay',
+      'drawCreationOverlay',
+      'liveScheduleToolOverlay',
       'eventCreationOverlay',
       'eventRegistrationOverlay',
       'pricingOverlay'
@@ -508,10 +521,6 @@
         });
         var confirmOverlay = document.getElementById('eventCreationConfirmOverlay');
         if (confirmOverlay) confirmOverlay.hidden = true;
-        var divisionCreatedModal = document.getElementById('divisionCreatedModal');
-        if (divisionCreatedModal) divisionCreatedModal.hidden = true;
-        var complexDivisionModal = document.getElementById('complexDivisionModal');
-        if (complexDivisionModal) complexDivisionModal.hidden = true;
         var advancedAccessDeniedModal = document.getElementById('advancedAccessDeniedModal');
         if (advancedAccessDeniedModal) advancedAccessDeniedModal.hidden = true;
         var appMessageOverlay = document.getElementById('appMessageOverlay');
@@ -912,7 +921,7 @@
     });
 
     // Allow clicking the backdrop itself to close each modal.
-    ['qrOverlay', 'releaseNotesOverlay', 'pricingOverlay', 'eventCreationOverlay', 'eventRegistrationOverlay', 'basicDivisionCreationOverlay'].forEach(function(overlayId) {
+    ['qrOverlay', 'releaseNotesOverlay', 'pricingOverlay', 'eventCreationOverlay', 'eventRegistrationOverlay', 'drawCreationOverlay', 'liveScheduleToolOverlay'].forEach(function(overlayId) {
       const overlay = document.getElementById(overlayId);
       if (!overlay) return;
       overlay.addEventListener('click', function(evt) {
@@ -935,7 +944,7 @@
         hideEventCreationConfirm();
         return;
       }
-      ['qrOverlay', 'releaseNotesOverlay', 'pricingOverlay', 'eventCreationOverlay', 'eventRegistrationOverlay', 'basicDivisionCreationOverlay'].forEach(function(overlayId) {
+      ['qrOverlay', 'releaseNotesOverlay', 'pricingOverlay', 'eventCreationOverlay', 'eventRegistrationOverlay', 'drawCreationOverlay', 'liveScheduleToolOverlay'].forEach(function(overlayId) {
         const overlay = document.getElementById(overlayId);
         if (overlay && overlay.style.display !== 'none') {
           overlay.style.display = 'none';
@@ -988,6 +997,7 @@
       e.preventDefault();
       requirePrincipleUserAccess(function() {
         logInteraction('open_event_registration', { description: 'Opened event registration modal' });
+        resetEventManagementModal();
         document.getElementById('eventRegistrationOverlay').style.display = 'flex';
         loadClientEvents();
       });
@@ -997,6 +1007,35 @@
       closeOverlay('eventRegistrationOverlay', 'close_event_registration');
     };
 
+    function showEventManagementSuccess() {
+      const emptyState = document.getElementById('eventRegEmptyState');
+      const content = document.getElementById('eventRegContent');
+      const success = document.getElementById('eventManagementSuccess');
+      if (emptyState) emptyState.style.display = 'none';
+      if (content) content.style.display = 'none';
+      if (success) success.hidden = false;
+    }
+
+    function resetEventManagementModal() {
+      const emptyState = document.getElementById('eventRegEmptyState');
+      const content = document.getElementById('eventRegContent');
+      const success = document.getElementById('eventManagementSuccess');
+      const details = document.getElementById('eventDetailsContainer');
+      const regs = document.getElementById('regTableContainer');
+      const select = document.getElementById('eventRegSelect');
+      if (success) success.hidden = true;
+      if (emptyState) emptyState.style.display = 'none';
+      if (content) content.style.display = 'none';
+      if (details) details.style.display = 'none';
+      if (regs) regs.style.display = 'none';
+      if (select) select.value = '';
+      const editForm = document.getElementById('eventEditForm');
+      if (editForm) editForm.reset();
+      clearCustomEventCheckboxes(document.getElementById('editEventEventsCheckboxes'));
+      const editCustomInput = document.getElementById('editCustomEventInput');
+      if (editCustomInput) editCustomInput.value = '';
+    }
+
     function loadClientEvents() {
       fetch('/api/client-events')
         .then(res => {
@@ -1005,6 +1044,13 @@
         })
         .then(events => {
           clientEvents = events || [];
+          const success = document.getElementById('eventManagementSuccess');
+          if (success && !success.hidden) {
+            // Keep success panel visible after a save refresh.
+            document.getElementById('eventRegEmptyState').style.display = 'none';
+            document.getElementById('eventRegContent').style.display = 'none';
+            return;
+          }
           if (clientEvents.length === 0) {
             document.getElementById('eventRegEmptyState').style.display = 'block';
             document.getElementById('eventRegContent').style.display = 'none';
@@ -1132,6 +1178,9 @@
       document.getElementById('editEventLocation').value = event.event_location || '';
       document.getElementById('editEventLink').value = event.event_link || '';
       document.getElementById('editEventContact').value = event.event_contact || '';
+      document.getElementById('editEventWaiverRequired').checked =
+        event.waiver_required === 1 || event.waiver_required === true || event.waiver_required === '1';
+      document.getElementById('editEventWaiverText').value = event.waiver_text || '';
       
       const editCheckboxContainer = document.getElementById('editEventEventsCheckboxes');
       clearCustomEventCheckboxes(editCheckboxContainer);
@@ -1171,6 +1220,16 @@
       const selectedEventTypes = Array.from(
         document.querySelectorAll('#editEventEventsCheckboxes input[name="editEventType"]:checked')
       ).map(input => input.value);
+
+      const editWaiverRequired = document.getElementById('editEventWaiverRequired').checked;
+      const editWaiverText = document.getElementById('editEventWaiverText').value.trim();
+      if (editWaiverRequired && !editWaiverText) {
+        showAppMessage({
+          title: 'waiver required',
+          message: 'Please enter waiver text when requiring a waiver for registration.'
+        });
+        return;
+      }
       
       const formData = new FormData();
       formData.append('eventName', document.getElementById('editEventName').value.trim());
@@ -1195,6 +1254,9 @@
       if (posterFile) {
         formData.append('eventPoster', posterFile);
       }
+
+      formData.append('waiverRequired', document.getElementById('editEventWaiverRequired').checked ? '1' : '0');
+      formData.append('waiverText', document.getElementById('editEventWaiverText').value);
       
       fetch('/api/client-events/' + eventId, {
         method: 'POST',
@@ -1203,10 +1265,7 @@
         .then(res => res.json())
         .then(result => {
           if (result.success) {
-            showAppMessage({
-              title: 'event updated',
-              message: 'Event updated successfully. Changes will be reviewed and the event will be reactivated, usually within 24-48 hours.'
-            });
+            showEventManagementSuccess();
             loadClientEvents();
           } else {
             showAppMessage({
@@ -1223,6 +1282,10 @@
         });
     });
 
+    document.getElementById('manageAnotherEventBtn').onclick = function() {
+      resetEventManagementModal();
+      loadClientEvents();
+    };
     document.getElementById('downloadQrBtn').addEventListener('click', function() {
       const eventId = document.getElementById('eventRegSelect').value;
       if (!eventId) {
@@ -1357,12 +1420,12 @@
         showAppMessage({ title: 'nothing to download', message: 'No registrations to download.' });
         return;
       }
-      
+
       logInteraction('download_registration_csv', { count: currentRegistrations.length });
-      
+
       const headers = Object.keys(currentRegistrations[0]);
       let csv = headers.join(',') + '\n';
-      
+
       currentRegistrations.forEach(reg => {
         const row = headers.map(h => {
           let value = formatRegistrationCellValue(h, reg[h]);
@@ -1374,17 +1437,17 @@
         });
         csv += row.join(',') + '\n';
       });
-      
+
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      
+
       const eventSelect = document.getElementById('eventRegSelect');
       const eventName = eventSelect.options[eventSelect.selectedIndex].text.split('(')[0].trim();
       const safeEventName = eventName.replace(/[^a-zA-Z0-9]/g, '_');
       a.download = 'registrations_' + safeEventName + '_' + Date.now() + '.csv';
-      
+
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -1392,36 +1455,197 @@
     };
 
     // ========== ORGANIZER TOOL MODALS ==========
-    document.getElementById('openDivisionCreationToolBtn').onclick = function(e) {
+    document.getElementById('openDrawCreationBtn').onclick = function(e) {
       e.preventDefault();
-      requirePrincipleUserAccess(function() {
-        logInteraction('open_division_creation_tool', { description: 'Opened basic division creation modal' });
-        document.getElementById('basicDivisionCreationOverlay').style.display = 'flex';
-        if (document.getElementById('athleteEntries').children.length === 0) {
-          initializeAthleteEntries();
+      requirePrincipleUserAdvancedAccess(function() {
+        logInteraction('open_draw_creation_tool', { description: 'Opened draw creation modal' });
+        var overlay = document.getElementById('drawCreationOverlay');
+        var frame = document.getElementById('drawCreationFrame');
+        // Always reload so a prior failed/partial load (e.g. DB outage) does not stick.
+        if (frame) {
+          frame.src = '/division-advanced?embed=1&t=' + Date.now();
+        }
+        overlay.style.display = 'flex';
+      });
+    };
+
+    function requestDrawCreationBack(frame) {
+      return new Promise(function(resolve) {
+        if (!frame || !frame.contentWindow) {
+          resolve(false);
+          return;
+        }
+        var requestId = 'da-close-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+        var settled = false;
+        function finish(handled) {
+          if (settled) return;
+          settled = true;
+          window.removeEventListener('message', onMessage);
+          resolve(Boolean(handled));
+        }
+        function onMessage(event) {
+          if (event.origin !== window.location.origin) return;
+          if (!event.data || event.data.type !== 'da-close-response' || event.data.id !== requestId) return;
+          finish(event.data.handled);
+        }
+        window.addEventListener('message', onMessage);
+        try {
+          frame.contentWindow.postMessage({ type: 'da-close-request', id: requestId }, window.location.origin);
+        } catch (_) {
+          finish(false);
+          return;
+        }
+        window.setTimeout(function() { finish(false); }, 600);
+      });
+    }
+
+    document.getElementById('closeDrawCreationBtn').onclick = function() {
+      var frame = document.getElementById('drawCreationFrame');
+      requestDrawCreationBack(frame).then(function(handled) {
+        if (!handled) {
+          closeOverlay('drawCreationOverlay', 'close_draw_creation');
         }
       });
     };
 
-    document.getElementById('closeBasicDivisionCreationBtn').onclick = function() {
-      closeOverlay('basicDivisionCreationOverlay', 'close_basic_division_creation');
-    };
-
-    document.getElementById('openAdvancedDivisionCreationBtn').onclick = function(e) {
+    document.getElementById('openLiveScheduleToolBtn').onclick = function(e) {
       e.preventDefault();
       requirePrincipleUserAdvancedAccess(function() {
-        logInteraction('open_advanced_division_creation', { description: 'Navigated to advanced division creation page' });
-        window.location.href = '/division-advanced';
+        logInteraction('open_live_schedule_tool', { description: 'Opened live event schedule tool modal' });
+        var overlay = document.getElementById('liveScheduleToolOverlay');
+        var frame = document.getElementById('liveScheduleToolFrame');
+        if (frame && frame.getAttribute('src') === 'about:blank') {
+          frame.src = '/live-schedule?embed=1';
+        }
+        overlay.style.display = 'flex';
       });
     };
 
-    document.getElementById('openLiveEventScheduleBtn').onclick = function(e) {
+    document.getElementById('closeLiveScheduleToolBtn').onclick = function() {
+      closeOverlay('liveScheduleToolOverlay', 'close_live_schedule_tool');
+    };
+
+    var liveScheduleViewerPickerState = { clientId: '', items: [] };
+
+    function formatLiveScheduleOptionLabel(item) {
+      var date = item.eventDateStart
+        ? new Date(item.eventDateStart).toLocaleDateString(undefined, {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        })
+        : '';
+      return date ? (item.eventName + ' (' + date + ')') : item.eventName;
+    }
+
+    function closeLiveScheduleViewerPicker() {
+      var overlay = document.getElementById('liveScheduleViewerPickerOverlay');
+      if (overlay) overlay.hidden = true;
+    }
+
+    function openLiveScheduleViewerPicker() {
+      var overlay = document.getElementById('liveScheduleViewerPickerOverlay');
+      var select = document.getElementById('liveScheduleViewerSelect');
+      var hint = document.getElementById('liveScheduleViewerPickerHint');
+      var openBtn = document.getElementById('liveScheduleViewerPickerOpenBtn');
+      if (!overlay || !select || !openBtn) return;
+
+      liveScheduleViewerPickerState = { clientId: '', items: [] };
+      select.innerHTML = '<option value="">— loading —</option>';
+      select.disabled = true;
+      openBtn.disabled = true;
+      if (hint) {
+        hint.hidden = true;
+        hint.textContent = '';
+      }
+      overlay.hidden = false;
+
+      fetch('/api/live-schedule/saved')
+        .then(function(res) {
+          if (!res.ok) {
+            return res.json().catch(function() { return {}; }).then(function(body) {
+              throw new Error((body && body.error) || 'Unable to load saved schedules.');
+            });
+          }
+          return res.json();
+        })
+        .then(function(data) {
+          liveScheduleViewerPickerState.clientId = String((data && data.clientId) || '');
+          liveScheduleViewerPickerState.items = (data && data.items) || [];
+          select.disabled = false;
+
+          if (!liveScheduleViewerPickerState.items.length) {
+            select.innerHTML = '<option value="">— no saved schedules —</option>';
+            openBtn.disabled = true;
+            if (hint) {
+              hint.hidden = false;
+              hint.textContent = 'No saved schedules found. Create draws for an event first — a schedule is saved automatically.';
+            }
+            return;
+          }
+
+          select.innerHTML = '<option value="">— choose a schedule —</option>' +
+            liveScheduleViewerPickerState.items.map(function(item) {
+              return '<option value="' + String(item.eventId).replace(/"/g, '&quot;') + '">' +
+                String(formatLiveScheduleOptionLabel(item))
+                  .replace(/&/g, '&amp;')
+                  .replace(/</g, '&lt;')
+                  .replace(/>/g, '&gt;') +
+                '</option>';
+            }).join('');
+          openBtn.disabled = true;
+        })
+        .catch(function(err) {
+          select.disabled = false;
+          select.innerHTML = '<option value="">— unable to load —</option>';
+          openBtn.disabled = true;
+          if (hint) {
+            hint.hidden = false;
+            hint.textContent = (err && err.message) || 'Unable to load saved schedules.';
+          }
+        });
+    }
+
+    document.getElementById('openLiveScheduleViewerBtn').onclick = function(e) {
       e.preventDefault();
       requirePrincipleUserAdvancedAccess(function() {
-        logInteraction('open_live_event_schedule', { description: 'Opened live event schedule in a new tab' });
-        window.open('/live-schedule', '_blank', 'noopener,noreferrer');
+        logInteraction('open_live_schedule_viewer_picker', { description: 'Opened live schedule viewer event picker' });
+        openLiveScheduleViewerPicker();
       });
     };
+
+    document.getElementById('liveScheduleViewerSelect').onchange = function() {
+      var openBtn = document.getElementById('liveScheduleViewerPickerOpenBtn');
+      if (openBtn) openBtn.disabled = !this.value;
+    };
+
+    document.getElementById('liveScheduleViewerPickerCancelBtn').onclick = function() {
+      closeLiveScheduleViewerPicker();
+    };
+
+    document.getElementById('liveScheduleViewerPickerOpenBtn').onclick = function() {
+      var select = document.getElementById('liveScheduleViewerSelect');
+      var eventId = select && select.value;
+      var clientId = liveScheduleViewerPickerState.clientId;
+      if (!eventId || !clientId) {
+        showAppMessage({ title: 'select an event', message: 'Please select an event with a saved schedule.' });
+        return;
+      }
+      logInteraction('open_live_schedule_viewer', {
+        description: 'Opened live event schedule viewer in a new tab',
+        eventId: eventId
+      });
+      closeLiveScheduleViewerPicker();
+      window.open(
+        '/live-schedule/' + encodeURIComponent(clientId) + '/' + encodeURIComponent(eventId),
+        '_blank',
+        'noopener,noreferrer'
+      );
+    };
+
+    document.getElementById('liveScheduleViewerPickerOverlay').addEventListener('click', function(e) {
+      if (e.target === this) closeLiveScheduleViewerPicker();
+    });
 
     function submitEventCreationRequest(formData) {
       logInteraction('event_creation_submit', { eventName: formData.get('eventName') });
@@ -1490,6 +1714,16 @@
         return;
       }
 
+      const waiverRequired = document.getElementById('eventWaiverRequiredInput').checked;
+      const waiverText = document.getElementById('eventWaiverTextInput').value.trim();
+      if (waiverRequired && !waiverText) {
+        showAppMessage({
+          title: 'waiver required',
+          message: 'Please enter waiver text when requiring a waiver for registration.'
+        });
+        return;
+      }
+
       const formData = new FormData();
       formData.append('eventName', eventName);
       formData.append('eventDateStart', eventDateStart);
@@ -1513,6 +1747,9 @@
       if (posterFile) {
         formData.append('eventPoster', posterFile);
       }
+
+      formData.append('waiverRequired', document.getElementById('eventWaiverRequiredInput').checked ? '1' : '0');
+      formData.append('waiverText', document.getElementById('eventWaiverTextInput').value);
 
       pendingEventFormData = formData;
       document.getElementById('eventCreationConfirmOverlay').hidden = false;
@@ -1544,68 +1781,6 @@
       }
     });
 
-    // Division Creation Tool
-    let athleteCount = 0;
-
-    function createAthleteEntry() {
-      const entry = document.createElement('div');
-      entry.className = 'athlete-entry';
-      entry.dataset.entryId = athleteCount++;
-      
-      const nameInput = document.createElement('input');
-      nameInput.type = 'text';
-      nameInput.placeholder = 'Name (First Last)';
-      nameInput.maxLength = 100;
-      nameInput.className = 'athlete-name';
-      nameInput.addEventListener('input', updateDivisionSize);
-      
-      const clubInput = document.createElement('input');
-      clubInput.type = 'text';
-      clubInput.placeholder = 'Club Name';
-      clubInput.maxLength = 100;
-      clubInput.className = 'athlete-club';
-      clubInput.addEventListener('input', updateDivisionSize);
-      
-      entry.appendChild(nameInput);
-      entry.appendChild(clubInput);
-      
-      return entry;
-    }
-
-    function initializeAthleteEntries() {
-      const container = document.getElementById('athleteEntries');
-      container.innerHTML = '';
-      // Create exactly 4 entries
-      for (let i = 0; i < 4; i++) {
-        container.appendChild(createAthleteEntry());
-      }
-    }
-
-    function updateDivisionSize() {
-      const entries = document.querySelectorAll('.athlete-entry');
-      let filledCount = 0;
-      
-      entries.forEach(entry => {
-        const name = entry.querySelector('.athlete-name').value.trim();
-        const club = entry.querySelector('.athlete-club').value.trim();
-        if (name && club) {
-          filledCount++;
-        }
-      });
-      
-      document.getElementById('divisionSize').value = filledCount;
-    }
-
-    function showComplexDivisionModal(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      document.getElementById('complexDivisionModal').hidden = false;
-    }
-
-    document.getElementById('closeComplexDivisionModal').onclick = function() {
-      document.getElementById('complexDivisionModal').hidden = true;
-    };
-
     document.getElementById('closeAdvancedAccessDeniedModal').onclick = function() {
       hideAdvancedAccessDeniedModal();
     };
@@ -1613,114 +1788,6 @@
     document.getElementById('advancedAccessDeniedModal').addEventListener('click', function(evt) {
       if (evt.target === this) hideAdvancedAccessDeniedModal();
     });
-
-    document.getElementById('divisionCreatedNoBtn').onclick = function() {
-      document.getElementById('divisionCreatedModal').hidden = true;
-    };
-
-    document.getElementById('divisionCreatedYesBtn').onclick = function() {
-      document.getElementById('divisionCreatedModal').hidden = true;
-      clearDivisionForm();
-    };
-
-    document.getElementById('addAthleteBtn').onclick = showComplexDivisionModal;
-    document.getElementById('removeAthleteBtn').onclick = showComplexDivisionModal;
-    
-    document.getElementById('divisionType').addEventListener('mousedown', function(e) {
-      if (this.value !== 'single elimination') {
-        showComplexDivisionModal(e);
-        this.value = 'single elimination';
-      }
-    });
-    
-    document.getElementById('divisionType').addEventListener('change', function(e) {
-      if (this.value !== 'single elimination') {
-        e.preventDefault();
-        showComplexDivisionModal(e);
-        this.value = 'single elimination';
-      }
-    });
-
-    function clearDivisionForm() {
-      document.getElementById('divisionName').value = 'Test Division';
-      document.getElementById('divisionType').value = 'single elimination';
-      document.getElementById('ringNumber').value = 'Ring 1';
-      document.getElementById('divisionSize').value = '4';
-      initializeAthleteEntries();
-    }
-
-    document.getElementById('clearDivisionBtn').onclick = clearDivisionForm;
-
-    function generateDivisionFile() {
-      const divisionName = document.getElementById('divisionName').value.trim();
-      const divisionType = document.getElementById('divisionType').value;
-      const ringNumber = document.getElementById('ringNumber').value;
-      const divisionSize = document.getElementById('divisionSize').value;
-      
-      if (!divisionName) {
-        alert('Please enter a division name');
-        return null;
-      }
-      
-      if (!divisionType) {
-        alert('Please select a division type');
-        return null;
-      }
-      
-      if (!ringNumber) {
-        alert('Please select a ring number');
-        return null;
-      }
-      
-      const entries = document.querySelectorAll('.athlete-entry');
-      const athletes = [];
-      
-      entries.forEach(entry => {
-        const name = entry.querySelector('.athlete-name').value.trim();
-        const club = entry.querySelector('.athlete-club').value.trim();
-        if (name && club) {
-          athletes.push({ name, club });
-        }
-      });
-      
-      if (athletes.length < 2) {
-        alert('Please enter at least 2 athletes with complete information');
-        return null;
-      }
-      
-      let content = '';
-      content += `Divison Name: ${divisionName}\n`;
-      content += `Division Type: ${divisionType}\n`;
-      content += `Ring Number: ${ringNumber}\n`;
-      content += `Division Size: ${divisionSize}\n\n`;
-      
-      athletes.forEach((athlete, index) => {
-        content += `${athlete.name} | ${athlete.club}\n`;
-        if ((index + 1) % 2 === 0 && index < athletes.length - 1) {
-          content += '\n';
-        }
-      });
-      
-      return content;
-    }
-
-    document.getElementById('confirmDivisionBtn').onclick = function() {
-      const content = generateDivisionFile();
-      
-      if (content) {
-        const blob = new Blob([content], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'division.txt';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        document.getElementById('divisionCreatedModal').hidden = false;
-      }
-    };
 
   </script>
 

@@ -1,4 +1,5 @@
 require('dotenv').config();
+const dns = require('dns');
 const express = require('express');
 const session = require('express-session');
 const bodyParser = require('body-parser');
@@ -11,6 +12,10 @@ const path = require('path');
 const helmet = require('helmet');
 const multer = require('multer');
 
+// Prefer IPv4 first — dual-stack DNS lookups often delay remote DB connects on Windows.
+if (typeof dns.setDefaultResultOrder === 'function') {
+  dns.setDefaultResultOrder('ipv4first');
+}
 
 const app = express();
 app.set('trust proxy', 1); // trust first proxy
@@ -35,11 +40,11 @@ app.use(
         connectSrc: ["'self'"],
         fontSrc: ["'self'", 'data:', "https://fonts.gstatic.com"],
         objectSrc: ["'none'"],
-        // Draw PDF preview uses an iframe with a blob: object URL.
         frameSrc: ["'self'", 'blob:'],
         childSrc: ["'self'", 'blob:'],
         workerSrc: ["'self'", 'blob:'],
-        frameAncestors: ["'none'"],
+        // Same-origin iframe for the Draw Creation modal on /landing.
+        frameAncestors: ["'self'"],
         formAction: ["'self'"],
         baseUri: ["'self'"],
         upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null
@@ -54,9 +59,18 @@ app.use(
 
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 app.use(bodyParser.json({ limit: '10mb' }));
-app.use('/css', express.static(path.join(__dirname, 'css')));
+app.use('/css', express.static(path.join(__dirname, 'css'), {
+  setHeaders(res) {
+    res.setHeader('Cache-Control', 'no-store');
+  }
+}));
 app.use('/images', express.static(path.join(__dirname, 'images')));
-app.use('/js', express.static(path.join(__dirname, 'js')));
+app.use('/js', express.static(path.join(__dirname, 'js'), {
+  setHeaders(res) {
+    // Avoid stale module graphs after tool updates (esp. embed iframe).
+    res.setHeader('Cache-Control', 'no-store');
+  }
+}));
 
 // multer configuration for file uploads (memory storage, PNG only, 5MB limit)
 const upload = multer({
@@ -78,23 +92,63 @@ const upload = multer({
 
 
 // mysql DB connection pool (auto-reconnects, survives deadlocks)
-const db = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
-  port: process.env.DB_PORT,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
+function buildDbPoolConfig() {
+  let host = String(process.env.DB_HOST || '').trim();
+  if (host === 'localhost' || host === '::1') host = '127.0.0.1';
+
+  const port = Number(process.env.DB_PORT) || 3306;
+  const connectTimeout = Number(process.env.DB_CONNECT_TIMEOUT_MS) || 10000;
+  const connectionLimit = Number(process.env.DB_CONNECTION_LIMIT) || 10;
+  const isLocalHost = host === '127.0.0.1';
+  const sslEnv = String(process.env.DB_SSL || '').trim().toLowerCase();
+  const sslEnabled = sslEnv
+    ? !['0', 'false', 'off', 'disable', 'disabled'].includes(sslEnv)
+    : !isLocalHost; // cloud hosts (e.g. Aiven) almost always require TLS
+
+  const config = {
+    host,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME,
+    port,
+    waitForConnections: true,
+    connectionLimit,
+    queueLimit: 0,
+    connectTimeout,
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 0
+  };
+
+  if (sslEnabled) {
+    if (process.env.DB_SSL_CA) {
+      // Prefer verifying with the provider CA (e.g. Aiven console → ca.pem).
+      config.ssl = {
+        ca: fs.readFileSync(path.resolve(process.env.DB_SSL_CA)),
+        rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false'
+      };
+    } else {
+      // Without a CA file, Aiven and similar hosts often fail with
+      // "self-signed certificate in certificate chain" under system CAs.
+      // Still use TLS; set DB_SSL_CA (or DB_SSL_REJECT_UNAUTHORIZED=true) to verify.
+      config.ssl = {
+        rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED === 'true'
+      };
+    }
+  }
+
+  return config;
+}
+
+const db = mysql.createPool(buildDbPoolConfig());
 
 // verify pool connectivity at startup (non-fatal)
+const dbConnectStartedAt = Date.now();
 db.getConnection((err, connection) => {
+  const elapsedMs = Date.now() - dbConnectStartedAt;
   if (err) {
-    console.error('MySQL initial connection error (will retry on next request):', err);
+    console.error(`MySQL initial connection error after ${elapsedMs}ms (will retry on next request):`, err.code || err.message);
   } else {
-    console.log('Connected to MySQL');
+    console.log(`Connected to MySQL in ${elapsedMs}ms`);
     connection.release();
   }
 });
@@ -108,10 +162,15 @@ function insertLog(userId, interactionLog, ipAddress) {
   });
 }
 
-// mysql session store
+// mysql session store (reuse the shared pool)
 const sessionStore = new MySQLStore({
   expiration: 1000 * 60 * 60 * 24,
-  createDatabaseTable: true
+  createDatabaseTable: process.env.DB_SESSION_CREATE_TABLE !== 'false',
+  clearExpired: true,
+  checkExpirationInterval: 15 * 60 * 1000,
+  schema: {
+    tableName: 'sessions'
+  }
 }, db);
 
 // session config
@@ -341,6 +400,29 @@ function toTinyIntFlag(value) {
   return value === true || value === 1 || value === '1' || value === 'true' ? 1 : 0;
 }
 
+const WAIVER_TEXT_MAX_LENGTH = 50000;
+
+// Preserve newlines/tabs for waiver documents; strip other control chars and nulls.
+function toWaiverText(value, maxLength) {
+  if (value == null) return null;
+  let text = String(value).replace(/\0/g, '');
+  text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  text = text.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '');
+  text = text.trim();
+  if (!text) return null;
+  const limit = maxLength == null ? WAIVER_TEXT_MAX_LENGTH : maxLength;
+  return text.slice(0, limit);
+}
+
+function parseWaiverFields(body) {
+  const waiverText = toWaiverText(body && body.waiverText);
+  const waiverRequired = toTinyIntFlag(body && body.waiverRequired);
+  if (waiverRequired && !waiverText) {
+    return { error: 'Waiver text is required when requiring a waiver for registration.' };
+  }
+  return { waiverText, waiverRequired: waiverRequired && waiverText ? 1 : 0 };
+}
+
 function isEventOpenForRegistration(events, eventId) {
   return (events || []).some((eventRow) => String(eventRow.id) === String(eventId));
 }
@@ -364,7 +446,12 @@ const PUBLIC_REGISTRATION_EVENTS_SQL = `
     event_link,
     event_contact,
     LENGTH(event_poster) > 0 AS has_poster,
-    CRC32(event_poster) AS poster_version
+    CRC32(event_poster) AS poster_version,
+    CASE
+      WHEN waiver_required = 1 AND LENGTH(TRIM(COALESCE(waiver_text, ''))) > 0 THEN 1
+      ELSE 0
+    END AS waiver_required,
+    LENGTH(TRIM(COALESCE(waiver_text, ''))) > 0 AS has_waiver
   FROM events
   WHERE active = 1
     AND COALESCE(event_date_end, event_date_start) >= CURDATE()
@@ -793,6 +880,52 @@ app.get('/api/registration/events', registrationApiLimiter, (req, res) => {
   });
 });
 
+app.get('/api/registration/teams', registrationApiLimiter, (req, res) => {
+  const sql = `
+    SELECT category, name FROM (
+      SELECT
+        'country' AS category,
+        COALESCE(NULLIF(TRIM(common_name), ''), name) AS name,
+        sort_order
+      FROM teams_country
+      WHERE active = 1
+      UNION ALL
+      SELECT 'club' AS category, name, sort_order FROM teams_club WHERE active = 1
+      UNION ALL
+      SELECT 'province' AS category, name, sort_order FROM teams_province WHERE active = 1
+    ) AS teams
+    ORDER BY
+      CASE category
+        WHEN 'country' THEN 1
+        WHEN 'club' THEN 2
+        WHEN 'province' THEN 3
+        ELSE 4
+      END,
+      sort_order,
+      name
+  `;
+
+  db.query(sql, (err, rows) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Unable to load teams. Please try again shortly.' });
+    }
+
+    const clubs = [];
+    const provinces = [];
+    const countries = [];
+    (rows || []).forEach((row) => {
+      const name = String(row.name || '').trim();
+      if (!name) return;
+      if (row.category === 'club') clubs.push(name);
+      else if (row.category === 'province') provinces.push(name);
+      else if (row.category === 'country') countries.push(name);
+    });
+
+    res.json({ clubs, provinces, countries });
+  });
+});
+
 app.get('/api/registration/events/:id/poster', registrationApiLimiter, (req, res) => {
   const eventId = req.params.id;
   
@@ -811,6 +944,54 @@ app.get('/api/registration/events/:id/poster', registrationApiLimiter, (req, res
     res.set('Content-Type', 'image/png');
     res.set('Cache-Control', 'public, max-age=86400');
     res.send(results[0].event_poster);
+  });
+});
+
+app.get('/api/registration/events/:id/waiver', registrationApiLimiter, (req, res) => {
+  const eventId = toNullableString(req.params.id, 45);
+  if (!eventId) {
+    return res.status(400).json({ error: 'Event id is required.' });
+  }
+
+  verifyEventEligibleForPublicRegistration(eventId, (err, isEligible) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Unable to load waiver. Please try again shortly.' });
+    }
+    if (!isEligible) {
+      return res.status(404).json({ error: 'Waiver not found.' });
+    }
+
+    const sql = `
+      SELECT
+        waiver_text,
+        CASE
+          WHEN waiver_required = 1 AND LENGTH(TRIM(COALESCE(waiver_text, ''))) > 0 THEN 1
+          ELSE 0
+        END AS waiver_required
+      FROM events
+      WHERE id = ?
+    `;
+    db.query(sql, [eventId], (queryErr, results) => {
+      if (queryErr) {
+        console.error(queryErr);
+        return res.status(500).json({ error: 'Unable to load waiver. Please try again shortly.' });
+      }
+      if (!results || !results.length) {
+        return res.status(404).json({ error: 'Waiver not found.' });
+      }
+
+      const row = results[0];
+      const waiverText = row.waiver_text || null;
+      if (!waiverText || !String(waiverText).trim()) {
+        return res.status(404).json({ error: 'Waiver not found.' });
+      }
+
+      res.json({
+        waiverText: String(waiverText),
+        waiverRequired: Number(row.waiver_required) === 1
+      });
+    });
   });
 });
 
@@ -998,58 +1179,89 @@ app.post('/api/registration/submit', registrationSubmitLimiter, (req, res) => {
       return res.status(400).json({ error: 'Selected event is not open for registration.' });
     }
 
-    // Teams compete — store as athlete so they are included in competition tooling
-    const storedRole = isTeam ? 'athlete' : roleKey;
+    const waiverSql = `
+      SELECT
+        waiver_text,
+        CASE
+          WHEN waiver_required = 1 AND LENGTH(TRIM(COALESCE(waiver_text, ''))) > 0 THEN 1
+          ELSE 0
+        END AS waiver_required
+      FROM events
+      WHERE id = ?
+    `;
 
-    const sql = 'INSERT INTO registration (event_id, active, role, contact_email, first_name, last_name, dob, `rank`, gender, weight_kg, height_kg, team_name_or_country, individual_patterns, individual_sparring, individual_special_technique, individual_power_test, team_patterns, team_sparring, team_special_technique, team_power_test, pre_arranged_sparring, other_events) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-
-    const params = [
-      eventId,
-      '1',
-      storedRole,
-      contactEmail,
-      firstName,
-      lastName,
-      dob,
-      rank,
-      gender,
-      weightKg,
-      heightKg,
-      teamNameOrCountry,
-      eventFlags.individualPatterns,
-      eventFlags.individualSparring,
-      eventFlags.individualSpecialTechnique,
-      eventFlags.individualPowerTest,
-      eventFlags.teamPatterns,
-      eventFlags.teamSparring,
-      eventFlags.teamSpecialTechnique,
-      eventFlags.teamPowerTest,
-      eventFlags.preArrangedSparring,
-      otherEvents
-    ];
-
-    db.query(sql, params, (insertErr, insertResult) => {
-      if (insertErr) {
-        console.error(insertErr);
-        const sqlMessage = String(insertErr.sqlMessage || '').toLowerCase();
-        if (insertErr.code === 'ER_TRUNCATED_WRONG_VALUE' && sqlMessage.includes('dob')) {
-          return res.status(400).json({ error: 'Please enter a valid date of birth. The day, month, or year is not correct.' });
-        }
-        return res.status(500).json({ error: 'Unable to save registration. Please try again shortly.' });
+    db.query(waiverSql, [eventId], (waiverErr, waiverRows) => {
+      if (waiverErr) {
+        console.error(waiverErr);
+        return res.status(500).json({ error: 'Unable to verify event waiver. Please try again shortly.' });
       }
 
-      insertLog(null, {
-        action: 'event_registration_submit',
-        page: 'registration',
-        eventId: eventId,
-        role: storedRole,
-        registrationSourceRole: roleKey,
-        registrationId: insertResult.insertId || null
-      }, req.ip);
+      const waiverRow = waiverRows && waiverRows[0];
+      const waiverRequired = waiverRow && Number(waiverRow.waiver_required) === 1;
+      const clientAccepted = toTinyIntFlag(body.waiverAccepted) === 1;
 
-      res.json({
-        success: true,
-        registrationId: insertResult.insertId || null
+      if (waiverRequired && !clientAccepted) {
+        return res.status(400).json({ error: 'You must accept the event waiver before registering.' });
+      }
+
+      const waiverAccepted = waiverRequired && clientAccepted ? 1 : 0;
+
+      // Teams compete — store as athlete so they are included in competition tooling
+      const storedRole = isTeam ? 'athlete' : roleKey;
+
+      const sql = 'INSERT INTO registration (event_id, active, role, contact_email, first_name, last_name, dob, `rank`, gender, weight_kg, height_kg, team_name_or_country, individual_patterns, individual_sparring, individual_special_technique, individual_power_test, team_patterns, team_sparring, team_special_technique, team_power_test, pre_arranged_sparring, other_events, waiver_accepted, waiver_accepted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+
+      const params = [
+        eventId,
+        '1',
+        storedRole,
+        contactEmail,
+        firstName,
+        lastName,
+        dob,
+        rank,
+        gender,
+        weightKg,
+        heightKg,
+        teamNameOrCountry,
+        eventFlags.individualPatterns,
+        eventFlags.individualSparring,
+        eventFlags.individualSpecialTechnique,
+        eventFlags.individualPowerTest,
+        eventFlags.teamPatterns,
+        eventFlags.teamSparring,
+        eventFlags.teamSpecialTechnique,
+        eventFlags.teamPowerTest,
+        eventFlags.preArrangedSparring,
+        otherEvents,
+        waiverAccepted,
+        waiverAccepted ? new Date() : null
+      ];
+
+      db.query(sql, params, (insertErr, insertResult) => {
+        if (insertErr) {
+          console.error(insertErr);
+          const sqlMessage = String(insertErr.sqlMessage || '').toLowerCase();
+          if (insertErr.code === 'ER_TRUNCATED_WRONG_VALUE' && sqlMessage.includes('dob')) {
+            return res.status(400).json({ error: 'Please enter a valid date of birth. The day, month, or year is not correct.' });
+          }
+          return res.status(500).json({ error: 'Unable to save registration. Please try again shortly.' });
+        }
+
+        insertLog(null, {
+          action: 'event_registration_submit',
+          page: 'registration',
+          eventId: eventId,
+          role: storedRole,
+          registrationSourceRole: roleKey,
+          registrationId: insertResult.insertId || null,
+          waiverAccepted: waiverAccepted
+        }, req.ip);
+
+        res.json({
+          success: true,
+          registrationId: insertResult.insertId || null
+        });
       });
     });
   });
@@ -1090,8 +1302,8 @@ app.get('/api/release-notes-list', requireLogin, (req, res) => {
 // API endpoint to list events owned by the authenticated client
 app.get('/api/client-events', requireLogin, (req, res) => {
   const clientId = req.session.clientId;
-  const sql = 'SELECT id, active, event_name, event_date_start, event_date_end, registration_open_date, registration_close_date, event_location, event_events, event_link, event_contact, LENGTH(event_poster) > 0 AS has_poster FROM events WHERE client_id = ? ORDER BY event_date_start DESC, event_name ASC';
-  
+  const sql = 'SELECT id, active, event_name, event_date_start, event_date_end, registration_open_date, registration_close_date, event_location, event_events, event_link, event_contact, LENGTH(event_poster) > 0 AS has_poster, waiver_required, waiver_text FROM events WHERE client_id = ? ORDER BY event_date_start DESC, event_name ASC';
+
   db.query(sql, [clientId], (err, results) => {
     if (err) {
       console.error(err);
@@ -1115,6 +1327,12 @@ app.post('/api/client-events/:eventId', requireLogin, upload.single('eventPoster
   const eventLocation = toNullableString(body.eventLocation, 100);
   const eventLink = toNullableString(body.eventLink, 255);
   const eventContact = toNullableString(body.eventContact, 100);
+  const parsedWaiver = parseWaiverFields(body);
+  if (parsedWaiver.error) {
+    return res.status(400).json({ error: parsedWaiver.error });
+  }
+  const waiverText = parsedWaiver.waiverText;
+  const waiverRequired = parsedWaiver.waiverRequired;
   
   let parsedEventEvents;
   try {
@@ -1161,11 +1379,11 @@ app.post('/api/client-events/:eventId', requireLogin, upload.single('eventPoster
     
     let sql, params;
     if (eventPoster) {
-      sql = 'UPDATE events SET active = 0, event_name = ?, event_date_start = ?, event_date_end = ?, registration_open_date = ?, registration_close_date = ?, event_location = ?, event_events = ?, event_link = ?, event_contact = ?, event_poster = ? WHERE id = ? AND client_id = ?';
-      params = [eventName, eventDateStart, eventDateEnd, registrationOpenDate, registrationCloseDate, eventLocation, eventEvents, eventLink, eventContact, eventPoster, eventId, clientId];
+      sql = 'UPDATE events SET active = 0, event_name = ?, event_date_start = ?, event_date_end = ?, registration_open_date = ?, registration_close_date = ?, event_location = ?, event_events = ?, event_link = ?, event_contact = ?, event_poster = ?, waiver_required = ?, waiver_text = ? WHERE id = ? AND client_id = ?';
+      params = [eventName, eventDateStart, eventDateEnd, registrationOpenDate, registrationCloseDate, eventLocation, eventEvents, eventLink, eventContact, eventPoster, waiverRequired, waiverText, eventId, clientId];
     } else {
-      sql = 'UPDATE events SET active = 0, event_name = ?, event_date_start = ?, event_date_end = ?, registration_open_date = ?, registration_close_date = ?, event_location = ?, event_events = ?, event_link = ?, event_contact = ? WHERE id = ? AND client_id = ?';
-      params = [eventName, eventDateStart, eventDateEnd, registrationOpenDate, registrationCloseDate, eventLocation, eventEvents, eventLink, eventContact, eventId, clientId];
+      sql = 'UPDATE events SET active = 0, event_name = ?, event_date_start = ?, event_date_end = ?, registration_open_date = ?, registration_close_date = ?, event_location = ?, event_events = ?, event_link = ?, event_contact = ?, waiver_required = ?, waiver_text = ? WHERE id = ? AND client_id = ?';
+      params = [eventName, eventDateStart, eventDateEnd, registrationOpenDate, registrationCloseDate, eventLocation, eventEvents, eventLink, eventContact, waiverRequired, waiverText, eventId, clientId];
     }
     
     db.query(sql, params, (updateErr) => {
@@ -1207,7 +1425,7 @@ app.get('/api/client-events/:eventId/registrations', requireLogin, (req, res) =>
     }
     
     // Fetch registrations for this event, excluding internal IDs and active flag
-    const sql = 'SELECT role, contact_email, first_name, last_name, dob, `rank`, gender, weight_kg, height_kg, team_name_or_country, individual_patterns, individual_sparring, individual_special_technique, individual_power_test, team_patterns, team_sparring, team_special_technique, team_power_test, pre_arranged_sparring, other_events FROM registration WHERE event_id = ? ORDER BY role, last_name, first_name';
+    const sql = 'SELECT role, contact_email, first_name, last_name, dob, `rank`, gender, weight_kg, height_kg, team_name_or_country, individual_patterns, individual_sparring, individual_special_technique, individual_power_test, team_patterns, team_sparring, team_special_technique, team_power_test, pre_arranged_sparring, other_events, waiver_accepted, waiver_accepted_at FROM registration WHERE event_id = ? ORDER BY role, last_name, first_name';
     
     db.query(sql, [eventId], (err, results) => {
       if (err) {
@@ -1232,6 +1450,12 @@ app.post('/api/client-events', requireLogin, upload.single('eventPoster'), (req,
   const eventLocation = toNullableString(body.eventLocation, 100);
   const eventLink = toNullableString(body.eventLink, 255);
   const eventContact = toNullableString(body.eventContact, 100);
+  const parsedWaiver = parseWaiverFields(body);
+  if (parsedWaiver.error) {
+    return res.status(400).json({ error: parsedWaiver.error });
+  }
+  const waiverText = parsedWaiver.waiverText;
+  const waiverRequired = parsedWaiver.waiverRequired;
   
   let parsedEventEvents;
   try {
@@ -1266,7 +1490,7 @@ app.post('/api/client-events', requireLogin, upload.single('eventPoster'), (req,
   
   const eventPoster = req.file ? req.file.buffer : null;
   
-  const sql = 'INSERT INTO events (active, client_id, event_name, event_date_start, event_date_end, registration_open_date, registration_close_date, event_location, event_events, event_link, event_contact, event_poster) VALUES (0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+  const sql = 'INSERT INTO events (active, client_id, event_name, event_date_start, event_date_end, registration_open_date, registration_close_date, event_location, event_events, event_link, event_contact, event_poster, waiver_required, waiver_text) VALUES (0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
   
   const params = [
     clientId,
@@ -1279,7 +1503,9 @@ app.post('/api/client-events', requireLogin, upload.single('eventPoster'), (req,
     eventEvents,
     eventLink,
     eventContact,
-    eventPoster
+    eventPoster,
+    waiverRequired,
+    waiverText
   ];
   
   db.query(sql, params, (err, result) => {
@@ -1350,5 +1576,13 @@ process.on('unhandledRejection', (reason) => {
   console.error('Unhandled promise rejection (process kept alive):', reason);
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const PORT = process.env.PORT || 5000;
+const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.on('error', (err) => {
+  if (err && err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use. Stop the other Node process (or change PORT) and try again.`);
+    process.exit(1);
+  }
+  console.error('Server failed to start:', err);
+  process.exit(1);
+});

@@ -1,6 +1,11 @@
 import { apiFetch } from './api.js';
-import { state, requireEvent } from './state.js';
-import { buildMoveTargetOptions, MOVE_ALL_OTHERS_SEPARATOR } from './move-targets.js';
+import { state } from './state.js';
+import { applyCombineToTarget } from './merge-division.js';
+import {
+  buildMoveTargetOptions,
+  findLeafByDivisionId,
+  MOVE_ALL_OTHERS_SEPARATOR
+} from './move-targets.js';
 
 let toastTimer = null;
 
@@ -18,7 +23,8 @@ export function showConfirmModal({
   title = 'confirm',
   message = '',
   confirmLabel = 'confirm',
-  cancelLabel = 'cancel'
+  cancelLabel = 'cancel',
+  danger = false
 } = {}) {
   return new Promise((resolve) => {
     const overlay = document.getElementById('daConfirmModal');
@@ -35,10 +41,12 @@ export function showConfirmModal({
     messageEl.textContent = message;
     okBtn.textContent = confirmLabel;
     cancelBtn.textContent = cancelLabel;
+    okBtn.classList.toggle('confirm-dialog-btn-danger', Boolean(danger));
     overlay.hidden = false;
 
     const cleanup = (result) => {
       overlay.hidden = true;
+      okBtn.classList.remove('confirm-dialog-btn-danger');
       okBtn.removeEventListener('click', onOk);
       cancelBtn.removeEventListener('click', onCancel);
       overlay.removeEventListener('click', onOverlay);
@@ -63,6 +71,80 @@ export function showConfirmModal({
   });
 }
 
+/**
+ * Modal text prompt. Resolves to trimmed string, or null if cancelled / empty.
+ */
+export function showPromptModal({
+  title = 'enter a name',
+  message = '',
+  confirmLabel = 'save',
+  cancelLabel = 'cancel',
+  placeholder = '',
+  defaultValue = ''
+} = {}) {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('daPromptModal');
+    const titleEl = document.getElementById('daPromptTitle');
+    const messageEl = document.getElementById('daPromptMessage');
+    const input = document.getElementById('daPromptInput');
+    const okBtn = document.getElementById('daPromptOkBtn');
+    const cancelBtn = document.getElementById('daPromptCancelBtn');
+    if (!overlay || !okBtn || !cancelBtn || !input) {
+      resolve(null);
+      return;
+    }
+
+    titleEl.textContent = title;
+    if (messageEl) {
+      messageEl.textContent = message || '';
+      messageEl.hidden = !message;
+    }
+    okBtn.textContent = confirmLabel;
+    cancelBtn.textContent = cancelLabel;
+    input.value = defaultValue || '';
+    input.placeholder = placeholder || '';
+    overlay.hidden = false;
+
+    const cleanup = (result) => {
+      overlay.hidden = true;
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      overlay.removeEventListener('click', onOverlay);
+      document.removeEventListener('keydown', onKey);
+      input.removeEventListener('keydown', onInputKey);
+      resolve(result);
+    };
+    const submit = () => {
+      const value = String(input.value || '').trim();
+      cleanup(value || null);
+    };
+    const onOk = () => submit();
+    const onCancel = () => cleanup(null);
+    const onOverlay = (e) => {
+      if (e.target === overlay) cleanup(null);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') cleanup(null);
+    };
+    const onInputKey = (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submit();
+      }
+    };
+
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+    overlay.addEventListener('click', onOverlay);
+    document.addEventListener('keydown', onKey);
+    input.addEventListener('keydown', onInputKey);
+    requestAnimationFrame(() => {
+      input.focus();
+      input.select();
+    });
+  });
+}
+
 export function setBusy(button, busy) {
   if (!button) return;
   button.disabled = busy;
@@ -84,11 +166,16 @@ export function formatDate(value) {
   return d.toLocaleDateString();
 }
 
+export function eventNickname(eventId = state.eventId) {
+  const event = (state.events || []).find((e) => String(e.id) === String(eventId));
+  return String(event?.event_name || '').trim() || (eventId ? `event_${eventId}` : '');
+}
+
 export function renderDivisionsTable() {
   const tbody = document.querySelector('#divisionsTable tbody');
   const summary = document.getElementById('divisionsSummary');
   if (!tbody) return;
-  summary.textContent = `${state.leaves.length} division leaves`;
+  if (summary) summary.textContent = `${state.leaves.length} division leaves`;
   tbody.innerHTML = state.leaves.slice(0, 500).map((leaf, i) => `
     <tr data-index="${i}">
       <td>${leaf.enabled !== false ? '✓' : ''}</td>
@@ -105,301 +192,200 @@ export function renderDivisionsTable() {
   }
 }
 
-export function renderAthletesTable() {
-  const tbody = document.querySelector('#athletesTable tbody');
-  const summary = document.getElementById('athletesSummary');
-  const q = state.athleteFilter.trim().toLowerCase();
-  const filtered = state.athletes.filter((a) => {
-    if (!q) return true;
-    const hay = [
-      a.first_name, a.last_name, a.rank, a.gender,
-      a.team_name_or_country, a._index
-    ].join(' ').toLowerCase();
-    return hay.includes(q);
-  });
-  summary.textContent = filtered.length
-    ? `${filtered.length} athlete(s)${q ? ' (filtered)' : ''}`
-    : 'no athletes loaded';
-  tbody.innerHTML = filtered.slice(0, 300).map((a) => `
-    <tr>
-      <td>${escapeHtml(`${a.first_name} ${a.last_name}`.trim())}</td>
-      <td>${formatDate(a.dob)}</td>
-      <td>${escapeHtml(a.rank)}</td>
-      <td>${escapeHtml(a.gender)}</td>
-      <td>${a.weight_kg ?? ''}</td>
-      <td>${a.height_cm ?? ''}</td>
-      <td>${escapeHtml(a.team_name_or_country)}</td>
-    </tr>
-  `).join('');
-}
-
 function athleteLine(a) {
   const club = a.club || a.team || a.team_name_or_country || '';
-  const bits = [a.name || `${a.first_name || ''} ${a.last_name || ''}`.trim(), a.rank, club]
+  const bits = [a.name || `${a.first_name || ''} ${a.last_name || ''}`.trim(), club]
     .filter(Boolean);
   return bits.join(' — ');
 }
 
-function filteredGroupingsCatalog(catalog) {
-  let list = (catalog || []).filter((e) => Number(e.athlete_count || 0) > 0);
-  const nameQ = String(state.groupingFilter || '').trim().toLowerCase();
-  const athleteQ = String(state.groupingAthleteFilter || '').trim().toLowerCase();
-  const eventQ = String(state.groupingEventFilter || '').trim();
-  const typeQ = String(state.groupingTypeFilter || '').trim();
-
-  if (nameQ) {
-    list = list.filter((e) => String(e.division_name || e.id || '').toLowerCase().includes(nameQ));
-  }
-  if (athleteQ) {
-    list = list.filter((e) => (e.athletes || []).some((a) =>
-      athleteLine(a).toLowerCase().includes(athleteQ)
-    ));
-  }
-  if (eventQ) {
-    list = list.filter((e) => String(e.event_key || '') === eventQ);
-  }
-  if (typeQ) {
-    list = list.filter((e) => String(e.division_type || '') === typeQ);
-  }
-
-  const sort = state.groupingSort || 'name';
-  list = [...list].sort((a, b) => {
-    if (sort === 'athletes-desc') return (b.athlete_count || 0) - (a.athlete_count || 0);
-    if (sort === 'athletes-asc') return (a.athlete_count || 0) - (b.athlete_count || 0);
-    if (sort === 'type') {
-      return String(a.division_type || '').localeCompare(String(b.division_type || ''))
-        || String(a.division_name || '').localeCompare(String(b.division_name || ''));
-    }
-    return String(a.division_name || '').localeCompare(String(b.division_name || ''));
-  });
-  return list;
+function updateMoveArrowEnabled() {
+  const btn = document.getElementById('drawMoveArrowBtn');
+  if (!btn) return;
+  btn.disabled = !(
+    state.selectedDrawId
+    && state.selectedAthleteIndices.size > 0
+    && state.targetGroupingId
+  );
 }
 
-function populateGroupingsEventFilter(catalog) {
-  const select = document.getElementById('groupingsEventFilter');
-  if (!select) return;
-  const previous = select.value || state.groupingEventFilter || '';
-  const keys = [...new Set((catalog || []).map((e) => e.event_key).filter(Boolean))].sort();
-  select.innerHTML = '<option value="">all events</option>' +
-    keys.map((key) => `<option value="${escapeHtml(key)}">${escapeHtml(key.replace(/_/g, ' '))}</option>`).join('');
-  if (previous && [...select.options].some((o) => o.value === previous)) {
-    select.value = previous;
-  }
-}
-
-function renderAthleteList(hostId, athletes, { selectable = false } = {}) {
-  const host = document.getElementById(hostId);
+function renderDrawAthletes(entry) {
+  const host = document.getElementById('drawAthletesList');
   if (!host) return;
-  if (!athletes?.length) {
-    host.innerHTML = '<p class="da-hint">no athletes in this division.</p>';
+  const athletes = entry?.athletes || [];
+  if (!entry) {
+    host.innerHTML = '<p class="da-hint">select a draw to view athletes.</p>';
     return;
   }
-  host.innerHTML = athletes.map((a, i) => {
-    const idx = a.index != null ? a.index : i;
-    const selected = selectable && state.selectedAthleteIndex === idx;
+  if (!athletes.length) {
+    host.innerHTML = '<p class="da-hint">no athletes in this draw.</p>';
+    return;
+  }
+  host.innerHTML = athletes.map((a) => {
+    const idx = a.index == null || a.index === '' ? null : Number(a.index);
+    const selected = idx != null && state.selectedAthleteIndices.has(idx);
     return `
-    <div class="da-athlete-chip ${selected ? 'selected' : ''}"
-         ${selectable ? `data-index="${idx}"` : ''}>
-      ${escapeHtml(athleteLine(a))}
-    </div>
-  `;
+      <div class="da-athlete-chip ${selected ? 'selected' : ''}" data-index="${idx == null ? '' : idx}" role="button" tabindex="0">
+        ${escapeHtml(athleteLine(a))}
+      </div>
+    `;
   }).join('');
 }
 
-function renderSourcePane(entry) {
-  const meta = document.getElementById('groupingsSourceMeta');
-  if (!entry) {
-    if (meta) meta.textContent = 'select a division';
-    renderAthleteList('groupingsSourceAthletes', [], { selectable: true });
-    document.getElementById('groupingsSourceAthletes').innerHTML =
-      '<p class="da-hint">select a division to view athletes.</p>';
+function renderTargetAthletes() {
+  const host = document.getElementById('drawTargetAthletesList');
+  if (!host) return;
+  const catalog = state.drawsState?.catalog || [];
+  const targetId = state.targetGroupingId;
+  if (!targetId) {
+    host.innerHTML = '<p class="da-hint">select a destination draw to view its athletes.</p>';
     return;
   }
-  if (meta) {
-    meta.textContent = `${entry.event_key || '—'} · ${entry.division_type || '—'} · ${entry.athlete_count || 0} athletes`;
-  }
-  const title = document.querySelector('#groupingsSourcePane h3');
-  if (title) title.textContent = entry.division_name || 'source division';
-  renderAthleteList('groupingsSourceAthletes', entry.athletes || [], { selectable: true });
-}
-
-function renderTargetPane(entry) {
-  const meta = document.getElementById('groupingsTargetMeta');
-  const title = document.querySelector('#groupingsTargetPane h3');
+  const entry = catalog.find((e) => String(e.id) === String(targetId));
   if (!entry) {
-    if (meta) meta.textContent = '—';
-    if (title) title.textContent = 'target division';
-    document.getElementById('groupingsTargetAthletes').innerHTML =
-      '<p class="da-hint">choose a target division above.</p>';
+    host.innerHTML = '<p class="da-hint">destination draw not found.</p>';
     return;
   }
-  if (meta) {
-    meta.textContent = `${entry.event_key || '—'} · ${entry.division_type || '—'} · ${entry.athlete_count || 0} athletes`;
+  const athletes = entry.athletes || [];
+  if (!athletes.length) {
+    host.innerHTML = '<p class="da-hint">no athletes in this destination draw.</p>';
+    return;
   }
-  if (title) title.textContent = entry.division_name || 'target division';
-  renderAthleteList('groupingsTargetAthletes', entry.athletes || [], { selectable: false });
+  host.innerHTML = athletes.map((a) => `
+    <div class="da-athlete-chip da-athlete-chip-readonly">
+      ${escapeHtml(athleteLine(a))}
+    </div>
+  `).join('');
 }
 
-function populateMoveTargets(sourceEntry) {
-  const select = document.getElementById('moveTargetSelect');
-  const moveBar = document.getElementById('moveBar');
-  if (!select || !moveBar) return;
+function populateDrawMoveTargets(sourceEntry) {
+  const select = document.getElementById('drawMoveTargetSelect');
+  if (!select) return;
   if (!sourceEntry) {
-    moveBar.hidden = true;
     select.innerHTML = '';
     state.targetGroupingId = '';
-    renderTargetPane(null);
+    renderTargetAthletes();
+    updateMoveArrowEnabled();
     return;
   }
 
-  const catalog = state.groupingsState?.catalog || [];
-  const leaves = state.groupingsState?.leaves || state.leaves || [];
+  const catalog = state.drawsState?.catalog || [];
+  const leaves = state.leaves || [];
   const { options, suggestedCount } = buildMoveTargetOptions(sourceEntry, catalog, leaves);
-
   if (!options.length) {
-    moveBar.hidden = true;
     select.innerHTML = '';
     state.targetGroupingId = '';
-    renderTargetPane(null);
+    renderTargetAthletes();
+    updateMoveArrowEnabled();
     return;
   }
 
-  moveBar.hidden = false;
   const previous = state.targetGroupingId;
   const parts = [];
   let insertedSeparator = false;
   options.forEach((opt) => {
     if (!opt.suggested && suggestedCount > 0 && !insertedSeparator) {
-      parts.push(
-        `<option disabled value="">${escapeHtml(MOVE_ALL_OTHERS_SEPARATOR)}</option>`
-      );
+      parts.push(`<option disabled value="">${escapeHtml(MOVE_ALL_OTHERS_SEPARATOR)}</option>`);
       insertedSeparator = true;
     }
-    parts.push(
-      `<option value="${escapeHtml(opt.id)}">${escapeHtml(opt.label)}</option>`
-    );
+    parts.push(`<option value="${escapeHtml(opt.id)}">${escapeHtml(opt.label)}</option>`);
   });
   select.innerHTML = parts.join('');
-
   const ids = options.map((o) => o.id);
   if (previous && ids.includes(previous)) {
     select.value = previous;
     state.targetGroupingId = previous;
   } else {
-    state.targetGroupingId = select.value || ids[0] || '';
+    // Default to top ★ recommendation (first option).
+    state.targetGroupingId = ids[0] || '';
     if (state.targetGroupingId) select.value = state.targetGroupingId;
   }
-  const target = catalog.find((e) => e.id === state.targetGroupingId) || null;
-  renderTargetPane(target);
+  renderTargetAthletes();
+  updateMoveArrowEnabled();
 }
 
-export function renderGroupings() {
-  const catalog = state.groupingsState?.catalog || [];
-  const nonEmpty = catalog.filter((e) => Number(e.athlete_count || 0) > 0);
-  populateGroupingsEventFilter(catalog);
-  const filtered = filteredGroupingsCatalog(catalog);
-  const tbody = document.querySelector('#groupingsTable tbody');
-  const summary = document.getElementById('groupingsSummary');
-  if (summary) {
-    summary.textContent = catalog.length
-      ? `${filtered.length} listed · ${nonEmpty.length} with athletes (${catalog.length - nonEmpty.length} empty hidden)`
-      : 'no groupings';
+function updateSelectedDrawName(entry) {
+  const el = document.getElementById('selectedDrawName');
+  if (!el) return;
+  const name = String(entry?.division_name || '').trim();
+  if (!name) {
+    el.textContent = '';
+    el.hidden = true;
+    el.removeAttribute('title');
+    return;
   }
-  if (tbody) {
-    tbody.innerHTML = filtered.map((entry) => `
-      <tr data-id="${escapeHtml(entry.id)}" class="${entry.id === state.selectedGroupingId ? 'selected' : ''}">
-        <td>${escapeHtml(entry.division_name)}</td>
-        <td>${escapeHtml(entry.division_type)}</td>
-        <td>${entry.athlete_count || 0}</td>
-      </tr>
-    `).join('');
-  }
-
-  const source = catalog.find((e) => e.id === state.selectedGroupingId) || null;
-  if (state.selectedGroupingId && !source) {
-    state.selectedGroupingId = '';
-    state.selectedAthleteIndex = null;
-    state.targetGroupingId = '';
-  }
-  renderSourcePane(catalog.find((e) => e.id === state.selectedGroupingId) || null);
-  populateMoveTargets(catalog.find((e) => e.id === state.selectedGroupingId) || null);
-
-  const moveBtn = document.getElementById('moveAthleteBtn');
-  if (moveBtn) {
-    moveBtn.disabled = !state.selectedGroupingId || state.selectedAthleteIndex == null || !state.targetGroupingId;
-  }
-  const saveGroupingsBtn = document.getElementById('saveGroupingsBtn');
-  if (saveGroupingsBtn) saveGroupingsBtn.disabled = !catalog.length;
-}
-
-function updateDrawSaveButtons() {
-  const saveBtn = document.getElementById('saveDrawBtn');
-  const revertBtn = document.getElementById('revertDrawBtn');
-  const dirty = Boolean(state.drawDirty);
-  if (saveBtn) saveBtn.disabled = !dirty;
-  if (revertBtn) revertBtn.disabled = !dirty;
-}
-
-function populateDrawInfo(entry) {
-  document.getElementById('drawInfoName').textContent = entry?.division_name || '—';
-  document.getElementById('drawInfoType').textContent = entry?.division_type || '—';
-  document.getElementById('drawInfoEvent').textContent = entry?.event_key || '—';
-  document.getElementById('drawInfoAthletes').textContent =
-    entry ? String(entry.athlete_count ?? '') : '—';
+  el.textContent = name;
+  el.title = name;
+  el.hidden = false;
 }
 
 export function switchDrawSubtab(subtab) {
+  if (subtab === 'edit' && typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches) {
+    subtab = 'pool';
+  }
   state.drawSubtab = subtab;
-  document.querySelectorAll('.da-subtab').forEach((btn) => {
+  document.querySelectorAll('#tab-draws .da-subtab').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.subtab === subtab);
   });
-  document.querySelectorAll('.da-subpanel').forEach((panel) => {
+  document.querySelectorAll('#tab-draws .da-subpanel').forEach((panel) => {
     const active = panel.dataset.subpanel === subtab;
     panel.hidden = !active;
     panel.classList.toggle('active', active);
   });
+  const right = document.querySelector('#tab-draws .da-draws-right');
+  right?.classList.toggle('da-draws-edit-mode', subtab === 'edit' || subtab === 'matches');
 }
 
 export async function renderDrawPreviewPanels(entry) {
-  const { renderInteractiveEditor, loadPdfPreview, loadSlotsForEntry } = await import('./draw-editor.js');
-  const preview = document.getElementById('drawPreview');
-  if (preview) {
-    preview.textContent = entry?.body_text || 'select a division to preview plain-text draw.';
+  const { renderMatchesViewer } = await import('./matches-viewer.js');
+  const dirtyHint = document.getElementById('drawDirtyHint');
+  if (dirtyHint) dirtyHint.hidden = !state.drawDirty;
+
+  if (state.drawSubtab === 'pdf') {
+    state.drawSubtab = 'pool';
+    switchDrawSubtab('pool');
   }
-  populateDrawInfo(entry);
-  updateDrawSaveButtons();
+
+  updateSelectedDrawName(entry);
+  renderDrawAthletes(entry);
+  populateDrawMoveTargets(entry);
+  updateMoveArrowEnabled();
 
   if (!entry) {
-    state.drawSlots = [];
-    renderInteractiveEditor(null, []);
-    try { await loadPdfPreview(null); } catch (_) { /* ignore */ }
+    renderMatchesViewer(null);
+    try {
+      const { renderInteractiveEditor } = await import('./draw-editor.js');
+      renderInteractiveEditor(null);
+    } catch (_) { /* ignore */ }
     return;
   }
 
-  try {
-    if (!state.drawSlots.length || !state.drawDirty) {
-      const refreshed = await loadSlotsForEntry(entry);
-      if (refreshed?.entry) {
-        Object.assign(entry, {
-          body_text: refreshed.entry.body_text,
-          json_data: refreshed.entry.json_data,
-          division_type: refreshed.entry.division_type
-        });
-        state.drawSlots = refreshed.slots || [];
-        if (preview) preview.textContent = entry.body_text || '';
-      }
-    }
-  } catch (_) {
-    state.drawSlots = entry._draw_slot_list || [];
+  if (state.drawSubtab === 'matches') {
+    renderMatchesViewer(entry);
   }
-
-  renderInteractiveEditor(entry, state.drawSlots);
-
-  if (state.drawSubtab === 'pdf') {
+  if (state.drawSubtab === 'edit') {
+    const {
+      renderInteractiveEditor,
+      loadSlotsForEntry,
+      setDrawEditorCallback,
+      applyEditedEntryToState
+    } = await import('./draw-editor.js');
+    setDrawEditorCallback((updatedEntry, slots) => {
+      const next = applyEditedEntryToState(updatedEntry, slots);
+      if (dirtyHint) dirtyHint.hidden = !state.drawDirty;
+      renderInteractiveEditor(next || updatedEntry, slots);
+    });
     try {
-      await loadPdfPreview(entry);
+      const data = await loadSlotsForEntry(entry);
+      if (data?.entry) {
+        entry._draw_slot_list = data.slots || [];
+        if (data.entry.body_text) entry.body_text = data.entry.body_text;
+        if (data.entry.json_data) entry.json_data = data.entry.json_data;
+      }
+      renderInteractiveEditor(entry, data?.slots || entry._draw_slot_list || []);
     } catch (err) {
-      showToast(err.message || 'PDF preview failed', true);
+      showToast(err.message || 'unable to load draw editor.', true);
+      renderInteractiveEditor(entry, entry._draw_slot_list || []);
     }
   }
 }
@@ -407,98 +393,327 @@ export async function renderDrawPreviewPanels(entry) {
 export function renderDraws() {
   const catalog = state.drawsState?.catalog || [];
   const tbody = document.querySelector('#drawsTable tbody');
-  const summary = document.getElementById('drawsSummary');
-  const downloadBtn = document.getElementById('downloadZipBtn');
-  const withAthletes = catalog.filter((e) => (e.athlete_count || 0) > 0);
-  const stale = state.drawsState?.groupings_out_of_sync;
-  const groupingsCount = (state.groupingsState?.catalog || []).length;
-  const oneToOne = !groupingsCount || catalog.length === groupingsCount;
-  summary.textContent = catalog.length
-    ? `${withAthletes.length} draw(s) with athletes (${catalog.length - withAthletes.length} empty hidden)` +
-      `${oneToOne ? ' · 1:1 with groupings' : ' · out of sync with groupings count'}` +
-      `${stale ? ' — groupings changed, regenerate recommended' : ''}`
-    : 'no draws';
-  const showZip = withAthletes.length > 0;
-  if (downloadBtn) downloadBtn.hidden = !showZip;
+  const withAthletes = catalog.filter(
+    (e) => (e.athlete_count || 0) > 0 || (e.athlete_indices || []).length > 0
+  );
+  const visible = state.filterDrawsToSolo
+    ? withAthletes.filter((e) => drawAthleteCount(e) === 1)
+    : withAthletes;
   const saveDrawsBtn = document.getElementById('saveDrawsBtn');
-  if (saveDrawsBtn) saveDrawsBtn.disabled = !catalog.length;
-  tbody.innerHTML = withAthletes.map((entry) => `
-    <tr data-id="${escapeHtml(entry.id)}" class="${entry.id === state.selectedDrawId ? 'selected' : ''}">
-      <td>${escapeHtml(entry.division_name)}</td>
-      <td>${escapeHtml(entry.division_type)}</td>
-      <td>${entry.athlete_count || 0}</td>
-    </tr>
-  `).join('');
+  if (saveDrawsBtn) {
+    saveDrawsBtn.disabled = !catalog.length || !state.drawDirty;
+  }
+  const athletesHeader = document.getElementById('drawsAthletesHeader');
+  if (athletesHeader) {
+    athletesHeader.classList.toggle('da-th-filtered', Boolean(state.filterDrawsToSolo));
+    athletesHeader.title = state.filterDrawsToSolo
+      ? 'showing solos only — right-click to clear'
+      : 'right-click to filter';
+  }
+  if (tbody) {
+    tbody.innerHTML = visible.map((entry) => {
+      const athleteCount = entry.athlete_count != null
+        ? Number(entry.athlete_count)
+        : (entry.athlete_indices || []).length;
+      return `
+      <tr data-id="${escapeHtml(entry.id)}" class="${entry.id === state.selectedDrawId ? 'selected' : ''}">
+        <td>${escapeHtml(entry.division_name)}</td>
+        <td>${escapeHtml(entry.division_type)}</td>
+        <td>${athleteCount || 0}</td>
+      </tr>
+    `;
+    }).join('');
+  }
   const selected = catalog.find((e) => e.id === state.selectedDrawId);
-  renderDrawPreviewPanels(selected).catch(() => {});
+  if (!selected && state.selectedDrawId) {
+    state.selectedDrawId = '';
+    state.selectedAthleteIndices = new Set();
+  } else if (
+    selected
+    && state.filterDrawsToSolo
+    && drawAthleteCount(selected) !== 1
+  ) {
+    state.selectedDrawId = '';
+    state.selectedAthleteIndices = new Set();
+  }
+  const selectedVisible = catalog.find((e) => e.id === state.selectedDrawId) || null;
+  renderDrawPreviewPanels(selectedVisible).catch(() => {});
+}
+
+/**
+ * Move athletes from one draw into another (client-only until save/regenerate).
+ */
+export function moveAthletesBetweenDrawsLocally(fromId, toId, indices) {
+  const catalog = state.drawsState?.catalog || [];
+  const from = catalog.find((e) => String(e.id) === String(fromId));
+  const to = catalog.find((e) => String(e.id) === String(toId));
+  if (!from || !to) throw new Error('select source and target draws.');
+  if (String(from.id) === String(to.id)) throw new Error('pick a different target draw.');
+  const list = [...indices].map(Number).filter((n) => Number.isFinite(n));
+  if (!list.length) throw new Error('select one or more athletes.');
+
+  const movingSet = new Set(list);
+  const fromIndices = (from.athlete_indices || []).map(Number);
+  const missing = list.filter((i) => !fromIndices.includes(i));
+  if (missing.length) throw new Error('selected athlete is not in this draw.');
+
+  const leaves = state.leaves || [];
+  const sourceLeaf = findLeafByDivisionId(leaves, from.id);
+  const targetLeaf = findLeafByDivisionId(leaves, to.id);
+  const sourceAthletesBefore = [...(from.athletes || [])];
+  const targetAthletesBefore = [...(to.athletes || [])];
+
+  const movingAthletes = (from.athletes || []).filter((a) => movingSet.has(Number(a.index)));
+  from.athlete_indices = fromIndices.filter((i) => !movingSet.has(i));
+  from.athletes = (from.athletes || []).filter((a) => !movingSet.has(Number(a.index)));
+  from.athlete_count = from.athlete_indices.length;
+
+  const toIndices = (to.athlete_indices || []).map(Number);
+  list.forEach((i) => {
+    if (!toIndices.includes(i)) toIndices.push(i);
+  });
+  to.athlete_indices = toIndices;
+  const existing = new Set((to.athletes || []).map((a) => Number(a.index)));
+  if (!Array.isArray(to.athletes)) to.athletes = [];
+  movingAthletes.forEach((a) => {
+    if (!existing.has(Number(a.index))) to.athletes.push(a);
+  });
+  to.athlete_count = to.athlete_indices.length;
+
+  applyCombineToTarget({
+    sourceEntry: from,
+    targetEntry: to,
+    sourceLeaf,
+    targetLeaf,
+    sourceAthletes: sourceAthletesBefore,
+    targetAthletes: targetAthletesBefore
+  });
+
+  from.preserve_structure = false;
+  to.preserve_structure = false;
+  delete from._draw_slot_list;
+  delete to._draw_slot_list;
+
+  state.drawDirty = true;
+  return { from, to };
+}
+
+/**
+ * Move selected athletes from source draw into target draw (client-only until save).
+ */
+export function moveSelectedAthletesLocally() {
+  const moved = moveAthletesBetweenDrawsLocally(
+    state.selectedDrawId,
+    state.targetGroupingId,
+    [...state.selectedAthleteIndices]
+  );
+  state.selectedAthleteIndices = new Set();
+  if (moved.from.athlete_count === 0) {
+    state.selectedDrawId = moved.to.id;
+  }
+}
+
+function drawAthleteCount(entry) {
+  if (!entry) return 0;
+  if (entry.athlete_count != null) return Number(entry.athlete_count) || 0;
+  return (entry.athlete_indices || []).length;
+}
+
+export function countSoloDivisions(catalog = state.drawsState?.catalog) {
+  return (catalog || []).filter((entry) => drawAthleteCount(entry) === 1).length;
+}
+
+/**
+ * Merge every 1-athlete draw into its top ★ recommendation (or next non-empty peer).
+ * Mutates state.drawsState.catalog in place.
+ * @returns {{ merged: number, remaining: number }}
+ */
+export function combineSoloDivisionsLocally() {
+  const catalog = state.drawsState?.catalog;
+  if (!Array.isArray(catalog) || !catalog.length) {
+    throw new Error('no draws available.');
+  }
+  const leaves = state.leaves || [];
+  let merged = 0;
+  const maxPasses = catalog.length + 2;
+
+  for (let pass = 0; pass < maxPasses; pass += 1) {
+    const solos = catalog.filter((entry) => drawAthleteCount(entry) === 1);
+    if (!solos.length) break;
+    let progress = false;
+
+    for (const solo of solos) {
+      if (drawAthleteCount(solo) !== 1) continue;
+      const { options } = buildMoveTargetOptions(solo, catalog, leaves);
+      const targetOpt = options.find((opt) => {
+        const target = catalog.find((e) => String(e.id) === String(opt.id));
+        return target && drawAthleteCount(target) >= 1;
+      });
+      if (!targetOpt) continue;
+
+      const indices = (solo.athlete_indices || []).map(Number).filter((n) => Number.isFinite(n));
+      if (!indices.length) continue;
+
+      moveAthletesBetweenDrawsLocally(solo.id, targetOpt.id, indices);
+      merged += 1;
+      progress = true;
+    }
+
+    if (!progress) break;
+  }
+
+  state.drawsState.catalog = catalog.filter((entry) => drawAthleteCount(entry) > 0);
+  const remaining = state.drawsState.catalog.filter((entry) => drawAthleteCount(entry) === 1).length;
+  return { merged, remaining };
 }
 
 export async function loadEvents() {
-  const events = await apiFetch('/api/division-advanced/events');
-  state.events = events;
-  const options = '<option value="">— select an event —</option>' +
-    events.map((e) => {
-      const label = `${e.event_name} (${formatDate(e.event_date_start)})`;
-      return `<option value="${e.id}">${escapeHtml(label)}</option>`;
-    }).join('');
-  document.querySelectorAll('.da-event-select').forEach((select) => {
-    const previous = select.value || state.eventId || '';
-    select.innerHTML = options;
-    if (previous && [...select.options].some((o) => o.value === previous)) {
-      select.value = previous;
-    }
+  // Prefer events already loaded by the classic boot script (same as Event Management).
+  if (Array.isArray(window.__daClientEvents) && window.__daClientEvents.length) {
+    state.events = window.__daClientEvents;
+    return state.events;
+  }
+
+  // Same fetch path as Event Management (`loadClientEvents` in landing.html).
+  const res = await fetch('/api/client-events', { credentials: 'same-origin' });
+  if (!res.ok) throw new Error('Unable to load your events. Please try again.');
+  const events = (await res.json()) || [];
+  state.events = Array.isArray(events) ? events : [];
+  window.__daClientEvents = state.events;
+
+  const select = document.getElementById('eventSelect');
+  if (!select) return state.events;
+
+  select.innerHTML = '<option value="">— select an event —</option>';
+  state.events.forEach((event) => {
+    const option = document.createElement('option');
+    option.value = event.id;
+    const startDate = event.event_date_start
+      ? new Date(event.event_date_start).toLocaleDateString()
+      : '';
+    option.textContent = startDate
+      ? `${event.event_name} (${startDate})`
+      : String(event.event_name || '');
+    select.appendChild(option);
   });
+
+  if (state.eventId && [...select.options].some((o) => o.value === String(state.eventId))) {
+    select.value = String(state.eventId);
+  }
+  return state.events;
 }
 
-export function syncEventSelects(eventId) {
-  const value = eventId || '';
-  document.querySelectorAll('.da-event-select').forEach((select) => {
-    if (select.value !== value) select.value = value;
-  });
-  const statusText = value ? 'event selected' : '';
-  [
-    'eventStatus',
-    'athletesEventStatus',
-    'groupingsEventStatus',
-    'drawsEventStatus',
-    'scheduleEventStatus'
-  ].forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = statusText;
-  });
+export function closeTemplatePicker() {
+  const menu = document.getElementById('wheelTemplateMenu');
+  const toggle = document.getElementById('wheelTemplateToggle');
+  if (menu) menu.hidden = true;
+  if (toggle) toggle.setAttribute('aria-expanded', 'false');
+}
+
+export function openTemplatePicker() {
+  const menu = document.getElementById('wheelTemplateMenu');
+  const toggle = document.getElementById('wheelTemplateToggle');
+  if (!menu || !toggle) return;
+  menu.hidden = false;
+  toggle.setAttribute('aria-expanded', 'true');
+}
+
+export function toggleTemplatePicker() {
+  const menu = document.getElementById('wheelTemplateMenu');
+  if (!menu) return;
+  if (menu.hidden) openTemplatePicker();
+  else closeTemplatePicker();
 }
 
 export async function loadTemplates() {
   state.templates = await apiFetch('/api/division-advanced/divisions/templates');
-  const select = document.getElementById('templateSelect');
-  select.innerHTML = '<option value="">— template —</option>' +
-    state.templates.map((t) =>
-      `<option value="${t.id}">${escapeHtml(t.nickname)} (${t.leaf_count})</option>`
-    ).join('');
+  const menu = document.getElementById('wheelTemplateMenu');
+  if (!menu) return;
+
+  const templates = state.templates || [];
+  if (!templates.length) {
+    menu.innerHTML = '<li class="da-template-empty" role="presentation">no templates saved</li>';
+    return;
+  }
+
+  menu.innerHTML = templates.map((t) => `
+    <li role="option" tabindex="-1" data-id="${escapeHtml(t.id)}" data-name="${escapeHtml(t.nickname)}">
+      ${escapeHtml(t.nickname)} (${Number(t.leaf_count) || 0})
+    </li>
+  `).join('');
 }
 
-export { renderSchedule } from './schedule-panel.js';
+export async function deleteDivisionTemplate(templateId) {
+  const id = String(templateId || '').trim();
+  if (!id) throw new Error('template id is required.');
+  await apiFetch(`/api/division-advanced/divisions/templates/${encodeURIComponent(id)}`, {
+    method: 'DELETE'
+  });
+  await loadTemplates();
+}
+
+export async function loadCreationStatus() {
+  if (!state.eventId) {
+    state.creationStatus = null;
+    return null;
+  }
+  const status = await apiFetch(`/api/division-advanced/events/${state.eventId}/creation-status`);
+  state.creationStatus = status;
+  return status;
+}
+
+export async function loadEventTemplateLeaves() {
+  if (!state.eventId) return [];
+  const data = await apiFetch(`/api/division-advanced/events/${state.eventId}/divisions`);
+  state.leaves = data.leaves || [];
+  return state.leaves;
+}
+
+export async function saveDivisionsForEvent(leaves = state.leaves) {
+  if (!Array.isArray(leaves) || !leaves.length) {
+    throw new Error('no divisions to save.');
+  }
+  if (!state.eventId) throw new Error('select an event first.');
+  await apiFetch(`/api/division-advanced/events/${state.eventId}/divisions`, {
+    method: 'POST',
+    body: JSON.stringify({ leaves })
+  });
+  return leaves.length;
+}
+
+export async function saveNamedDivisionTemplate(nickname, leaves = state.leaves) {
+  const name = String(nickname || '').trim();
+  if (!name) throw new Error('template name is required.');
+  if (!Array.isArray(leaves) || !leaves.length) {
+    throw new Error('no divisions to save.');
+  }
+  await loadTemplates();
+  const existing = (state.templates || []).find(
+    (t) => String(t.nickname || '').trim().toLowerCase() === name.toLowerCase()
+  );
+  await apiFetch('/api/division-advanced/divisions/templates', {
+    method: 'POST',
+    body: JSON.stringify({
+      nickname: name,
+      leaves,
+      overwriteId: existing?.id || null
+    })
+  });
+  await loadTemplates();
+  return name;
+}
 
 export async function loadSavedForEvent() {
   if (!state.eventId) return;
-  try {
-    const g = await apiFetch(`/api/division-advanced/events/${state.eventId}/groupings`);
-    state.groupingsState = g.state || null;
-    if (state.groupingsState?.leaves) state.leaves = state.groupingsState.leaves;
-  } catch (_) { /* ignore */ }
+  state.drawsState = null;
+  state.leaves = [];
   try {
     const d = await apiFetch(`/api/division-advanced/events/${state.eventId}/draws`);
     state.drawsState = d.state || null;
   } catch (_) { /* ignore */ }
   try {
-    const s = await apiFetch(`/api/division-advanced/events/${state.eventId}/schedule`);
-    state.scheduleState = s.state || null;
-  } catch (_) {
-    state.scheduleState = null;
-  }
+    await loadEventTemplateLeaves();
+  } catch (_) { /* ignore */ }
   renderDivisionsTable();
-  renderGroupings();
   renderDraws();
-  renderSchedule();
 }
-

@@ -123,6 +123,108 @@ h2 {
   width: 100%;
 }
 
+.team-name-picker {
+  position: relative;
+}
+
+.team-name-picker .team-picker-input {
+  padding-right: 42px;
+}
+
+.team-name-picker .team-picker-toggle {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  z-index: 3;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.team-name-picker.is-open .team-picker-toggle {
+  color: #00d4ff;
+}
+
+.team-picker-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  max-height: 260px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid rgba(0, 212, 255, 0.45);
+  border-radius: 8px;
+  background: #141414;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+
+.team-picker-panel[hidden] {
+  display: none !important;
+}
+
+.team-picker-group + .team-picker-group {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 212, 255, 0.18);
+}
+
+.team-picker-group-label {
+  margin: 0 0 4px 4px;
+  color: #00d4ff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.team-picker-count {
+  color: rgba(0, 212, 255, 0.65);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.team-picker-status {
+  margin: 0 0 8px 4px;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 12px;
+}
+
+.team-picker-option {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.team-picker-option:hover,
+.team-picker-option:focus {
+  outline: none;
+  background: rgba(0, 212, 255, 0.12);
+  color: #00d4ff;
+}
+
+.team-picker-empty {
+  padding: 10px;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 13px;
+}
+
 .form-column .field-select,
 .registration-form input,
 .registration-form select,
@@ -373,6 +475,39 @@ h2 {
   box-shadow: 0 0 24px rgba(0, 212, 255, 0.25);
 }
 
+.waiver-modal-card {
+  max-width: 640px;
+  max-height: min(90vh, 720px);
+  display: flex;
+  flex-direction: column;
+}
+
+.waiver-intro {
+  margin: 0 0 12px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.waiver-document {
+  flex: 1 1 auto;
+  min-height: 180px;
+  max-height: 45vh;
+  overflow-y: auto;
+  margin: 0 0 18px;
+  padding: 14px;
+  background: #212121;
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  text-align: left;
+}
+
 .modal-card h3 {
   margin: 0 0 14px;
   color: #00d4ff;
@@ -525,6 +660,9 @@ h2 {
 
 .submit-row {
   margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .submit-row .btn {
@@ -542,6 +680,13 @@ h2 {
   cursor: pointer;
 }
 
+.submit-row .btn:disabled,
+.submit-row .btn.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .submit-row .block-cube .bg-top,
 .submit-row .block-cube .bg {
   background: linear-gradient(90deg, rgba(2, 0, 36, 1) 0%, rgba(52, 9, 121, 1) 37%, rgba(0, 212, 255, 1) 94%);
@@ -554,6 +699,13 @@ h2 {
 .submit-row .block-cube-hover:hover .bg .bg-inner,
 .submit-row .block-cube-hover:focus .bg .bg-inner {
   top: 100%;
+}
+
+.submit-row .btn:disabled.block-cube-hover:hover .bg .bg-inner,
+.submit-row .btn:disabled.block-cube-hover:focus .bg .bg-inner,
+.submit-row .btn.is-disabled.block-cube-hover:hover .bg .bg-inner,
+.submit-row .btn.is-disabled.block-cube-hover:focus .bg .bg-inner {
+  top: 0;
 }
 
 .submit-row .text {
@@ -962,12 +1114,8 @@ body.registration-focus-active .registration-closed-warning:not([hidden]) {
 }
 
 @media (max-width: 768px) {
-  body {
-    padding: 12px 8px 28px;
-  }
-
   :root {
-    --form-column-width: min(582px, calc(100vw - 32px));
+    --form-column-width: 100%;
     --card-padding-x: 12px;
     --focus-stage-gap: 14px;
     --focus-poster-max-height: min(58vh, 520px);
@@ -975,6 +1123,21 @@ body.registration-focus-active .registration-closed-warning:not([hidden]) {
     --focus-details-pad: 18px 16px;
     --focus-details-title-size: 20px;
     --focus-details-text-size: 14px;
+  }
+
+  body {
+    padding: 12px 8px 28px;
+    overflow-x: hidden;
+  }
+
+  .modal-card {
+    max-height: min(90dvh, 90vh);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .team-picker-panel {
+    max-height: min(260px, 40dvh);
   }
 
   .card {
@@ -997,19 +1160,27 @@ body.registration-focus-active .registration-closed-warning:not([hidden]) {
   }
 
   .event-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 12px;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+  }
+
+  .modal-btn {
+    width: 100%;
   }
 
   .event-card-name {
     padding: 8px 6px;
-    font-size: 11px;
-    min-height: 40px;
+    font-size: 13px;
+    min-height: 44px;
   }
 
   .event-card-dates {
     padding: 0 6px 8px 6px;
-    font-size: 9px;
+    font-size: 11px;
     line-height: 1.4;
   }
 
@@ -1019,16 +1190,16 @@ body.registration-focus-active .registration-closed-warning:not([hidden]) {
   }
 
   .event-card-link {
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .event-card-action-hint {
-    padding: 6px 6px 8px 6px;
-    font-size: 9px;
+    padding: 8px 6px 10px;
+    font-size: 11px;
   }
 
   .event-grid-hint {
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .event-focus-poster {
@@ -1083,26 +1254,26 @@ body.registration-focus-active .registration-closed-warning:not([hidden]) {
 
 @media (max-width: 480px) {
   .event-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
+    grid-template-columns: 1fr;
+    gap: 10px;
   }
 
   .event-card-name {
-    font-size: 10px;
-    min-height: 36px;
+    font-size: 14px;
+    min-height: 40px;
   }
 
   .event-card-dates {
-    font-size: 8px;
+    font-size: 12px;
   }
 
   .event-card-action-hint {
-    padding: 5px 4px 6px 4px;
-    font-size: 8px;
+    padding: 6px 6px 8px;
+    font-size: 11px;
   }
 
   .event-grid-hint {
-    font-size: 10px;
+    font-size: 12px;
   }
 
   :root {

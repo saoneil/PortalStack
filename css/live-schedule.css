@@ -13,21 +13,20 @@
   --live-time-w: 72px;
 }
 
-.live-schedule-page {
-  min-height: 100vh;
-  height: 100vh;
-  overflow: hidden;
-  background:
-    radial-gradient(circle at top left, rgba(11, 110, 79, 0.08), transparent 40%),
-    linear-gradient(180deg, #f8f5ee 0%, var(--live-bg) 45%, var(--live-bg-deep) 100%);
-  color: var(--live-ink);
-  font-family: "DM Sans", sans-serif;
-}
-
 html:has(.live-schedule-page),
 body:has(.live-schedule-page) {
   height: 100%;
   margin: 0;
+  overflow: hidden;
+}
+
+.live-schedule-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
   overflow: hidden;
 }
 
@@ -46,43 +45,35 @@ body:has(.live-schedule-page) {
 .live-schedule-top {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 18px;
+  align-items: center;
+  gap: 12px;
   flex-wrap: wrap;
   flex: 0 0 auto;
 }
 
-.live-kicker {
-  margin: 0 0 4px;
-  color: var(--live-accent);
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+.live-schedule-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
-.live-schedule-title-row {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 10px 16px;
+.live-schedule-label {
+  margin: 0;
+  line-height: 1.2;
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .live-schedule-title {
   margin: 0;
-  color: var(--live-ink);
-  font-size: clamp(28px, 4vw, 42px);
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1.05;
+  line-height: 1.2;
 }
 
 .live-schedule-subtitle {
-  margin: 0;
-  color: var(--live-muted);
-  font-size: clamp(16px, 2.2vw, 22px);
-  font-weight: 600;
-  line-height: 1.2;
+  margin: 2px 0 0;
+  line-height: 1.3;
 }
 
 .live-schedule-top-actions {
@@ -92,56 +83,6 @@ body:has(.live-schedule-page) {
   align-items: center;
 }
 
-.live-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  padding: 10px 16px;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 700;
-  text-decoration: none;
-  cursor: pointer;
-  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
-}
-
-.live-btn:hover {
-  transform: translateY(-1px);
-}
-
-.live-btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.live-btn-primary {
-  background: var(--live-accent);
-  color: #fff;
-}
-
-.live-btn-secondary {
-  background: #fff;
-  color: var(--live-ink);
-  border-color: var(--live-line);
-}
-
-.live-btn-ghost {
-  background: transparent;
-  color: var(--live-muted);
-  border-color: transparent;
-}
-
-.live-panel {
-  background: var(--live-card);
-  border: 1px solid rgba(26, 28, 30, 0.08);
-  border-radius: 20px;
-  padding: 22px;
-  box-shadow: var(--live-shadow);
-}
-
 .live-panel-board {
   padding: 16px;
   flex: 1 1 auto;
@@ -149,66 +90,6 @@ body:has(.live-schedule-page) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-}
-
-.live-panel h2 {
-  margin: 0 0 8px;
-  color: var(--live-ink);
-  font-size: 24px;
-  font-weight: 800;
-}
-
-.live-hint {
-  color: var(--live-muted);
-  font-size: 15px;
-  margin: 0 0 16px;
-}
-
-.live-error {
-  color: var(--live-warn);
-  margin-top: 12px;
-  font-weight: 700;
-}
-
-.live-field-label {
-  display: block;
-  color: var(--live-muted);
-  margin-bottom: 6px;
-  font-size: 13px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.live-select {
-  width: 100%;
-  max-width: 560px;
-  background: #fff;
-  color: var(--live-ink);
-  border: 1px solid var(--live-line);
-  border-radius: 12px;
-  padding: 12px 14px;
-  font: inherit;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.live-select-sm {
-  width: auto;
-  max-width: none;
-  padding: 8px 10px;
-  font-size: 14px;
-}
-
-.live-select-event {
-  min-width: min(360px, 70vw);
-  max-width: min(520px, 80vw);
-}
-
-.live-actions-row {
-  margin-top: 14px;
-  display: flex;
-  gap: 10px;
 }
 
 .live-viewer-toolbar {
@@ -222,24 +103,141 @@ body:has(.live-schedule-page) {
   flex: 0 0 auto;
 }
 
+.live-schedule-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border: 1px solid rgba(0, 212, 255, 0.28);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.22);
+  flex: 0 0 auto;
+}
+
+.live-schedule-settings[hidden] {
+  display: none !important;
+}
+
+.live-settings-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  align-items: stretch;
+  width: 100%;
+}
+
+.live-settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 0 0 auto;
+  align-items: stretch;
+  padding: 4px 36px;
+  position: relative;
+}
+
+.live-settings-group:first-child {
+  padding-left: 8px;
+}
+
+.live-settings-group + .live-settings-group {
+  border-left: 1px solid rgba(0, 212, 255, 0.35);
+  margin-left: 8px;
+  padding-left: 44px;
+}
+
+.live-settings-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.live-settings-group.live-settings-actions,
+.live-settings-group + .live-settings-actions {
+  margin-left: auto;
+  justify-content: flex-end;
+  align-items: stretch;
+  gap: 8px;
+  min-width: 150px;
+  padding-right: 8px;
+}
+
+.live-settings-autofill {
+  justify-content: center;
+}
+
+.live-settings-btn-lg {
+  padding: 10px 18px;
+  font-size: 15px;
+  font-weight: 700;
+  min-height: 42px;
+  line-height: 1.2;
+}
+
+.live-settings-day {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.live-settings-day-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.live-settings-num {
+  width: 56px;
+}
+
+.live-select-day {
+  min-width: 120px;
+  max-width: 180px;
+}
+
+.live-days-settings {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.live-day-settings-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.live-day-settings-row .da-input {
+  min-width: 0;
+}
+
+.live-day-settings-row .live-day-start,
+.live-day-settings-row .live-day-end {
+  width: 138px;
+  min-width: 128px;
+}
+
 .live-inline-label {
   display: inline-flex;
   gap: 8px;
   align-items: center;
-  color: var(--live-muted);
   font-size: 14px;
   font-weight: 700;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
-.live-meta {
-  color: var(--live-muted);
-  font-size: 13px;
-  font-family: "IBM Plex Mono", monospace;
+.live-select-event {
+  min-width: min(280px, 50vw);
+  max-width: min(420px, 60vw);
 }
 
 .live-stage {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-columns: minmax(0, 1fr) 400px;
   gap: 14px;
   flex: 1 1 auto;
   min-height: 0;
@@ -254,9 +252,6 @@ body:has(.live-schedule-page) {
 .live-scratch {
   min-height: 0;
   height: 100%;
-  background: #fff;
-  border: 1px solid var(--live-line);
-  border-radius: 16px;
   overflow: auto;
 }
 
@@ -265,18 +260,11 @@ body:has(.live-schedule-page) {
   position: relative;
 }
 
-.live-schedule-page .live-board,
-.live-schedule-page .da-schedule-board.live-board {
+.live-board,
+.da-schedule-board.live-board {
   overflow: visible;
   min-height: 0;
   height: auto;
-}
-
-.live-board-wrap.is-drop-target,
-.live-scratch.is-drop-target {
-  outline: 3px solid rgba(11, 110, 79, 0.45);
-  outline-offset: -3px;
-  background: var(--live-accent-soft);
 }
 
 .live-scratch {
@@ -298,18 +286,10 @@ body:has(.live-schedule-page) {
 }
 
 .live-scratch-item {
-  background: var(--live-accent-soft);
-  border: 1px solid rgba(11, 110, 79, 0.28);
-  color: var(--live-ink);
   border-radius: 12px;
   padding: 12px 14px;
   font-weight: 700;
   cursor: grab;
-}
-
-.live-scratch-item.selected,
-.live-scratch-item:hover {
-  border-color: var(--live-accent);
 }
 
 .live-scratch-item.da-dragging {
@@ -321,27 +301,17 @@ body:has(.live-schedule-page) {
   right: 20px;
   bottom: 20px;
   z-index: 10000;
-  background: var(--live-ink);
-  color: #fff;
   padding: 12px 16px;
   border-radius: 12px;
-  box-shadow: var(--live-shadow);
   max-width: min(360px, calc(100vw - 40px));
   font-weight: 700;
-}
-
-.live-toast.is-error {
-  background: #7f1d1d;
 }
 
 .live-context-menu {
   position: fixed;
   z-index: 10001;
   min-width: 180px;
-  background: #fff;
-  border: 1px solid var(--live-line);
   border-radius: 12px;
-  box-shadow: var(--live-shadow);
   padding: 6px;
   display: flex;
   flex-direction: column;
@@ -360,24 +330,7 @@ body:has(.live-schedule-page) {
   border-radius: 8px;
   font: inherit;
   font-weight: 700;
-  color: var(--live-ink);
   cursor: pointer;
-}
-
-.live-context-menu button:hover {
-  background: var(--live-accent-soft);
-  color: var(--live-accent);
-}
-
-/* High-visibility board overrides */
-.live-schedule-page .da-schedule-timeline {
-  --da-sched-slot-h: var(--live-slot-h);
-  --da-sched-time-w: var(--live-time-w);
-  position: relative;
-  border: 1px solid var(--live-line);
-  border-radius: 14px;
-  background: #fffdf8;
-  min-width: max(100%, calc(var(--da-sched-time-w) + var(--da-sched-cols, 3) * 180px));
 }
 
 .live-now-line {
@@ -412,8 +365,109 @@ body:has(.live-schedule-page) {
   display: none !important;
 }
 
-.live-schedule-page .da-schedule-timeline-corner,
-.live-schedule-page .da-schedule-timeline-ring-head {
+.live-viewer-event-name {
+  margin: 0 0 14px;
+  font-size: clamp(22px, 3.4vw, 34px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.live-viewer-day {
+  margin-bottom: 28px;
+}
+
+.live-viewer-day:last-child {
+  margin-bottom: 0;
+}
+
+.live-viewer-day-title {
+  margin: 0 0 10px;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+/* ---------- Viewer: schedule only, attendee cream board ---------- */
+
+html.live-viewer,
+html.live-viewer body {
+  background: var(--live-bg);
+}
+
+html.live-viewer .live-schedule-page {
+  background:
+    radial-gradient(circle at top left, rgba(11, 110, 79, 0.08), transparent 40%),
+    linear-gradient(180deg, #f8f5ee 0%, var(--live-bg) 45%, var(--live-bg-deep) 100%);
+  color: var(--live-ink);
+  font-family: "DM Sans", sans-serif;
+}
+
+html.live-viewer .live-schedule-top,
+html.live-viewer .live-viewer-toolbar,
+html.live-viewer .live-schedule-settings,
+html.live-viewer .live-scratch,
+html.live-viewer #liveToast,
+html.live-viewer #liveContextMenu,
+html.live-viewer #livePickerPanel {
+  display: none !important;
+}
+
+html.live-viewer .live-schedule-main {
+  max-width: none;
+  padding: 16px 18px 20px;
+}
+
+html.live-viewer .live-panel {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+html.live-viewer .live-panel-board {
+  padding: 0;
+}
+
+html.live-viewer .live-board-wrap {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+}
+
+html.live-viewer .live-viewer-event-name {
+  color: var(--live-ink);
+}
+
+html.live-viewer .live-viewer-day-title {
+  color: var(--live-ink);
+}
+
+html.live-viewer .live-hint {
+  color: var(--live-muted);
+  font-size: 15px;
+  margin: 0;
+}
+
+html.live-viewer .live-panel h2 {
+  margin: 0 0 8px;
+  color: var(--live-ink);
+  font-size: 24px;
+  font-weight: 800;
+}
+
+html.live-viewer .da-schedule-timeline {
+  --da-sched-slot-h: var(--live-slot-h);
+  --da-sched-time-w: var(--live-time-w);
+  position: relative;
+  border: 1px solid var(--live-line);
+  border-radius: 14px;
+  background: #fffdf8;
+  min-width: max(100%, calc(var(--da-sched-time-w) + var(--da-sched-cols, 3) * 180px));
+}
+
+html.live-viewer .da-schedule-timeline-corner,
+html.live-viewer .da-schedule-timeline-ring-head {
   color: var(--live-ink);
   background: #f0ebe1;
   border-bottom: 1px solid var(--live-line);
@@ -424,7 +478,7 @@ body:has(.live-schedule-page) {
   text-transform: uppercase;
 }
 
-.live-schedule-page .da-schedule-time-axis {
+html.live-viewer .da-schedule-time-axis {
   background:
     repeating-linear-gradient(
       to bottom,
@@ -435,14 +489,14 @@ body:has(.live-schedule-page) {
     );
 }
 
-.live-schedule-page .da-schedule-time-tick {
+html.live-viewer .da-schedule-time-tick {
   color: var(--live-muted);
   font-family: "IBM Plex Mono", monospace;
   font-size: 12px;
   font-weight: 600;
 }
 
-.live-schedule-page .da-schedule-ring-lane {
+html.live-viewer .da-schedule-ring-lane {
   border-right: 1px solid var(--live-line);
   background:
     repeating-linear-gradient(
@@ -454,7 +508,7 @@ body:has(.live-schedule-page) {
     );
 }
 
-.live-schedule-page .da-schedule-block {
+html.live-viewer .da-schedule-block {
   left: 6px;
   right: 6px;
   padding: 3px 6px;
@@ -471,11 +525,12 @@ body:has(.live-schedule-page) {
   gap: 1px;
   overflow: hidden;
   min-width: 0;
+  cursor: default;
 }
 
-.live-schedule-page .da-schedule-block strong {
+html.live-viewer .da-schedule-block strong {
   color: var(--live-ink);
-  font-size: 13px;
+  font-size: 59px;
   font-weight: 800;
   line-height: 1.12;
   min-width: 0;
@@ -485,23 +540,24 @@ body:has(.live-schedule-page) {
   white-space: nowrap;
 }
 
-.live-schedule-page .da-schedule-block[data-slots]:not([data-slots="1"]):not([data-slots="2"]) strong {
+html.live-viewer .da-schedule-block[data-slots]:not([data-slots="1"]):not([data-slots="2"]) strong {
   white-space: normal;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
-.live-schedule-page .da-schedule-block[data-slots="1"],
-.live-schedule-page .da-schedule-block[data-slots="2"] {
+html.live-viewer .da-schedule-block[data-slots="1"],
+html.live-viewer .da-schedule-block[data-slots="2"] {
   padding: 1px 5px;
   gap: 0;
 }
 
-.live-schedule-page .da-schedule-block span {
+html.live-viewer .da-schedule-block span {
   color: var(--live-muted);
   font-family: "IBM Plex Mono", monospace;
-  font-size: 11px;
+  font-size: 50px;
   font-weight: 600;
   line-height: 1.1;
   min-width: 0;
@@ -511,13 +567,289 @@ body:has(.live-schedule-page) {
   flex-shrink: 0;
 }
 
-.live-schedule-page .da-schedule-block.is-selected {
-  outline: 2px solid var(--live-accent);
-  box-shadow: 0 0 0 3px rgba(11, 110, 79, 0.18), 0 8px 18px rgba(26, 28, 30, 0.12);
+html.live-viewer .da-schedule-block.is-selected,
+html.live-viewer .da-schedule-block.da-dragging {
+  outline: none;
+  opacity: 1;
 }
 
-.live-schedule-page .da-schedule-block.da-dragging {
-  opacity: 0.5;
+/* ---------- Tool: portal dark theme, full controls ---------- */
+
+html.live-tool,
+html.live-tool body.live-schedule-page {
+  background-color: #212121;
+  color: #fff;
+  font-family: monospace, serif;
+}
+
+html.live-tool .live-schedule-page {
+  background-color: #212121;
+  color: #fff;
+}
+
+html.live-tool .live-schedule-main {
+  max-width: none;
+  padding: 6px 12px 8px;
+  gap: 6px;
+}
+
+html.live-tool .live-schedule-label {
+  color: #00d4ff;
+  font-size: clamp(13px, 1.5vh, 16px);
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 12px rgba(0, 212, 255, 0.35);
+  font-weight: 700;
+}
+
+html.live-tool .live-schedule-title {
+  color: #00d4ff;
+  font-size: clamp(16px, 1.8vh, 22px);
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 12px rgba(0, 212, 255, 0.35);
+}
+
+html.live-tool .live-schedule-subtitle {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: clamp(11px, 1.3vh, 13px);
+  letter-spacing: 0.04em;
+  font-weight: 400;
+}
+
+html.live-tool .live-panel {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
+}
+
+html.live-tool .live-panel-board {
+  padding: 0;
+}
+
+html.live-tool .live-panel h2 {
+  margin: 0 0 8px;
+  color: #00d4ff;
+  font-size: 16px;
+}
+
+html.live-tool .live-hint {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 13px;
+  margin: 0 0 12px;
+}
+
+html.live-tool .live-error {
+  color: #ffb4b4;
+  margin-top: 8px;
+  font-weight: 700;
+}
+
+html.live-tool .live-inline-label {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+html.live-tool .live-meta {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 12px;
+}
+
+html.live-tool .live-viewer-toolbar {
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(0, 212, 255, 0.06);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+}
+
+html.live-tool .live-board-wrap,
+html.live-tool .live-scratch {
+  background: rgba(8, 12, 16, 0.55);
+  border: 1px solid rgba(0, 212, 255, 0.16);
+  border-radius: 8px;
+}
+
+html.live-tool .live-board-wrap.is-drop-target,
+html.live-tool .live-scratch.is-drop-target {
+  outline: 2px solid rgba(0, 212, 255, 0.55);
+  outline-offset: -2px;
+  background: rgba(0, 212, 255, 0.08);
+}
+
+html.live-tool .live-scratch-item {
+  background: rgba(0, 40, 55, 0.92);
+  border: 1px solid rgba(0, 212, 255, 0.28);
+  border-left: 3px solid #00d4ff;
+  color: #fff;
+  border-radius: 5px;
+  font-weight: 600;
+  font-size: 12px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px 8px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+html.live-tool .live-scratch-item strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+  line-height: 1.12;
+  font-size: 12px;
+}
+
+html.live-tool .live-scratch-item span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.1;
+  font-size: 11px;
+}
+
+html.live-tool .da-schedule-block {
+  font-size: 117px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+html.live-tool .da-schedule-block strong {
+  font-size: 117px;
+  font-weight: 700;
+  line-height: 1.12;
+  min-width: 0;
+}
+
+html.live-tool .da-schedule-block span {
+  font-size: 99px;
+  line-height: 1.1;
+  min-width: 0;
+}
+
+html.live-tool .da-schedule-block[data-slots="1"] {
+  padding: 0 4px;
+  gap: 0;
+  justify-content: center;
+}
+
+html.live-tool .da-schedule-block[data-slots="1"] strong {
+  font-size: 9px;
+  line-height: 1.05;
+}
+
+html.live-tool .da-schedule-block[data-slots="1"] span {
+  font-size: 7px;
+  line-height: 1.05;
+}
+
+html.live-tool .da-schedule-block[data-slots="2"] {
+  padding: 1px 5px;
+  gap: 0;
+}
+
+html.live-tool .da-schedule-block[data-slots="2"] strong {
+  font-size: 12px;
+  line-height: 1.08;
+}
+
+html.live-tool .da-schedule-block[data-slots="2"] span {
+  font-size: 10px;
+  line-height: 1.05;
+}
+
+html.live-tool .live-scratch-item.da-dragging {
+  opacity: 0.35;
+}
+
+html.live-tool .live-scratch-item.selected,
+html.live-tool .live-scratch-item:hover {
+  border-color: #00d4ff;
+  color: #00d4ff;
+}
+
+.live-drag-image {
+  position: fixed;
+  top: -10000px;
+  left: -10000px;
+  z-index: 0;
+  pointer-events: none;
+  box-sizing: border-box;
+  opacity: 0.95;
+  list-style: none;
+}
+
+.live-drag-ghost {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  z-index: 5;
+  box-sizing: border-box;
+  pointer-events: none;
+  border-radius: 5px;
+  border: 2px dashed #00d4ff;
+  background: rgba(0, 212, 255, 0.12);
+  box-shadow: 0 0 0 1px rgba(0, 212, 255, 0.35);
+}
+
+html.live-tool #liveSaveBtn.is-dirty {
+  background: #e6b800;
+  border-color: #f0c420;
+  color: #1a1400;
+}
+
+html.live-tool #liveSaveBtn.is-dirty:hover:not(:disabled) {
+  background: #f0c420;
+  border-color: #ffd84d;
+  color: #1a1400;
+}
+
+html.live-tool .live-toast {
+  background: rgba(20, 20, 20, 0.95);
+  color: #fff;
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+html.live-tool .live-toast.is-error {
+  border-color: rgba(255, 100, 100, 0.45);
+  color: #ffb4b4;
+}
+
+html.live-tool .live-context-menu {
+  background: rgba(20, 20, 20, 0.98);
+  border: 1px solid rgba(0, 212, 255, 0.28);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+}
+
+html.live-tool .live-context-menu button {
+  color: #fff;
+}
+
+html.live-tool .live-context-menu button:hover {
+  background: rgba(0, 212, 255, 0.12);
+  color: #00d4ff;
+}
+
+html.live-tool .live-now-line {
+  display: none !important;
+}
+
+html.live-tool .live-viewer-event-name {
+  display: none !important;
 }
 
 @media (max-width: 900px) {
@@ -527,5 +859,109 @@ body:has(.live-schedule-page) {
 
   .live-schedule-main {
     padding: 18px 14px 40px;
+  }
+
+  html.live-tool .live-schedule-main {
+    padding: 8px 10px 12px;
+  }
+
+  .live-schedule-label {
+    white-space: normal;
+  }
+
+  .live-settings-group {
+    padding: 6px 0;
+    width: 100%;
+  }
+
+  .live-settings-group:first-child {
+    padding-left: 0;
+  }
+
+  .live-settings-group + .live-settings-group {
+    border-left: 0;
+    border-top: 1px solid rgba(0, 212, 255, 0.28);
+    margin-left: 0;
+    padding-left: 0;
+    padding-top: 10px;
+    margin-top: 4px;
+  }
+
+  .live-settings-group.live-settings-actions,
+  .live-settings-group + .live-settings-actions {
+    margin-left: 0;
+    min-width: 0;
+    width: 100%;
+    padding-right: 0;
+  }
+
+  .live-settings-day {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .live-settings-day-controls {
+    width: 100%;
+  }
+
+  .live-select-day,
+  .live-select-event {
+    min-width: 0;
+    max-width: none;
+    width: 100%;
+  }
+
+  .live-day-settings-row .live-day-start,
+  .live-day-settings-row .live-day-end {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .live-settings-num {
+    width: 72px;
+  }
+
+  .live-context-menu {
+    max-width: calc(100vw - 16px);
+  }
+
+  .live-board-wrap {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  html.live-viewer .da-schedule-timeline {
+    min-width: max(100%, calc(var(--da-sched-time-w) + var(--da-sched-cols, 3) * 140px));
+  }
+
+  .live-settings-btn-lg {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .live-schedule-top {
+    align-items: stretch;
+  }
+
+  .live-schedule-top-actions {
+    width: 100%;
+  }
+
+  .live-schedule-top-actions .da-btn,
+  .live-viewer-toolbar .da-btn {
+    flex: 1 1 auto;
+  }
+
+  .live-viewer-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  html.live-viewer .da-schedule-block strong {
+    font-size: clamp(14px, 4.2vw, 28px);
+  }
+
+  html.live-viewer .da-schedule-block span {
+    font-size: clamp(12px, 3.6vw, 22px);
   }
 }

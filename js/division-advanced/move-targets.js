@@ -180,18 +180,25 @@ function effectiveDrawTypeForDivision(catalog, divisionId, leaf) {
   return preferred;
 }
 
+/** PL and RR are interchangeable for move suggestions (count drives final type). */
+function drawTypeFamily(type) {
+  const t = normalizeDrawType(type);
+  if (t === 'Premier League' || t === 'Round Robin') return 'pool';
+  return t;
+}
+
 function drawTypesCompatible(catalog, sourceLeaf, targetLeaf, sourceId, targetId) {
   const srcId = String(sourceId || '').trim();
   const tgtId = String(targetId || '').trim();
   if (srcId || tgtId) {
     const src = effectiveDrawTypeForDivision(catalog, srcId, sourceLeaf);
     const tgt = effectiveDrawTypeForDivision(catalog, tgtId, targetLeaf);
-    if (src && tgt) return src === tgt;
+    if (src && tgt) return drawTypeFamily(src) === drawTypeFamily(tgt);
   }
   if (!sourceLeaf || !targetLeaf) return true;
   return (
-    effectiveDrawTypeForDivision(catalog, '', sourceLeaf)
-    === effectiveDrawTypeForDivision(catalog, '', targetLeaf)
+    drawTypeFamily(effectiveDrawTypeForDivision(catalog, '', sourceLeaf))
+    === drawTypeFamily(effectiveDrawTypeForDivision(catalog, '', targetLeaf))
   );
 }
 

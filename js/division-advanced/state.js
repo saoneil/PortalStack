@@ -2,32 +2,21 @@ export const state = {
   eventId: '',
   events: [],
   leaves: [],
-  athletes: [],
-  groupingsState: null,
   drawsState: null,
-  scheduleState: null,
   templates: [],
-  selectedGroupingId: '',
+  creationStatus: null,
+  screen: 'wheel',
+  wheelPhase: 'pick',
   targetGroupingId: '',
   selectedDrawId: '',
-  selectedAthleteIndex: null,
-  groupingFilter: '',
-  groupingAthleteFilter: '',
-  groupingEventFilter: '',
-  groupingTypeFilter: '',
-  groupingSort: 'name',
-  athleteFilter: '',
-  drawSubtab: 'text',
-  drawSlots: [],
+  selectedAthleteIndices: new Set(),
+  drawSubtab: 'pool',
   drawDirty: false,
-  drawSnapshot: null,
-  scheduleSelectedIds: new Set(),
-  scheduleUiBound: false
+  filterDrawsToSolo: false,
+  divisionMode: '',
+  soloDivisionsCombined: false,
+  savedDivisionTemplateName: ''
 };
-
-export function getEventId() {
-  return state.eventId;
-}
 
 export function requireEvent() {
   if (!state.eventId) throw new Error('select an event first.');
@@ -36,4 +25,8 @@ export function requireEvent() {
 
 export function selectedDrawEntry() {
   return (state.drawsState?.catalog || []).find((e) => e.id === state.selectedDrawId) || null;
+}
+
+export function clearSelectedAthletes() {
+  state.selectedAthleteIndices = new Set();
 }

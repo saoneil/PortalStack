@@ -1,178 +1,621 @@
 import { apiFetch, logInteraction } from './api.js';
 import { state, requireEvent, selectedDrawEntry } from './state.js';
 import {
-  showToast, showConfirmModal, setBusy, renderDivisionsTable, renderAthletesTable,
-  renderGroupings, renderDraws, renderSchedule, loadEvents, loadTemplates, loadSavedForEvent,
-  switchDrawSubtab, syncEventSelects
+  showToast, showConfirmModal, showPromptModal, setBusy, renderDivisionsTable, renderDraws,
+  loadEvents, loadTemplates, loadSavedForEvent, loadCreationStatus,
+  saveDivisionsForEvent, saveNamedDivisionTemplate, switchDrawSubtab, eventNickname, loadEventTemplateLeaves,
+  moveSelectedAthletesLocally, combineSoloDivisionsLocally, countSoloDivisions,
+  renderDrawPreviewPanels, closeTemplatePicker, toggleTemplatePicker, deleteDivisionTemplate
 } from './ui.js';
-import {
-  setDrawEditorCallback, loadPdfPreview
-} from './draw-editor.js';
-import {
-  initPatternForm, bindPatternForm, collectPatternFormPayload
-} from './pattern-form.js';
-import { bindSchedulePanel } from './schedule-panel.js';
+import { initPatternForm, bindPatternForm, collectPatternFormPayload } from './pattern-form.js';
 
-function switchTab(tabId) {
-  document.querySelectorAll('.da-tab').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.tab === tabId);
-  });
-  document.querySelectorAll('.da-panel').forEach((panel) => {
-    const active = panel.dataset.panel === tabId;
-    panel.hidden = !active;
-    panel.classList.toggle('active', active);
-  });
+function setPrompt(message, { hidden = false } = {}) {
+  const prompt = document.getElementById('workflowProgressText');
+  if (!prompt) return;
+  prompt.textContent = message;
+  prompt.hidden = hidden;
 }
 
-function clearDivisions({ silent = false } = {}) {
-  state.leaves = [];
-  renderDivisionsTable();
-  if (!silent) showToast('divisions cleared.');
+function setRingPct(pct) {
+  const ring = document.getElementById('workflowStatusRing');
+  if (!ring) return;
+  ring.style.setProperty('--p', String(Math.max(0, Math.min(100, Math.round(pct)))));
 }
 
-function clearAthletes({ silent = false } = {}) {
-  state.athletes = [];
-  state.athleteFilter = '';
-  const search = document.getElementById('athleteSearch');
-  if (search) search.value = '';
-  renderAthletesTable();
-  if (!silent) showToast('athletes cleared.');
-}
-
-function clearGroupings({ silent = false } = {}) {
-  state.groupingsState = null;
-  state.selectedGroupingId = '';
-  state.targetGroupingId = '';
-  state.selectedAthleteIndex = null;
-  state.groupingFilter = '';
-  state.groupingAthleteFilter = '';
-  state.groupingEventFilter = '';
-  state.groupingTypeFilter = '';
-  state.groupingSort = 'name';
-  const search = document.getElementById('groupingsSearch');
-  const athleteSearch = document.getElementById('groupingsAthleteSearch');
-  const eventFilter = document.getElementById('groupingsEventFilter');
-  const typeFilter = document.getElementById('groupingsTypeFilter');
-  const sortSelect = document.getElementById('groupingsSort');
-  if (search) search.value = '';
-  if (athleteSearch) athleteSearch.value = '';
-  if (eventFilter) eventFilter.value = '';
-  if (typeFilter) typeFilter.value = '';
-  if (sortSelect) sortSelect.value = 'name';
-  if (state.drawsState) state.drawsState.groupings_out_of_sync = true;
-  renderGroupings();
-  if (!silent) showToast('groupings cleared.');
-}
-
-function clearDraws({ silent = false } = {}) {
-  state.drawsState = null;
-  state.selectedDrawId = '';
-  state.drawSlots = [];
-  state.drawDirty = false;
-  state.drawSnapshot = null;
-  renderDraws();
-  if (!silent) showToast('draws cleared.');
-}
-
-function clearSchedule({ silent = false } = {}) {
-  state.scheduleState = null;
-  state.scheduleSelectedIds = new Set();
-  renderSchedule();
-  if (!silent) showToast('schedule cleared.');
-}
-
-async function clearAllTabs() {
-  const ok = await showConfirmModal({
-    title: 'clear all tabs',
-    message: 'clear divisions, athletes, groupings, draws, and schedule from this session?',
-    confirmLabel: 'clear all'
-  });
-  if (!ok) return;
-  clearDivisions({ silent: true });
-  clearAthletes({ silent: true });
-  clearGroupings({ silent: true });
-  clearDraws({ silent: true });
-  clearSchedule({ silent: true });
-  const result = document.getElementById('workflowResult');
-  if (result) result.hidden = true;
-  refreshWorkflowFocus();
-  showToast('all tabs cleared.');
-}
-
-function snapshotEntry(entry) {
-  if (!entry) return null;
-  return JSON.parse(JSON.stringify({
-    body_text: entry.body_text,
-    json_data: entry.json_data,
-    division_type: entry.division_type
-  }));
-}
-
-function applyEditedEntry(updatedEntry, slots, markDirty) {
-  const catalog = state.drawsState?.catalog || [];
-  const idx = catalog.findIndex((e) => e.id === updatedEntry.id);
-  if (idx < 0) return;
-  if (!state.drawDirty && markDirty) {
-    state.drawSnapshot = snapshotEntry(catalog[idx]);
+function showScreen(screen) {
+  state.screen = screen;
+  const start = screen === 'wheel';
+  document.documentElement.classList.toggle('da-start-screen', start);
+  document.documentElement.classList.toggle('da-edit-screen', !start);
+  const divisions = document.getElementById('tab-divisions');
+  const draws = document.getElementById('tab-draws');
+  if (divisions) {
+    divisions.hidden = screen !== 'divisions';
+    divisions.classList.toggle('active', screen === 'divisions');
   }
-  Object.assign(catalog[idx], {
-    body_text: updatedEntry.body_text,
-    json_data: updatedEntry.json_data,
-    division_type: updatedEntry.division_type,
-    athlete_count: updatedEntry.athlete_count ?? catalog[idx].athlete_count
+  if (draws) {
+    draws.hidden = screen !== 'draws';
+    draws.classList.toggle('active', screen === 'draws');
+  }
+}
+
+function setWheelPhase(phase) {
+  state.wheelPhase = phase;
+  const choice = document.getElementById('daDivisionChoice');
+  const ready = document.getElementById('daCreateDrawsChoice');
+  const complete = document.getElementById('daCompleteChoice');
+  if (choice) choice.hidden = phase !== 'choose';
+  if (ready) ready.hidden = phase !== 'ready';
+  if (complete) complete.hidden = phase !== 'complete';
+
+  if (phase === 'pick') {
+    setPrompt('select an event', { hidden: false });
+    setRingPct(0);
+  } else if (phase === 'choose') {
+    setPrompt('choose how to build divisions', { hidden: false });
+    setRingPct(28);
+  } else if (phase === 'ready') {
+    setPrompt('divisions ready — create draws', { hidden: false });
+    setRingPct(64);
+  } else if (phase === 'complete') {
+    setPrompt('complete', { hidden: false });
+    setRingPct(100);
+  }
+}
+
+function soloCombinedStorageKey(eventId = state.eventId) {
+  return eventId ? `da-solo-combined:${eventId}` : '';
+}
+
+function readSoloCombinedFlag(eventId = state.eventId) {
+  const key = soloCombinedStorageKey(eventId);
+  if (!key) return false;
+  try {
+    return sessionStorage.getItem(key) === '1';
+  } catch (_) {
+    return false;
+  }
+}
+
+function writeSoloCombinedFlag(value, eventId = state.eventId) {
+  const key = soloCombinedStorageKey(eventId);
+  if (!key) return;
+  try {
+    if (value) sessionStorage.setItem(key, '1');
+    else sessionStorage.removeItem(key);
+  } catch (_) { /* ignore */ }
+}
+
+function syncCombineSoloButton() {
+  const btn = document.getElementById('combineSoloDrawsBtn');
+  if (!btn) return;
+  const soloCount = countSoloDivisions();
+  const clicked = Boolean(state.soloDivisionsCombined) || readSoloCombinedFlag();
+  state.soloDivisionsCombined = clicked;
+  if (clicked || soloCount === 0) {
+    btn.disabled = true;
+    btn.classList.add('da-choice-btn-done');
+    btn.textContent = clicked ? 'Solo Divisions Combined' : 'No Solo Divisions';
+  } else {
+    btn.disabled = false;
+    btn.classList.remove('da-choice-btn-done');
+    btn.textContent = 'Combine Solo Divisions';
+  }
+}
+
+function markCombineSoloButtonDone() {
+  state.soloDivisionsCombined = true;
+  writeSoloCombinedFlag(true);
+  syncCombineSoloButton();
+}
+
+function savedTemplateStorageKey(eventId = state.eventId) {
+  const id = String(eventId || '').trim();
+  return id ? `da-saved-template:${id}` : '';
+}
+
+function readSavedTemplateName(eventId = state.eventId) {
+  const key = savedTemplateStorageKey(eventId);
+  if (!key) return '';
+  try {
+    return String(sessionStorage.getItem(key) || '').trim();
+  } catch (_) {
+    return '';
+  }
+}
+
+function writeSavedTemplateName(name, eventId = state.eventId) {
+  const key = savedTemplateStorageKey(eventId);
+  if (!key) return;
+  try {
+    const trimmed = String(name || '').trim();
+    if (trimmed) sessionStorage.setItem(key, trimmed);
+    else sessionStorage.removeItem(key);
+  } catch (_) { /* ignore */ }
+}
+
+function syncSaveDivisionTemplateButton() {
+  const btn = document.getElementById('saveDivisionTemplateBtn');
+  if (!btn) return;
+  const savedName = String(state.savedDivisionTemplateName || '').trim() || readSavedTemplateName();
+  state.savedDivisionTemplateName = savedName;
+  if (savedName) {
+    btn.disabled = true;
+    btn.classList.add('da-choice-btn-done');
+    btn.textContent = `Template Saved as "${savedName}"`;
+    btn.title = `division template already saved as "${savedName}"`;
+  } else {
+    btn.disabled = false;
+    btn.classList.remove('da-choice-btn-done');
+    btn.textContent = 'Save Division Template';
+    btn.removeAttribute('title');
+  }
+}
+
+function markDivisionTemplateSaved(name) {
+  const trimmed = String(name || '').trim();
+  state.savedDivisionTemplateName = trimmed;
+  writeSavedTemplateName(trimmed);
+  syncSaveDivisionTemplateButton();
+}
+
+async function prepareCompleteWheel() {
+  if (state.eventId && !state.drawsState) {
+    try {
+      await loadSavedForEvent();
+    } catch (_) { /* ignore */ }
+  }
+  state.soloDivisionsCombined = readSoloCombinedFlag();
+  syncCombineSoloButton();
+  state.savedDivisionTemplateName = readSavedTemplateName();
+  syncSaveDivisionTemplateButton();
+}
+
+function flashMissingEventSelect() {
+  const select = document.getElementById('eventSelect');
+  const bar = select?.closest('.da-event-gate') || select;
+  if (!select) return;
+  select.focus({ preventScroll: true });
+  const targets = [select, bar].filter(Boolean);
+  targets.forEach((el) => {
+    el.classList.remove('da-flash-missing');
+    void el.offsetWidth;
+    el.classList.add('da-flash-missing');
   });
-  state.drawSlots = slots || [];
-  if (markDirty) state.drawDirty = true;
-  renderDraws();
+  window.setTimeout(() => {
+    targets.forEach((el) => el.classList.remove('da-flash-missing'));
+  }, 1600);
+  setPrompt('select an event first');
 }
 
 async function applyProfile(profile) {
   const principleUserAdvanced = Number(profile?.principleUserAdvanced) === 1;
   if (!principleUserAdvanced) {
-    window.location.href = '/landing';
+    if (!document.documentElement.classList.contains('da-embed')) {
+      window.location.href = '/landing';
+    }
     return false;
   }
   return true;
 }
 
-function bindTabs() {
-  document.querySelectorAll('.da-tab').forEach((btn) => {
-    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+async function refreshWheelFromStatus() {
+  showScreen('wheel');
+  if (!state.eventId) {
+    setWheelPhase('pick');
+    return;
+  }
+  const status = await loadCreationStatus();
+  if (status?.hasDraws) {
+    setWheelPhase('complete');
+    await prepareCompleteWheel();
+  } else if (status?.hasDivisions) {
+    setWheelPhase('ready');
+  } else {
+    setWheelPhase('choose');
+  }
+}
+
+function resetSessionData() {
+  state.leaves = [];
+  state.drawsState = null;
+  state.creationStatus = null;
+  state.selectedDrawId = '';
+  state.selectedAthleteIndices = new Set();
+  state.targetGroupingId = '';
+  state.drawDirty = false;
+  state.drawSubtab = 'pool';
+  state.filterDrawsToSolo = false;
+  state.divisionMode = '';
+  // In-memory only; sessionStorage flags are per-event and restored in prepareCompleteWheel.
+  state.soloDivisionsCombined = false;
+  state.savedDivisionTemplateName = '';
+  syncCombineSoloButton();
+  syncSaveDivisionTemplateButton();
+}
+
+async function confirmStartOver() {
+  const eventName = eventNickname() || 'this event';
+  return showConfirmModal({
+    title: 'start over',
+    message: `Delete all saved divisions, draws, draw results, and live schedules for “${eventName}”? This cannot be undone and may undo a lot of work. Registration will not be changed.`,
+    confirmLabel: 'delete everything',
+    cancelLabel: 'cancel',
+    danger: true
   });
+}
+
+async function startOver() {
+  if (!state.eventId) {
+    flashMissingEventSelect();
+    return;
+  }
+  const ok = await confirmStartOver();
+  if (!ok) return;
+  try {
+    await apiFetch(`/api/division-advanced/events/${state.eventId}/profile-files`, {
+      method: 'DELETE'
+    });
+    writeSoloCombinedFlag(false);
+    writeSavedTemplateName('');
+    resetSessionData();
+    renderDivisionsTable();
+    renderDraws();
+    await loadTemplates();
+    showToast('divisions, draws, results, and schedules removed. start from the beginning.');
+    await refreshWheelFromStatus();
+  } catch (err) {
+    showToast(err.message || 'unable to start over.', true);
+  }
+}
+
+async function saveDivisionsAndContinue() {
+  const count = await saveDivisionsForEvent(state.leaves);
+  showToast(`saved ${count} divisions for this event.`);
+  await refreshWheelFromStatus();
+}
+
+async function regenerateDrawsSession({ silent = false } = {}) {
+  const eventId = requireEvent();
+  if (!state.drawsState) throw new Error('no draws to save.');
+  const saved = await apiFetch(`/api/division-advanced/events/${eventId}/draws/regenerate`, {
+    method: 'POST',
+    body: JSON.stringify({ state: state.drawsState })
+  });
+  state.drawsState = saved.state || state.drawsState;
+  state.drawDirty = false;
+  state.selectedAthleteIndices = new Set();
+  renderDraws();
+  if (!silent) showToast('draws saved.');
+}
+
+async function downloadEventDrawPdfs() {
+  const eventId = requireEvent();
+  const res = await fetch(
+    `/api/division-advanced/events/${encodeURIComponent(eventId)}/draws/pdfs.zip`,
+    { credentials: 'same-origin' }
+  );
+  if (res.status === 401) {
+    window.location.href = '/login';
+    throw new Error('unauthorized');
+  }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'unable to download PDFs.');
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const header = res.headers.get('Content-Disposition') || '';
+  const headerMatch = header.match(/filename="([^"]+)"/i);
+  if (headerMatch?.[1]) {
+    a.download = headerMatch[1];
+  } else {
+    const rawName = eventNickname() || `event_${eventId}_draws`;
+    const safe = rawName
+      .replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_')
+      .replace(/\s+/g, ' ')
+      .replace(/[. ]+$/g, '')
+      .slice(0, 120)
+      .trim() || `event_${eventId}_draws`;
+    a.download = safe.toLowerCase().endsWith('.zip') ? safe : `${safe}.zip`;
+  }
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 function bindEventSelect() {
-  document.querySelectorAll('.da-event-select').forEach((select) => {
-    select.addEventListener('change', async (e) => {
-      state.eventId = e.target.value;
-      syncEventSelects(state.eventId);
-      state.groupingsState = null;
-      state.drawsState = null;
-      state.scheduleState = null;
-      state.athletes = [];
-      state.selectedGroupingId = '';
-      state.targetGroupingId = '';
-      state.selectedAthleteIndex = null;
-      state.selectedDrawId = '';
-      state.drawDirty = false;
-      state.drawSnapshot = null;
-      state.drawSlots = [];
-      renderAthletesTable();
-      if (state.eventId) {
-        await loadSavedForEvent();
-        showToast('loaded saved groupings/draws/schedule if available.');
-      } else {
-        renderGroupings();
-        renderDraws();
-        renderSchedule();
-      }
-      refreshWorkflowFocus();
-    });
+  const select = document.getElementById('eventSelect');
+  select?.addEventListener('change', async (e) => {
+    state.eventId = e.target.value;
+    resetSessionData();
+    renderDivisionsTable();
+    renderDraws();
+    if (!state.eventId) {
+      await refreshWheelFromStatus();
+      return;
+    }
+    setWheelPhase('pick');
+    setPrompt('loading event…');
+    try {
+      await loadSavedForEvent();
+      await refreshWheelFromStatus();
+    } catch (err) {
+      showToast(err.message || 'unable to load event data.', true);
+      setWheelPhase('choose');
+    }
   });
 }
 
+function bindWheelActions() {
+  document.getElementById('useDefaultDivisionsBtn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('useDefaultDivisionsBtn');
+    if (!state.eventId) {
+      flashMissingEventSelect();
+      return;
+    }
+    setBusy(btn, true);
+    try {
+      requireEvent();
+      const data = await apiFetch('/api/division-advanced/divisions/create-all-defaults', {
+        method: 'POST'
+      });
+      state.leaves = data.leaves || [];
+      if (data.failures?.length) showToast(`skipped: ${data.failures.join(', ')}`, true);
+      const count = await saveDivisionsForEvent(state.leaves);
+      showToast(`saved ${count} default divisions for this event.`);
+      await refreshWheelFromStatus();
+    } catch (err) {
+      showToast(err.message, true);
+    } finally {
+      setBusy(btn, false);
+    }
+  });
+
+  document.getElementById('customizeDivisionsBtn')?.addEventListener('click', async () => {
+    if (!state.eventId) {
+      flashMissingEventSelect();
+      return;
+    }
+    state.divisionMode = 'custom';
+    try {
+      if (!state.leaves.length) await loadSavedForEvent();
+    } catch (_) { /* ignore */ }
+    renderDivisionsTable();
+    showScreen('divisions');
+  });
+
+  document.getElementById('wheelTemplateToggle')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleTemplatePicker();
+  });
+
+  document.getElementById('wheelTemplateMenu')?.addEventListener('click', async (e) => {
+    const item = e.target.closest('li[data-id]');
+    if (!item) return;
+    const id = item.dataset.id;
+    const name = item.dataset.name || 'template';
+    closeTemplatePicker();
+    if (!id) return;
+    if (!state.eventId) {
+      flashMissingEventSelect();
+      return;
+    }
+    const toggle = document.getElementById('wheelTemplateToggle');
+    if (toggle) toggle.disabled = true;
+    try {
+      const data = await apiFetch(`/api/division-advanced/divisions/templates/${id}`);
+      state.leaves = data.leaves || [];
+      if (!state.leaves.length) throw new Error('that template has no divisions.');
+      await saveDivisionsForEvent(state.leaves);
+      renderDivisionsTable();
+      showToast(`loaded template "${data.nickname || name}" for this event.`);
+      await refreshWheelFromStatus();
+    } catch (err) {
+      showToast(err.message, true);
+    } finally {
+      if (toggle) toggle.disabled = false;
+    }
+  });
+
+  document.getElementById('wheelTemplateMenu')?.addEventListener('contextmenu', async (e) => {
+    const item = e.target.closest('li[data-id]');
+    if (!item) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const id = item.dataset.id;
+    const name = item.dataset.name || 'this template';
+    if (!id) return;
+    const ok = await showConfirmModal({
+      title: 'delete template',
+      message: `Delete division template "${name}"? This cannot be undone.`,
+      confirmLabel: 'delete',
+      danger: true
+    });
+    if (!ok) return;
+    try {
+      await deleteDivisionTemplate(id);
+      showToast(`deleted template "${name}".`);
+    } catch (err) {
+      showToast(err.message || 'unable to delete template.', true);
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    const picker = document.getElementById('wheelTemplatePicker');
+    if (picker && !picker.contains(e.target)) closeTemplatePicker();
+  });
+
+  document.getElementById('createDrawsBtn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('createDrawsBtn');
+    if (!state.eventId) {
+      flashMissingEventSelect();
+      return;
+    }
+    setBusy(btn, true);
+    try {
+      const saved = await apiFetch(
+        `/api/division-advanced/events/${state.eventId}/draws/create-from-divisions`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ leaves: state.leaves })
+        }
+      );
+      state.drawsState = saved.state || null;
+      state.drawDirty = false;
+      state.selectedAthleteIndices = new Set();
+      state.drawSubtab = 'pool';
+      state.soloDivisionsCombined = false;
+      writeSoloCombinedFlag(false);
+      renderDraws();
+      showToast('draws created and saved.');
+      await refreshWheelFromStatus();
+    } catch (err) {
+      showToast(err.message, true);
+    } finally {
+      setBusy(btn, false);
+    }
+  });
+
+  document.getElementById('backToDivisionsChoiceBtn')?.addEventListener('click', () => {
+    setWheelPhase('choose');
+  });
+
+  document.getElementById('modifyDrawsBtn')?.addEventListener('click', async () => {
+    if (!state.drawsState) {
+      try {
+        await loadSavedForEvent();
+      } catch (err) {
+        showToast(err.message, true);
+        return;
+      }
+    }
+    state.drawSubtab = 'pool';
+    switchDrawSubtab('pool');
+    renderDraws();
+    showScreen('draws');
+  });
+
+  document.getElementById('downloadDrawPdfsBtn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('downloadDrawPdfsBtn');
+    if (!state.eventId) {
+      flashMissingEventSelect();
+      return;
+    }
+    setBusy(btn, true);
+    try {
+      await downloadEventDrawPdfs();
+      showToast('draw PDFs downloaded.');
+    } catch (err) {
+      showToast(err.message || 'unable to download PDFs.', true);
+    } finally {
+      setBusy(btn, false);
+    }
+  });
+
+  document.getElementById('saveDivisionTemplateBtn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('saveDivisionTemplateBtn');
+    if (state.savedDivisionTemplateName || readSavedTemplateName()) {
+      syncSaveDivisionTemplateButton();
+      return;
+    }
+    if (!state.eventId) {
+      flashMissingEventSelect();
+      return;
+    }
+    setBusy(btn, true);
+    try {
+      if (!state.leaves.length) {
+        await loadEventTemplateLeaves();
+      }
+      if (!state.leaves.length) {
+        throw new Error('no divisions available to save as a template.');
+      }
+      const nickname = await showPromptModal({
+        title: 'save division template',
+        message: 'enter a name for this division template.',
+        confirmLabel: 'save',
+        cancelLabel: 'cancel',
+        placeholder: 'e.g. spring open defaults'
+      });
+      if (!nickname) return;
+      const name = await saveNamedDivisionTemplate(nickname, state.leaves);
+      markDivisionTemplateSaved(name);
+      showToast(`division template "${name}" saved.`);
+    } catch (err) {
+      showToast(err.message || 'unable to save division template.', true);
+    } finally {
+      setBusy(btn, false);
+      syncSaveDivisionTemplateButton();
+    }
+  });
+
+  document.getElementById('combineSoloDrawsBtn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('combineSoloDrawsBtn');
+    if (state.soloDivisionsCombined || readSoloCombinedFlag() || countSoloDivisions() === 0) {
+      syncCombineSoloButton();
+      return;
+    }
+    if (!state.eventId) {
+      flashMissingEventSelect();
+      return;
+    }
+    setBusy(btn, true);
+    try {
+      if (!state.drawsState) {
+        await loadSavedForEvent();
+      } else if (!(state.leaves || []).length) {
+        try {
+          await loadEventTemplateLeaves();
+        } catch (_) { /* recommendations still work without leaves */ }
+      }
+      if (!state.drawsState?.catalog?.length) {
+        throw new Error('no draws available to combine.');
+      }
+
+      const { merged, remaining } = combineSoloDivisionsLocally();
+      if (merged > 0) {
+        await regenerateDrawsSession({ silent: true });
+      }
+      markCombineSoloButtonDone();
+
+      if (!merged && !remaining) {
+        showToast('no solo divisions found.');
+      } else if (!merged && remaining) {
+        showToast(
+          `${remaining} solo division${remaining === 1 ? '' : 's'} could not be combined (no suitable target).`,
+          true
+        );
+      } else if (remaining) {
+        showToast(
+          `combined ${merged} solo division${merged === 1 ? '' : 's'}; ${remaining} still remain without a suitable target.`
+        );
+      } else {
+        showToast(
+          `combined ${merged} solo division${merged === 1 ? '' : 's'} into recommended draws.`
+        );
+      }
+    } catch (err) {
+      showToast(err.message || 'unable to combine solo divisions.', true);
+    } finally {
+      setBusy(btn, false);
+      syncCombineSoloButton();
+    }
+  });
+
+  ['startOverReadyBtn', 'startOverCompleteBtn', 'startOverDivisionsBtn', 'startOverDrawsBtn']
+    .forEach((id) => {
+      document.getElementById(id)?.addEventListener('click', () => {
+        startOver().catch((err) => showToast(err.message, true));
+      });
+    });
+}
+
 function bindDivisions() {
-  document.getElementById('generatePatternBtn').addEventListener('click', async () => {
+  document.getElementById('generatePatternBtn')?.addEventListener('click', async () => {
     const btn = document.getElementById('generatePatternBtn');
     setBusy(btn, true);
     try {
@@ -192,53 +635,7 @@ function bindDivisions() {
     }
   });
 
-  document.getElementById('createAllDefaultsBtn').addEventListener('click', async () => {
-    const btn = document.getElementById('createAllDefaultsBtn');
-    setBusy(btn, true);
-    try {
-      const data = await apiFetch('/api/division-advanced/divisions/create-all-defaults', { method: 'POST' });
-      state.leaves = data.leaves || [];
-      renderDivisionsTable();
-      showToast(`created ${data.count} default division leaves.`);
-      if (data.failures?.length) showToast(`skipped: ${data.failures.join(', ')}`, true);
-      refreshWorkflowFocus();
-    } catch (err) {
-      showToast(err.message, true);
-    } finally {
-      setBusy(btn, false);
-    }
-  });
-
-  document.getElementById('loadTemplateBtn').addEventListener('click', async () => {
-    const id = document.getElementById('templateSelect').value;
-    if (!id) return showToast('select a template.', true);
-    try {
-      const data = await apiFetch(`/api/division-advanced/divisions/templates/${id}`);
-      state.leaves = data.leaves || [];
-      renderDivisionsTable();
-      showToast(`loaded template "${data.nickname}".`);
-    } catch (err) {
-      showToast(err.message, true);
-    }
-  });
-
-  document.getElementById('saveTemplateBtn').addEventListener('click', async () => {
-    if (!state.leaves.length) return showToast('no divisions to save.', true);
-    const nickname = window.prompt('template nickname:');
-    if (!nickname?.trim()) return;
-    try {
-      await apiFetch('/api/division-advanced/divisions/templates', {
-        method: 'POST',
-        body: JSON.stringify({ nickname: nickname.trim(), leaves: state.leaves })
-      });
-      await loadTemplates();
-      showToast('template saved.');
-    } catch (err) {
-      showToast(err.message, true);
-    }
-  });
-
-  document.getElementById('clearDivisionsBtn').addEventListener('click', async () => {
+  document.getElementById('clearDivisionsBtn')?.addEventListener('click', async () => {
     if (!state.leaves.length) return showToast('divisions already empty.');
     const ok = await showConfirmModal({
       title: 'clear divisions',
@@ -246,215 +643,39 @@ function bindDivisions() {
       confirmLabel: 'clear'
     });
     if (!ok) return;
-    clearDivisions();
+    state.leaves = [];
+    renderDivisionsTable();
+    showToast('divisions cleared.');
   });
-}
 
-function bindAthletes() {
-  document.getElementById('importAthletesBtn').addEventListener('click', async () => {
-    const btn = document.getElementById('importAthletesBtn');
+  document.getElementById('saveDivisionsContinueBtn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('saveDivisionsContinueBtn');
     setBusy(btn, true);
     try {
-      const eventId = requireEvent();
-      const data = await apiFetch(`/api/division-advanced/events/${eventId}/athletes`);
-      state.athletes = data.athletes || [];
-      renderAthletesTable();
-      showToast(`imported ${data.count} athletes.`);
-      refreshWorkflowFocus();
-    } catch (err) {
-      showToast(err.message, true);
-    } finally {
-      setBusy(btn, false);
-    }
-  });
-  document.getElementById('athleteSearch').addEventListener('input', (e) => {
-    state.athleteFilter = e.target.value;
-    renderAthletesTable();
-  });
-  document.getElementById('clearAthletesBtn').addEventListener('click', async () => {
-    if (!state.athletes.length) return showToast('athletes already empty.');
-    const ok = await showConfirmModal({
-      title: 'clear athletes',
-      message: 'clear imported athletes from this session?',
-      confirmLabel: 'clear'
-    });
-    if (!ok) return;
-    clearAthletes();
-    refreshWorkflowFocus();
-  });
-}
-
-function bindGroupings() {
-  document.getElementById('generateGroupingsBtn').addEventListener('click', async () => {
-    const btn = document.getElementById('generateGroupingsBtn');
-    setBusy(btn, true);
-    try {
-      const eventId = requireEvent();
       if (!state.leaves.length) throw new Error('create or load divisions first.');
-      if (!state.athletes.length) {
-        const data = await apiFetch(`/api/division-advanced/events/${eventId}/athletes`);
-        state.athletes = data.athletes || [];
-      }
-      const generated = await apiFetch(`/api/division-advanced/events/${eventId}/groupings/generate`, {
-        method: 'POST',
-        body: JSON.stringify({ leaves: state.leaves, athletes: state.athletes })
-      });
-      state.groupingsState = generated.state;
-      if (state.groupingsState?.leaves) state.leaves = state.groupingsState.leaves;
-      if (state.drawsState) {
-        state.drawsState.groupings_out_of_sync = true;
-      }
-      state.selectedGroupingId = '';
-      state.targetGroupingId = '';
-      state.selectedAthleteIndex = null;
-      renderGroupings();
-      showToast('groupings generated (not saved yet).');
-      refreshWorkflowFocus();
+      await saveDivisionsAndContinue();
     } catch (err) {
       showToast(err.message, true);
     } finally {
       setBusy(btn, false);
     }
-  });
-
-  document.getElementById('saveGroupingsBtn')?.addEventListener('click', async () => {
-    const btn = document.getElementById('saveGroupingsBtn');
-    setBusy(btn, true);
-    try {
-      await saveGroupingsSession();
-    } catch (err) {
-      showToast(err.message, true);
-    } finally {
-      setBusy(btn, false);
-    }
-  });
-
-  document.getElementById('groupingsSearch').addEventListener('input', (e) => {
-    state.groupingFilter = e.target.value;
-    renderGroupings();
-  });
-  document.getElementById('groupingsAthleteSearch').addEventListener('input', (e) => {
-    state.groupingAthleteFilter = e.target.value;
-    renderGroupings();
-  });
-  document.getElementById('groupingsEventFilter').addEventListener('change', (e) => {
-    state.groupingEventFilter = e.target.value;
-    renderGroupings();
-  });
-  document.getElementById('groupingsTypeFilter').addEventListener('change', (e) => {
-    state.groupingTypeFilter = e.target.value;
-    renderGroupings();
-  });
-  document.getElementById('groupingsSort').addEventListener('change', (e) => {
-    state.groupingSort = e.target.value;
-    renderGroupings();
-  });
-  document.getElementById('groupingsClearFiltersBtn').addEventListener('click', () => {
-    state.groupingFilter = '';
-    state.groupingAthleteFilter = '';
-    state.groupingEventFilter = '';
-    state.groupingTypeFilter = '';
-    state.groupingSort = 'name';
-    document.getElementById('groupingsSearch').value = '';
-    document.getElementById('groupingsAthleteSearch').value = '';
-    document.getElementById('groupingsEventFilter').value = '';
-    document.getElementById('groupingsTypeFilter').value = '';
-    document.getElementById('groupingsSort').value = 'name';
-    renderGroupings();
-  });
-
-  document.querySelector('#groupingsTable tbody').addEventListener('click', (e) => {
-    const row = e.target.closest('tr[data-id]');
-    if (!row) return;
-    state.selectedGroupingId = row.dataset.id;
-    state.selectedAthleteIndex = null;
-    state.targetGroupingId = '';
-    renderGroupings();
-  });
-
-  document.getElementById('groupingsSourceAthletes').addEventListener('click', (e) => {
-    const chip = e.target.closest('.da-athlete-chip[data-index]');
-    if (!chip) return;
-    state.selectedAthleteIndex = Number(chip.dataset.index);
-    renderGroupings();
-  });
-
-  document.getElementById('moveTargetSelect').addEventListener('change', (e) => {
-    state.targetGroupingId = e.target.value;
-    renderGroupings();
-  });
-
-  document.getElementById('moveAthleteBtn').addEventListener('click', async () => {
-    try {
-      const eventId = requireEvent();
-      if (!state.selectedGroupingId || state.selectedAthleteIndex == null) {
-        throw new Error('select an athlete in the source division.');
-      }
-      const toId = document.getElementById('moveTargetSelect').value || state.targetGroupingId;
-      if (!toId) throw new Error('select a target division.');
-      const fromId = state.selectedGroupingId;
-      if (!state.groupingsState) throw new Error('generate groupings first.');
-      const moved = await apiFetch(`/api/division-advanced/events/${eventId}/groupings/move`, {
-        method: 'POST',
-        body: JSON.stringify({
-          state: state.groupingsState,
-          fromDivisionId: fromId,
-          toDivisionId: toId,
-          athleteIndex: state.selectedAthleteIndex
-        })
-      });
-      state.groupingsState = moved.state;
-      state.selectedGroupingId = fromId;
-      state.targetGroupingId = toId;
-      state.selectedAthleteIndex = null;
-      renderGroupings();
-      showToast('athlete moved (not saved yet).');
-    } catch (err) {
-      showToast(err.message, true);
-    }
-  });
-
-  document.getElementById('clearGroupingsBtn').addEventListener('click', async () => {
-    if (!state.groupingsState) return showToast('groupings already empty.');
-    const ok = await showConfirmModal({
-      title: 'clear groupings',
-      message: 'clear groupings from this session? any previously saved DB row is unchanged until you save again.',
-      confirmLabel: 'clear'
-    });
-    if (!ok) return;
-    clearGroupings();
   });
 }
 
 function bindDraws() {
-  document.getElementById('generateDrawsBtn').addEventListener('click', async () => {
-    const btn = document.getElementById('generateDrawsBtn');
-    setBusy(btn, true);
-    try {
-      const eventId = requireEvent();
-      const generated = await apiFetch(`/api/division-advanced/events/${eventId}/draws/generate`, {
-        method: 'POST',
-        body: JSON.stringify({ groupingsState: state.groupingsState })
-      });
-      state.drawsState = generated.state;
-      state.drawDirty = false;
-      state.drawSnapshot = null;
-      state.drawSlots = [];
-      renderDraws();
-      showToast('draws created (not saved yet).');
-      refreshWorkflowFocus();
-    } catch (err) {
-      showToast(err.message, true);
-    } finally {
-      setBusy(btn, false);
-    }
-  });
-
   document.getElementById('saveDrawsBtn')?.addEventListener('click', async () => {
     const btn = document.getElementById('saveDrawsBtn');
+    if (!state.drawDirty) return;
+    const ok = await showConfirmModal({
+      title: 'save draws',
+      message: "save your draw changes? athlete moves will regenerate affected draws; placement edits will be kept.",
+      confirmLabel: 'save',
+      cancelLabel: 'cancel'
+    });
+    if (!ok) return;
     setBusy(btn, true);
     try {
-      await saveDrawsSession();
+      await regenerateDrawsSession();
     } catch (err) {
       showToast(err.message, true);
     } finally {
@@ -462,652 +683,206 @@ function bindDraws() {
     }
   });
 
-  document.getElementById('downloadZipBtn')?.addEventListener('click', async () => {
-    const btn = document.getElementById('downloadZipBtn');
-    setBusy(btn, true);
-    try {
-      await downloadDrawsZip();
-    } catch (err) {
-      showToast(err.message, true);
-    } finally {
-      setBusy(btn, false);
-    }
-  });
-
-  document.querySelector('#drawsTable tbody').addEventListener('click', async (e) => {
+  document.querySelector('#drawsTable tbody')?.addEventListener('click', (e) => {
     const row = e.target.closest('tr[data-id]');
     if (!row) return;
-    if (state.drawDirty && state.selectedDrawId && state.selectedDrawId !== row.dataset.id) {
-      const choice = await showConfirmModal({
-        title: 'unsaved draw edits',
-        message: 'this division has unsaved draw edits. discard changes and switch, or stay on the current division?',
-        confirmLabel: 'discard & switch',
-        cancelLabel: 'stay'
-      });
-      if (!choice) return;
-      const prev = selectedDrawEntry();
-      if (prev && state.drawSnapshot) {
-        Object.assign(prev, state.drawSnapshot);
-      }
-      state.drawDirty = false;
-      state.drawSnapshot = null;
-      state.drawSlots = [];
-    }
     state.selectedDrawId = row.dataset.id;
-    state.drawDirty = false;
-    state.drawSnapshot = null;
-    state.drawSlots = [];
+    state.selectedAthleteIndices = new Set();
     renderDraws();
   });
 
-  document.querySelectorAll('.da-subtab').forEach((btn) => {
+  function hideDrawsAthletesMenu() {
+    const menu = document.getElementById('daDrawsAthletesMenu');
+    if (menu) menu.hidden = true;
+  }
+
+  function showDrawsAthletesMenu(clientX, clientY) {
+    const menu = document.getElementById('daDrawsAthletesMenu');
+    if (!menu) return;
+    const filterSoloBtn = menu.querySelector('[data-action="filter-solo"]');
+    const showAllBtn = menu.querySelector('[data-action="show-all"]');
+    if (filterSoloBtn) filterSoloBtn.hidden = Boolean(state.filterDrawsToSolo);
+    if (showAllBtn) showAllBtn.hidden = !state.filterDrawsToSolo;
+    menu.style.left = '0px';
+    menu.style.top = '0px';
+    menu.hidden = false;
+    const pad = 8;
+    const rect = menu.getBoundingClientRect();
+    let left = clientX;
+    let top = clientY;
+    if (left + rect.width > window.innerWidth - pad) {
+      left = Math.max(pad, window.innerWidth - rect.width - pad);
+    }
+    if (top + rect.height > window.innerHeight - pad) {
+      top = Math.max(pad, window.innerHeight - rect.height - pad);
+    }
+    menu.style.left = `${left}px`;
+    menu.style.top = `${top}px`;
+  }
+
+  document.getElementById('drawsAthletesHeader')?.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    showDrawsAthletesMenu(e.clientX, e.clientY);
+  });
+
+  document.getElementById('daDrawsAthletesMenu')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const action = btn.getAttribute('data-action');
+    hideDrawsAthletesMenu();
+    if (action === 'filter-solo') {
+      state.filterDrawsToSolo = true;
+      renderDraws();
+    } else if (action === 'show-all') {
+      state.filterDrawsToSolo = false;
+      renderDraws();
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    const menu = document.getElementById('daDrawsAthletesMenu');
+    if (!menu || menu.hidden) return;
+    if (menu.contains(e.target)) return;
+    hideDrawsAthletesMenu();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hideDrawsAthletesMenu();
+  });
+
+  window.addEventListener('scroll', hideDrawsAthletesMenu, true);
+  window.addEventListener('resize', hideDrawsAthletesMenu);
+
+  document.getElementById('drawAthletesList')?.addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-index]');
+    if (!chip || chip.dataset.index === '') return;
+    const idx = Number(chip.dataset.index);
+    if (Number.isNaN(idx)) return;
+    if (state.selectedAthleteIndices.has(idx)) state.selectedAthleteIndices.delete(idx);
+    else state.selectedAthleteIndices.add(idx);
+    renderDraws();
+  });
+
+  document.getElementById('drawMoveTargetSelect')?.addEventListener('change', (e) => {
+    state.targetGroupingId = e.target.value;
+    renderDraws();
+  });
+
+  document.getElementById('drawMoveArrowBtn')?.addEventListener('click', () => {
+    try {
+      moveSelectedAthletesLocally();
+      renderDraws();
+      showToast('athletes moved (save to regenerate).');
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  });
+
+  document.querySelectorAll('#tab-draws .da-subtab').forEach((btn) => {
     btn.addEventListener('click', async () => {
       switchDrawSubtab(btn.dataset.subtab);
       const entry = selectedDrawEntry();
-      if (btn.dataset.subtab === 'pdf' && entry) {
-        try {
-          await loadPdfPreview(entry);
-        } catch (err) {
-          showToast(err.message || 'PDF preview failed', true);
-        }
+      if (btn.dataset.subtab === 'matches') {
+        const { renderMatchesViewer } = await import('./matches-viewer.js');
+        renderMatchesViewer(entry);
+      } else if (btn.dataset.subtab === 'edit') {
+        await renderDrawPreviewPanels(entry);
       }
     });
   });
+}
 
-  document.getElementById('saveDrawBtn').addEventListener('click', async () => {
-    try {
-      await saveDrawsSession();
-    } catch (err) {
-      showToast(err.message, true);
-    }
-  });
-
-  document.getElementById('revertDrawBtn').addEventListener('click', async () => {
-    const entry = selectedDrawEntry();
-    if (!entry || !state.drawDirty || !state.drawSnapshot) return;
+/**
+ * Leave modify-draws back to the wheel (same as former Back button).
+ * @returns {Promise<boolean>} false if user cancelled due to unsaved changes
+ */
+async function leaveDrawsScreen() {
+  if (state.drawDirty) {
     const ok = await showConfirmModal({
-      title: 'discard changes',
-      message: 'discard unsaved changes and restore the last saved draw?',
-      confirmLabel: 'discard'
+      title: 'unsaved changes',
+      message: 'you have unsaved draw changes. leave without saving?',
+      confirmLabel: 'leave',
+      cancelLabel: 'stay',
+      danger: true
     });
-    if (!ok) return;
-    Object.assign(entry, state.drawSnapshot);
-    state.drawDirty = false;
-    state.drawSnapshot = null;
-    state.drawSlots = [];
-    renderDraws();
-    showToast('draw reverted.');
-  });
-
-  document.getElementById('clearDrawsBtn').addEventListener('click', async () => {
-    if (!state.drawsState) return showToast('draws already empty.');
-    const ok = await showConfirmModal({
-      title: 'clear draws',
-      message: 'clear draws from this session? any previously saved DB row is unchanged until you save again.',
-      confirmLabel: 'clear'
-    });
-    if (!ok) return;
-    clearDraws();
-  });
-
-  setDrawEditorCallback(applyEditedEntry);
-}
-
-function recommendedWorkflowStep() {
-  if (!state.eventId) return 'event';
-  if (!state.leaves?.length) return 'divisions';
-  if (!state.athletes?.length) return 'athletes';
-  if (!state.groupingsState?.catalog?.length) return 'groupings';
-  if (!state.drawsState?.catalog?.length) return 'draws';
-  if (!state.scheduleState?.catalog?.length) return 'schedule';
-  return 'done';
-}
-
-function workflowCompletionFlags() {
-  return {
-    event: Boolean(state.eventId),
-    divisions: Boolean(state.leaves?.length),
-    athletes: Boolean(state.athletes?.length),
-    groupings: Boolean(state.groupingsState?.catalog?.length),
-    draws: Boolean(state.drawsState?.catalog?.length),
-    schedule: Boolean(state.scheduleState?.catalog?.length)
-  };
-}
-
-function progressFromRecommended(stepKey) {
-  const order = ['event', 'divisions', 'athletes', 'groupings', 'draws', 'schedule', 'done'];
-  const idx = Math.max(0, order.indexOf(stepKey));
-  return Math.round((idx / (order.length - 1)) * 100);
-}
-
-function setWorkflowRingPct(pct) {
-  const ring = document.getElementById('workflowStatusRing');
-  if (!ring) return;
-  const value = Math.max(0, Math.min(100, Math.round(Number(pct) || 0)));
-  ring.style.setProperty('--p', String(value));
-  const span = ring.querySelector('span');
-  if (span) span.textContent = `${value}%`;
-}
-
-function setWorkflowMessage(message) {
-  const text = document.getElementById('workflowProgressText');
-  if (text) text.textContent = message;
-}
-
-async function saveGroupingsSession({ silent = false } = {}) {
-  const eventId = requireEvent();
-  if (!state.groupingsState) throw new Error('no groupings to save.');
-  await apiFetch(`/api/division-advanced/events/${eventId}/groupings`, {
-    method: 'PUT',
-    body: JSON.stringify({ state: state.groupingsState })
-  });
-  if (!silent) showToast('groupings saved.');
-}
-
-async function saveDrawsSession({ silent = false } = {}) {
-  const eventId = requireEvent();
-  if (!state.drawsState) throw new Error('no draws to save.');
-  await apiFetch(`/api/division-advanced/events/${eventId}/draws`, {
-    method: 'PUT',
-    body: JSON.stringify({ state: state.drawsState })
-  });
-  state.drawDirty = false;
-  state.drawSnapshot = null;
-  renderDraws();
-  if (!silent) showToast('draws saved.');
-}
-
-async function saveScheduleSession({ silent = false } = {}) {
-  const eventId = requireEvent();
-  if (!state.scheduleState) throw new Error('no schedule to save.');
-  await apiFetch(`/api/division-advanced/events/${eventId}/schedule`, {
-    method: 'PUT',
-    body: JSON.stringify({ state: state.scheduleState })
-  });
-  if (!silent) showToast('schedule saved.');
-}
-
-async function saveDivisionsTemplateAsEventName({ silent = false } = {}) {
-  const eventId = requireEvent();
-  if (!state.leaves?.length) throw new Error('no divisions to save.');
-  const event = (state.events || []).find((e) => String(e.id) === String(eventId));
-  const nickname = String(event?.event_name || '').trim() || `event_${eventId}`;
-  await loadTemplates();
-  const existing = (state.templates || []).find(
-    (t) => String(t.nickname || '').trim().toLowerCase() === nickname.toLowerCase()
-  );
-  await apiFetch('/api/division-advanced/divisions/templates', {
-    method: 'POST',
-    body: JSON.stringify({
-      nickname,
-      leaves: state.leaves,
-      overwriteId: existing?.id || null
-    })
-  });
-  await loadTemplates();
-  if (!silent) showToast(`divisions saved as "${nickname}".`);
-  return nickname;
-}
-
-async function saveWorkflowToProfile() {
-  const done = workflowCompletionFlags();
-  if (!done.event || !done.divisions || !done.groupings || !done.draws || !done.schedule) {
-    throw new Error('finish the full workflow before saving to profile.');
-  }
-
-  const eventId = requireEvent();
-  const event = (state.events || []).find((e) => String(e.id) === String(eventId));
-  const nickname = String(event?.event_name || '').trim() || `event_${eventId}`;
-
-  await loadTemplates();
-  const existing = (state.templates || []).find(
-    (t) => String(t.nickname || '').trim().toLowerCase() === nickname.toLowerCase()
-  );
-
-  await Promise.all([
-    apiFetch('/api/division-advanced/divisions/templates', {
-      method: 'POST',
-      body: JSON.stringify({
-        nickname,
-        leaves: state.leaves,
-        overwriteId: existing?.id || null
-      })
-    }),
-    apiFetch(`/api/division-advanced/events/${eventId}/groupings`, {
-      method: 'PUT',
-      body: JSON.stringify({ state: state.groupingsState })
-    }),
-    apiFetch(`/api/division-advanced/events/${eventId}/draws`, {
-      method: 'PUT',
-      body: JSON.stringify({ state: state.drawsState })
-    }),
-    apiFetch(`/api/division-advanced/events/${eventId}/schedule`, {
-      method: 'PUT',
-      body: JSON.stringify({ state: state.scheduleState })
-    })
-  ]);
-
-  state.drawDirty = false;
-  state.drawSnapshot = null;
-  renderDraws();
-
-  await loadTemplates();
-
-  showToast(`saved all files to profile — divisions "${nickname}", groupings, draws, and schedule.`);
-}
-
-async function removeWorkflowFromProfile() {
-  const eventId = requireEvent();
-  const event = (state.events || []).find((e) => String(e.id) === String(eventId));
-  const eventName = String(event?.event_name || '').trim() || `event ${eventId}`;
-
-  const ok = await showConfirmModal({
-    title: 'remove files from profile',
-    message: `delete saved divisions, groupings, draws, and schedule for “${eventName}”? registration for this event will not be changed.`,
-    confirmLabel: 'remove'
-  });
-  if (!ok) return null;
-
-  const result = await apiFetch(`/api/division-advanced/events/${eventId}/profile-files`, {
-    method: 'DELETE'
-  });
-
-  // Clear session copies of removed profile files; leave athletes/registration alone.
-  clearDivisions({ silent: true });
-  clearGroupings({ silent: true });
-  clearDraws({ silent: true });
-  clearSchedule({ silent: true });
-  await loadTemplates();
-  refreshWorkflowFocus();
-
-  const deleted = result?.deleted || {};
-  const bits = [
-    deleted.divisions ? `${deleted.divisions} division template(s)` : null,
-    deleted.groupings ? 'groupings' : null,
-    deleted.draws ? 'draws' : null,
-    deleted.schedules ? 'schedule' : null
-  ].filter(Boolean);
-
-  showToast(
-    bits.length
-      ? `removed from profile: ${bits.join(', ')}.`
-      : 'no saved profile files found for this event.'
-  );
-  return result;
-}
-
-async function downloadDrawsZip() {
-  const eventId = requireEvent();
-  if (!state.drawsState) throw new Error('no draws to download.');
-  const res = await apiFetch(`/api/division-advanced/events/${eventId}/draws/download.zip`, {
-    method: 'POST',
-    body: JSON.stringify({ state: state.drawsState })
-  });
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-
-  const header = res.headers.get('Content-Disposition') || '';
-  const headerMatch = header.match(/filename="([^"]+)"/i);
-  if (headerMatch?.[1]) {
-    a.download = headerMatch[1];
-  } else {
-    const event = (state.events || []).find((e) => String(e.id) === String(eventId));
-    const rawName = String(event?.event_name || '').trim() || `event_${eventId}_draws`;
-    const safe = rawName
-      .replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_')
-      .replace(/\s+/g, ' ')
-      .replace(/[. ]+$/g, '')
-      .slice(0, 120)
-      .trim() || `event_${eventId}_draws`;
-    a.download = safe.toLowerCase().endsWith('.zip') ? safe : `${safe}.zip`;
-  }
-
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
-function refreshWorkflowFocus(activeStep = null, { syncRing = null, keepMessage = false } = {}) {
-  const done = workflowCompletionFlags();
-  const focusKey = activeStep || recommendedWorkflowStep();
-
-  document.querySelectorAll('.da-workflow-step[data-step-key]').forEach((el) => {
-    const key = el.dataset.stepKey;
-    el.classList.toggle('is-done', Boolean(done[key]));
-    el.classList.toggle('is-focus', focusKey !== 'done' && key === focusKey);
-  });
-
-  const workflowZipBtn = document.getElementById('workflowDownloadZipBtn');
-  if (workflowZipBtn) workflowZipBtn.hidden = !done.draws;
-
-  const saveToProfileBtn = document.getElementById('workflowSaveToProfileBtn');
-  if (saveToProfileBtn) {
-    const ready =
-      done.event &&
-      done.divisions &&
-      done.athletes &&
-      done.groupings &&
-      done.draws &&
-      done.schedule;
-    saveToProfileBtn.hidden = !ready;
-  }
-
-  const removeFromProfileBtn = document.getElementById('workflowRemoveFromProfileBtn');
-  if (removeFromProfileBtn) {
-    removeFromProfileBtn.hidden = !done.event;
-  }
-
-  const shouldSyncRing = syncRing === true || (syncRing !== false && !activeStep);
-  if (shouldSyncRing) {
-    setWorkflowRingPct(progressFromRecommended(recommendedWorkflowStep()));
-  }
-
-  if (!keepMessage && !activeStep) {
-    setWorkflowMessage(recommendedWorkflowStep() === 'done' ? 'complete' : 'ready');
-  }
-}
-
-function updateWorkflowStatus({ step = 'event', message = '', commitProgress = false } = {}) {
-  if (message) setWorkflowMessage(message);
-  if (commitProgress) {
-    refreshWorkflowFocus(null, { syncRing: true, keepMessage: Boolean(message) });
-  } else {
-    refreshWorkflowFocus(step === 'done' ? 'done' : step, { syncRing: false, keepMessage: true });
-  }
-}
-
-async function runWorkflowStep(step) {
-  const eventId = requireEvent();
-  const result = document.getElementById('workflowResult');
-  if (result) result.hidden = true;
-
-  if (step === 'divisions') {
-    updateWorkflowStatus({ step: 'divisions', message: 'creating default divisions…' });
-    const data = await apiFetch('/api/division-advanced/divisions/create-all-defaults', { method: 'POST' });
-    state.leaves = data.leaves || [];
-    renderDivisionsTable();
-    updateWorkflowStatus({
-      step: 'divisions',
-      message: `${state.leaves.length} divisions ready`,
-      commitProgress: true
-    });
-    showToast(`created ${state.leaves.length} default divisions.`);
-    return;
-  }
-
-  if (step === 'athletes') {
-    updateWorkflowStatus({ step: 'athletes', message: 'importing athletes…' });
-    const data = await apiFetch(`/api/division-advanced/events/${eventId}/athletes`);
-    state.athletes = data.athletes || [];
-    renderAthletesTable();
-    updateWorkflowStatus({
-      step: 'athletes',
-      message: `${state.athletes.length} athletes imported`,
-      commitProgress: true
-    });
-    showToast(`imported ${state.athletes.length} athletes.`);
-    return;
-  }
-
-  if (step === 'groupings') {
-    updateWorkflowStatus({ step: 'groupings', message: 'generating groupings…' });
-    if (!state.leaves.length) throw new Error('create divisions first.');
-    if (!state.athletes.length) {
-      const data = await apiFetch(`/api/division-advanced/events/${eventId}/athletes`);
-      state.athletes = data.athletes || [];
-      renderAthletesTable();
-    }
-    const generated = await apiFetch(`/api/division-advanced/events/${eventId}/groupings/generate`, {
-      method: 'POST',
-      body: JSON.stringify({ leaves: state.leaves, athletes: state.athletes })
-    });
-    state.groupingsState = generated.state;
-    if (state.groupingsState?.leaves) state.leaves = state.groupingsState.leaves;
-    renderGroupings();
-    updateWorkflowStatus({
-      step: 'groupings',
-      message: 'groupings generated',
-      commitProgress: true
-    });
-    showToast('groupings generated (not saved yet).');
-    return;
-  }
-
-  if (step === 'draws') {
-    updateWorkflowStatus({ step: 'draws', message: 'creating draws…' });
-    if (!state.groupingsState) throw new Error('generate groupings first.');
-    const generated = await apiFetch(`/api/division-advanced/events/${eventId}/draws/generate`, {
-      method: 'POST',
-      body: JSON.stringify({ groupingsState: state.groupingsState })
-    });
-    state.drawsState = generated.state;
-    state.drawDirty = false;
-    state.drawSnapshot = null;
-    state.drawSlots = [];
-    renderDraws();
-    updateWorkflowStatus({
-      step: 'draws',
-      message: 'draws created',
-      commitProgress: true
-    });
-    showToast('draws created (not saved yet).');
-    return;
-  }
-
-  if (step === 'schedule') {
-    updateWorkflowStatus({ step: 'schedule', message: 'packing schedule across 3 rings…' });
-    if (!state.drawsState) {
-      const loaded = await apiFetch(`/api/division-advanced/events/${eventId}/draws`);
-      state.drawsState = loaded.state;
-      if (!state.drawsState) throw new Error('generate draws first.');
-      renderDraws();
-    }
-    const ringCount = Number(document.getElementById('scheduleRingCount')?.value || 3);
-    const generated = await apiFetch(`/api/division-advanced/events/${eventId}/schedule/generate`, {
-      method: 'POST',
-      body: JSON.stringify({
-        drawsState: state.drawsState,
-        groupingsState: state.groupingsState,
-        ringCount
-      })
-    });
-    state.scheduleState = generated.state;
-    state.scheduleSelectedIds = new Set();
-    renderSchedule();
-    updateWorkflowStatus({
-      step: 'schedule',
-      message: `schedule packed · ${generated.placed || 0} placed` +
-        (generated.skipped ? ` · ${generated.skipped} skipped` : ''),
-      commitProgress: true
-    });
-    showToast('schedule generated (not saved yet).');
-  }
-}
-
-function bindSchedule() {
-  bindSchedulePanel({ showToast, showConfirmModal });
-
-  document.getElementById('refreshScheduleFromDrawsBtn')?.addEventListener('click', async () => {
-    const btn = document.getElementById('refreshScheduleFromDrawsBtn');
-    setBusy(btn, true);
+    if (!ok) return false;
     try {
-      await runWorkflowStep('schedule');
-      switchTab('schedule');
-    } catch (err) {
-      showToast(err.message, true);
-    } finally {
-      setBusy(btn, false);
-    }
-  });
-
-  document.getElementById('saveScheduleBtn')?.addEventListener('click', async () => {
-    const btn = document.getElementById('saveScheduleBtn');
-    setBusy(btn, true);
-    try {
-      await saveScheduleSession();
-    } catch (err) {
-      showToast(err.message, true);
-    } finally {
-      setBusy(btn, false);
-    }
-  });
-
-  document.getElementById('clearScheduleBtn')?.addEventListener('click', async () => {
-    if (!state.scheduleState) return showToast('schedule already empty.');
-    const ok = await showConfirmModal({
-      title: 'clear schedule',
-      message: 'clear schedule from this session? any previously saved DB row is unchanged until you save again.',
-      confirmLabel: 'clear'
-    });
-    if (!ok) return;
-    clearSchedule();
-  });
-}
-
-function bindWorkflow() {
-  document.querySelectorAll('[data-run-step]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      setBusy(btn, true);
-      try {
-        await runWorkflowStep(btn.dataset.runStep);
-      } catch (err) {
-        showToast(err.message, true);
-        refreshWorkflowFocus(null, { syncRing: false, keepMessage: true });
-      } finally {
-        setBusy(btn, false);
-      }
-    });
-  });
-
-  document.getElementById('workflowDownloadZipBtn')?.addEventListener('click', async () => {
-    const btn = document.getElementById('workflowDownloadZipBtn');
-    setBusy(btn, true);
-    try {
-      await downloadDrawsZip();
-    } catch (err) {
-      showToast(err.message, true);
-    } finally {
-      setBusy(btn, false);
-    }
-  });
-
-  document.getElementById('workflowSaveToProfileBtn')?.addEventListener('click', async () => {
-    const btn = document.getElementById('workflowSaveToProfileBtn');
-    setBusy(btn, true);
-    try {
-      await saveWorkflowToProfile();
-    } catch (err) {
-      showToast(err.message, true);
-    } finally {
-      setBusy(btn, false);
-    }
-  });
-
-  document.getElementById('workflowRemoveFromProfileBtn')?.addEventListener('click', async () => {
-    const btn = document.getElementById('workflowRemoveFromProfileBtn');
-    setBusy(btn, true);
-    try {
-      await removeWorkflowFromProfile();
-    } catch (err) {
-      showToast(err.message, true);
-    } finally {
-      setBusy(btn, false);
-    }
-  });
-
-  document.getElementById('runAllWorkflowBtn')?.addEventListener('click', async () => {
-    const btn = document.getElementById('runAllWorkflowBtn');
-    const result = document.getElementById('workflowResult');
-    setBusy(btn, true);
-    if (result) result.hidden = true;
-    try {
-      if (!state.eventId) {
-        flashMissingEventSelect();
-        return;
-      }
-      updateWorkflowStatus({ step: 'divisions', message: 'starting full workflow…' });
-      await runWorkflowStep('divisions');
-      await runWorkflowStep('athletes');
-      await runWorkflowStep('groupings');
-      await runWorkflowStep('draws');
-      await runWorkflowStep('schedule');
-      if (result) {
-        result.hidden = false;
-        result.innerHTML = `
-          <p>workflow complete — use <strong>save all files to profile</strong> to persist divisions, groupings, draws, and schedule.</p>
-          <ul>
-            <li>${state.leaves?.length || 0} divisions</li>
-            <li>${state.athletes?.length || 0} athletes</li>
-            <li>${state.groupingsState?.catalog?.length || 0} groupings</li>
-            <li>${(state.drawsState?.catalog || []).filter((e) => (e.athlete_count || 0) > 0).length} draws</li>
-            <li>${Object.keys(state.scheduleState?.placements || {}).length} schedule placements (${state.scheduleState?.ring_count || 3} rings)</li>
-          </ul>
-        `;
-      }
-      updateWorkflowStatus({ step: 'done', message: 'workflow complete', commitProgress: true });
-      showToast('workflow finished (not saved yet).');
-    } catch (err) {
-      showToast(err.message, true);
-    } finally {
-      setBusy(btn, false);
-    }
-  });
-
-  document.getElementById('clearAllWorkflowBtn').addEventListener('click', clearAllTabs);
-  refreshWorkflowFocus();
-}
-
-function flashMissingEventSelect() {
-  const select = document.getElementById('eventSelect');
-  const bar = select?.closest('.da-event-bar-inline') || select;
-  const step = document.querySelector('.da-workflow-step[data-step-key="event"]');
-  if (step) {
-    step.classList.add('is-focus');
-    step.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      await loadSavedForEvent();
+      state.drawDirty = false;
+      state.selectedAthleteIndices = new Set();
+    } catch (_) { /* ignore */ }
   }
-  if (!select) return;
-  select.focus({ preventScroll: true });
-  const targets = [select, bar].filter(Boolean);
-  targets.forEach((el) => {
-    el.classList.remove('da-flash-missing');
-    // force reflow so the animation can restart
-    void el.offsetWidth;
-    el.classList.add('da-flash-missing');
+  await refreshWheelFromStatus();
+  return true;
+}
+
+function bindEmbedCloseAsBack() {
+  if (!document.documentElement.classList.contains('da-embed')) return;
+  window.addEventListener('message', (event) => {
+    if (event.origin !== window.location.origin) return;
+    if (event.data?.type !== 'da-close-request') return;
+    const requestId = event.data.id;
+    const reply = (handled) => {
+      event.source?.postMessage(
+        { type: 'da-close-response', id: requestId, handled: Boolean(handled) },
+        event.origin
+      );
+    };
+    if (state.screen === 'divisions') {
+      refreshWheelFromStatus()
+        .then(() => reply(true))
+        .catch(() => reply(false));
+      return;
+    }
+    if (state.screen === 'draws') {
+      leaveDrawsScreen()
+        .then(() => reply(true))
+        .catch(() => reply(true));
+      return;
+    }
+    reply(false);
   });
-  const clear = () => {
-    targets.forEach((el) => el.classList.remove('da-flash-missing'));
-  };
-  window.setTimeout(clear, 1600);
-  updateWorkflowStatus({ step: 'event', message: 'select an event first' });
 }
 
 async function init() {
   logInteraction('page_view', { description: 'Advanced division creation page loaded' });
-  const profile = await apiFetch('/api/profile');
-  if (!(await applyProfile(profile))) return;
-  bindTabs();
-  bindEventSelect();
-  bindPatternForm();
-  await initPatternForm();
-  bindDivisions();
-  bindAthletes();
-  bindGroupings();
-  bindDraws();
-  bindSchedule();
-  bindWorkflow();
-  await loadEvents();
-  await loadTemplates();
-  renderDivisionsTable();
-  renderAthletesTable();
-  renderGroupings();
-  renderDraws();
-  renderSchedule();
-  refreshWorkflowFocus();
+  bindEmbedCloseAsBack();
+  try {
+    await loadEvents();
+  } catch (err) {
+    showToast(err?.message || 'Unable to load your events. Please try again.', true);
+  }
+
+  try {
+    const profile = await apiFetch('/api/profile');
+    if (!(await applyProfile(profile))) {
+      showToast('advanced division tool access required.', true);
+      return;
+    }
+    bindEventSelect();
+    bindWheelActions();
+    bindPatternForm();
+    bindDivisions();
+    bindDraws();
+    try {
+      await initPatternForm();
+    } catch (err) {
+      showToast(err?.message || 'pattern form failed to load.', true);
+    }
+    try {
+      await loadTemplates();
+    } catch (_) { /* ignore */ }
+    renderDivisionsTable();
+    renderDraws();
+    await refreshWheelFromStatus();
+  } catch (err) {
+    try {
+      showToast(err?.message || 'unable to load draw creation.', true);
+    } catch (_) { /* ignore */ }
+    if (!document.documentElement.classList.contains('da-embed')) {
+      window.location.href = '/landing';
+    }
+  }
 }
 
-init().catch(() => {
-  window.location.href = '/landing';
-});
+init();

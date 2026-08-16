@@ -7,12 +7,13 @@ export async function apiFetch(path, options = {}) {
     },
     ...options
   });
-  if (res.status === 401 || res.redirected) {
+  if (res.status === 401) {
     window.location.href = '/login';
     throw new Error('unauthorized');
   }
   if (res.status === 403) {
-    window.location.href = '/landing';
+    const embed = document.documentElement.classList.contains('da-embed');
+    if (!embed) window.location.href = '/landing';
     throw new Error('access denied');
   }
   const contentType = res.headers.get('content-type') || '';
