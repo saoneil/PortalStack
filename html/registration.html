@@ -5,18 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" type="image/png" href="/images/PMA_Score_8.png">
-  <title>Event Registration</title>
+  <title>Event Information</title>
   <link rel="stylesheet" href="/css/registration.css">
 </head>
 <body>
   <div class="page-wrapper">
     <div class="card">
-      <h1>event registration</h1>
+      <h1>event information</h1>
 
       <p id="eventStatus" class="status-message" role="status"></p>
 
       <p id="eventGridHint" class="event-grid-hint" aria-live="polite">
-        tap an event to register
+        tap an event for details
       </p>
 
       <div id="eventGrid" class="event-grid">
@@ -24,6 +24,11 @@
       </div>
 
       <section id="eventFocusStage" class="event-focus-stage" hidden aria-live="polite">
+        <nav id="eventPublicResources" class="event-public-resources" hidden aria-label="Event resources">
+          <a id="eventDrawsLink" class="event-resource-link event-resource-link-primary" href="#" target="_blank" rel="noopener">View Draws</a>
+          <a id="eventDigitalIdLink" class="event-resource-link" href="#" target="_blank" rel="noopener">Digital ID Card</a>
+          <a id="eventLiveScheduleLink" class="event-resource-link" href="#" target="_blank" rel="noopener">Live Schedule</a>
+        </nav>
         <div id="eventFocusPoster" class="event-focus-poster" aria-hidden="false"></div>
         <aside id="eventFocusDetails" class="event-focus-details"></aside>
       </section>

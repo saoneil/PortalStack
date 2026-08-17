@@ -5,6 +5,19 @@ const GAP = 5;
 const POLL_MS = 15000;
 const NOW_SCROLL_MS = 30000;
 const TIMELINE_HEADER_H = 28;
+const AUTO_SAVE_MS = 900;
+
+const EVENT_DISPLAY_NAMES = {
+  individual_patterns: 'INDIVIDUAL PATTERNS',
+  individual_sparring: 'INDIVIDUAL SPARRING',
+  individual_special_technique: 'INDIVIDUAL SPECIAL TECHNIQUE',
+  individual_power_test: 'INDIVIDUAL POWER TEST',
+  team_patterns: 'TEAM PATTERNS',
+  team_sparring: 'TEAM SPARRING',
+  team_special_technique: 'TEAM SPECIAL TECHNIQUE',
+  team_power_test: 'TEAM POWER TEST',
+  pre_arranged_sparring: 'PRE ARRANGED SPARRING'
+};
 
 const ctx = {
   clientId: '',
@@ -16,13 +29,21 @@ const ctx = {
   updatedAt: null,
   timezone: '',
   dirty: false,
+  durationsDirty: false,
+  autoSaveTimer: null,
+  autoSaveInFlight: false,
   selectedId: '',
   contextId: '',
   pollTimer: null,
   nowScrollTimer: null,
   nowResizeBound: false,
   dragBound: false,
-  contextBound: false
+  contextBound: false,
+  toolTab: 'board',
+  selectedDurationIds: new Set(),
+  timesBound: false,
+  eventFilters: new Set(),
+  beltFilters: new Set()
 };
 
 function liveMode() {
@@ -146,6 +167,104 @@ function displayDuration(entry, sched) {
   return Math.max(SLOT, Math.ceil(raw / SLOT) * SLOT);
 }
 
+function rawDivisionDuration(entry, sched) {
+  const id = String(entry.id);
+  const match = Number(sched.match_durations?.[id] || 0) || 0;
+  const buffer = Number(sched.buffer_durations?.[id] || 0) || 0;
+  return (match + buffer) * matchCount(entry);
+}
+
+function formatDurationMinutes(mins) {
+  const n = Number(mins) || 0;
+  if (n <= 0) return '0';
+  if (Number.isInteger(n)) return String(n);
+  return n.toFixed(1).replace(/\.0$/, '');
+}
+
+function eventDisplayName(eventKey) {
+  const key = String(eventKey || '').trim();
+  return EVENT_DISPLAY_NAMES[key] || key || '—';
+}
+
+function eventFilterLabel(eventKey) {
+  const full = eventDisplayName(eventKey);
+  return full
+    .replace(/^INDIVIDUAL\s+/i, '')
+    .replace(/^TEAM\s+/i, 'T ')
+    .replace(/\s+/g, ' ')
+    .trim() || eventKey;
+}
+
+function entryAthletes(entry) {
+  return Array.isArray(entry?.athletes) ? entry.athletes : [];
+}
+
+function divisionBelt(entry) {
+  const athletes = entryAthletes(entry);
+  if (athletes.some((a) => String(a.rank || '').toLowerCase().includes('dan'))) return 'dan';
+  if (athletes.some((a) => String(a.rank || '').toLowerCase().includes('gup'))) return 'gup';
+
+  const ranks = [entry?.rank_min, entry?.rank_max]
+    .map((r) => String(r || '').toLowerCase())
+    .filter(Boolean);
+  if (ranks.some((r) => r.includes('dan'))) return 'dan';
+  if (ranks.some((r) => r.includes('gup'))) return 'gup';
+
+  const name = String(entry?.division_name || '').toLowerCase();
+  if (/\bdan\b/.test(name)) return 'dan';
+  if (/\bgup\b/.test(name)) return 'gup';
+  return 'gup';
+}
+
+function catalogSorted() {
+  return [...(ctx.state?.catalog || [])].sort((a, b) =>
+    String(a.division_name || '').localeCompare(String(b.division_name || ''))
+  );
+}
+
+function catalogFiltered() {
+  return catalogSorted().filter((entry) => {
+    const eventKey = String(entry.event_key || '').trim();
+    if (ctx.eventFilters.size && !ctx.eventFilters.has(eventKey)) return false;
+    if (ctx.beltFilters.size && !ctx.beltFilters.has(divisionBelt(entry))) return false;
+    return true;
+  });
+}
+
+function catalogEventKeys() {
+  const keys = new Set();
+  catalogSorted().forEach((entry) => {
+    const key = String(entry.event_key || '').trim();
+    if (key) keys.add(key);
+  });
+  return [...keys].sort((a, b) => eventDisplayName(a).localeCompare(eventDisplayName(b)));
+}
+
+function renderEventFilterButtons() {
+  const host = document.getElementById('liveEventFilterBtns');
+  if (!host) return;
+  const keys = catalogEventKeys();
+  const known = new Set(keys);
+  [...ctx.eventFilters].forEach((key) => {
+    if (!known.has(key)) ctx.eventFilters.delete(key);
+  });
+  if (!keys.length) {
+    host.innerHTML = '<span class="live-hint">No event types</span>';
+    return;
+  }
+  host.innerHTML = keys.map((key) => {
+    const active = ctx.eventFilters.has(key) ? 'is-active' : '';
+    return `<button type="button" class="da-btn da-btn-sm live-filter-btn ${active}" data-event-filter="${escapeHtml(key)}" title="${escapeHtml(eventDisplayName(key))}">${escapeHtml(eventFilterLabel(key))}</button>`;
+  }).join('');
+}
+
+function syncBeltFilterButtons() {
+  document.querySelectorAll('#liveBeltFilterBtns [data-belt-filter]').forEach((btn) => {
+    const key = btn.getAttribute('data-belt-filter');
+    btn.classList.toggle('is-active', ctx.beltFilters.has(key));
+  });
+}
+
 function catalogEntry(id) {
   return (ctx.state?.catalog || []).find((e) => String(e.id) === String(id)) || null;
 }
@@ -154,10 +273,18 @@ function markDirty() {
   if (!ctx.canEdit) return;
   ctx.dirty = true;
   updateSaveButtonAppearance();
+  scheduleAutoSave();
+}
+
+function markDurationsDirty() {
+  if (!ctx.canEdit) return;
+  ctx.durationsDirty = true;
+  markDirty();
 }
 
 function clearDirty() {
   ctx.dirty = false;
+  ctx.durationsDirty = false;
   updateSaveButtonAppearance();
 }
 
@@ -166,6 +293,24 @@ function updateSaveButtonAppearance() {
   if (!saveBtn) return;
   saveBtn.textContent = ctx.dirty ? 'Save*' : 'Save';
   saveBtn.classList.toggle('is-dirty', Boolean(ctx.dirty && ctx.canEdit));
+}
+
+function cancelAutoSave() {
+  if (ctx.autoSaveTimer) {
+    clearTimeout(ctx.autoSaveTimer);
+    ctx.autoSaveTimer = null;
+  }
+}
+
+function scheduleAutoSave() {
+  if (!ctx.canEdit || !isToolMode()) return;
+  cancelAutoSave();
+  ctx.autoSaveTimer = setTimeout(() => {
+    ctx.autoSaveTimer = null;
+    saveSchedule({ silent: true }).catch((err) => {
+      showToast(err.message || 'Unable to auto-save schedule.', true);
+    });
+  }, AUTO_SAVE_MS);
 }
 
 function stopPolling() {
@@ -511,7 +656,7 @@ function adjustDurationSlots(id, slotDelta) {
     pushSubsequentOnRing(id);
   }
 
-  markDirty();
+  markDurationsDirty();
   renderViewer();
   showToast(slotDelta > 0 ? 'Lengthened division.' : 'Shortened division.');
 }
@@ -549,7 +694,6 @@ function dayTimelineHtml(sched, dayIndex) {
   const ringCount = Math.max(1, Number(sched.ring_count || 3));
   const startAbs = parseHhmm(day.start_time) ?? 8 * 60;
   const windowMins = dayWindowMinutes(day);
-  const slotCount = Math.max(1, Math.floor(windowMins / SLOT));
   const byRing = Array.from({ length: ringCount }, () => []);
 
   Object.entries(sched.placements || {}).forEach(([id, placement]) => {
@@ -570,6 +714,14 @@ function dayTimelineHtml(sched, dayIndex) {
   });
   byRing.forEach((list) => list.sort((a, b) => a.start - b.start));
 
+  let maxEnd = windowMins;
+  byRing.forEach((list) => {
+    list.forEach((block) => {
+      maxEnd = Math.max(maxEnd, block.end);
+    });
+  });
+  const slotCount = Math.max(1, Math.ceil(maxEnd / SLOT));
+
   const timeLabels = Array.from({ length: slotCount }, (_, i) => formatHhmm(startAbs + i * SLOT));
   const gridCols = `var(--da-sched-time-w, 72px) repeat(${ringCount}, minmax(100px, 1fr))`;
   const draggable = ctx.canEdit ? 'true' : 'false';
@@ -577,15 +729,15 @@ function dayTimelineHtml(sched, dayIndex) {
 
   return `
     <div class="da-schedule-timeline" data-day-index="${Number(dayIndex)}" style="--da-sched-slots:${slotCount}; --da-sched-cols:${ringCount}; grid-template-columns:${gridCols};">
-      <div class="da-schedule-timeline-corner">time</div>
+      <div class="da-schedule-timeline-corner" style="grid-row:1;grid-column:1;">time</div>
       ${Array.from({ length: ringCount }, (_, ring) => `
-        <div class="da-schedule-timeline-ring-head">Ring ${ring + 1}</div>
+        <div class="da-schedule-timeline-ring-head" style="grid-row:1;grid-column:${ring + 2};">Ring ${ring + 1}</div>
       `).join('')}
-      <div class="da-schedule-time-axis" aria-hidden="true">
+      <div class="da-schedule-time-axis" aria-hidden="true" style="grid-row:2;grid-column:1;">
         ${timeLabels.map((label) => `<div class="da-schedule-time-tick">${label}</div>`).join('')}
       </div>
       ${byRing.map((list, ring) => `
-        <div class="da-schedule-ring-lane" data-ring="${ring}">
+        <div class="da-schedule-ring-lane" data-ring="${ring}" style="grid-row:2;grid-column:${ring + 2};">
           ${list.map((block) => {
             const topSlots = block.start / SLOT;
             const heightSlots = Math.max(1, block.duration / SLOT);
@@ -797,6 +949,7 @@ function clampLocalScheduleBounds() {
 
 function renderScheduleSettings() {
   const panel = document.getElementById('liveScheduleSettings');
+  const tabs = document.getElementById('liveToolTabs');
   const ringInput = document.getElementById('liveRingCountInput');
   const daysHost = document.getElementById('liveDaysSettings');
   const removeDayBtn = document.getElementById('liveRemoveDayBtn');
@@ -806,7 +959,9 @@ function renderScheduleSettings() {
 
   const show = Boolean(ctx.canEdit && isToolMode() && ctx.state);
   panel.hidden = !show;
-  if (dayWrap) dayWrap.hidden = !show;
+  panel.classList.toggle('is-times-tab', show && ctx.toolTab === 'times');
+  if (tabs) tabs.hidden = !show;
+  if (dayWrap) dayWrap.hidden = !show || ctx.toolTab !== 'board';
   if (!show) return;
 
   const days = ensureScheduleDays();
@@ -843,6 +998,225 @@ function renderScheduleSettings() {
       input.focus();
     }
   }
+}
+
+function syncToolTabUi() {
+  const tabs = document.getElementById('liveToolTabs');
+  const stage = document.getElementById('liveStage');
+  const times = document.getElementById('liveTimesPanel');
+  const showTabs = Boolean(ctx.canEdit && isToolMode() && ctx.state);
+  if (tabs) {
+    tabs.hidden = !showTabs;
+    tabs.querySelectorAll('[data-live-tab]').forEach((btn) => {
+      btn.classList.toggle('active', btn.getAttribute('data-live-tab') === ctx.toolTab);
+    });
+  }
+  const onBoard = !showTabs || ctx.toolTab === 'board';
+  const onTimes = showTabs && ctx.toolTab === 'times';
+  if (stage) stage.hidden = !onBoard;
+  if (times) {
+    times.hidden = !onTimes;
+    times.classList.toggle('is-active', onTimes);
+  }
+}
+
+function setToolTab(tab) {
+  ctx.toolTab = tab === 'times' ? 'times' : 'board';
+  syncToolTabUi();
+  renderViewer();
+}
+
+function updateTimesFooter() {
+  const footer = document.getElementById('liveTimesFooter');
+  if (!footer || !ctx.state) return;
+  const listed = catalogFiltered().length;
+  const selected = ctx.selectedDurationIds.size;
+  const total = catalogFiltered().reduce((sum, entry) => sum + rawDivisionDuration(entry, ctx.state), 0);
+  footer.textContent = `Divisions: ${listed} listed, ${selected} selected · Total: ${formatDurationMinutes(total)} min`;
+}
+
+function renderTimesTable() {
+  const body = document.getElementById('liveTimesBody');
+  const selectAll = document.getElementById('liveTimesSelectAll');
+  if (!body || !ctx.state) return;
+
+  renderEventFilterButtons();
+  syncBeltFilterButtons();
+
+  const activeEl = document.activeElement;
+  const activeId = activeEl?.closest?.('tr[data-id]')?.getAttribute('data-id') || '';
+  const activeField = activeEl?.classList?.contains('live-times-match')
+    ? 'match'
+    : activeEl?.classList?.contains('live-times-buffer')
+      ? 'buffer'
+      : '';
+  const selectionStart = activeEl?.selectionStart;
+  const selectionEnd = activeEl?.selectionEnd;
+
+  const entries = catalogFiltered();
+  const known = new Set(catalogSorted().map((e) => String(e.id)));
+  [...ctx.selectedDurationIds].forEach((id) => {
+    if (!known.has(String(id))) ctx.selectedDurationIds.delete(id);
+  });
+
+  if (!entries.length) {
+    body.innerHTML = `<tr><td colspan="9" class="live-hint">No divisions match the current filters.</td></tr>`;
+    if (selectAll) selectAll.checked = false;
+    updateTimesFooter();
+    return;
+  }
+
+  body.innerHTML = entries.map((entry) => {
+    const id = String(entry.id);
+    const selected = ctx.selectedDurationIds.has(id);
+    const mc = matchCount(entry);
+    const match = Number(ctx.state.match_durations?.[id] || 0) || 0;
+    const buffer = Number(ctx.state.buffer_durations?.[id] || 0) || 0;
+    const total = rawDivisionDuration(entry, ctx.state);
+    const disabled = ctx.canEdit ? '' : 'disabled';
+    return `
+      <tr data-id="${escapeHtml(id)}" class="${selected ? 'selected' : ''}">
+        <td class="live-times-check-col">
+          <input type="checkbox" class="live-times-row-check" ${selected ? 'checked' : ''} ${disabled} aria-label="Select ${escapeHtml(entry.division_name || id)}">
+        </td>
+        <td>${escapeHtml(entry.division_name || id)}</td>
+        <td>${escapeHtml(eventDisplayName(entry.event_key))}</td>
+        <td>${escapeHtml(entry.division_type || '—')}</td>
+        <td>${Number(entry.athlete_count || 0) || 0}</td>
+        <td>${mc}</td>
+        <td>
+          <input type="text" class="da-input da-input-sm live-times-cell-input live-times-match"
+            inputmode="decimal" maxlength="5" value="${escapeHtml(String(match))}" data-id="${escapeHtml(id)}" ${disabled}>
+        </td>
+        <td>
+          <input type="text" class="da-input da-input-sm live-times-cell-input live-times-buffer"
+            inputmode="decimal" maxlength="5" value="${escapeHtml(String(buffer))}" data-id="${escapeHtml(id)}" ${disabled}>
+        </td>
+        <td>${escapeHtml(formatDurationMinutes(total))} min</td>
+      </tr>
+    `;
+  }).join('');
+
+  if (selectAll) {
+    selectAll.disabled = !ctx.canEdit;
+    selectAll.checked = entries.length > 0 && entries.every((e) => ctx.selectedDurationIds.has(String(e.id)));
+  }
+
+  if (activeId && activeField) {
+    const input = body.querySelector(
+      `tr[data-id="${CSS.escape(activeId)}"] .live-times-${activeField}`
+    );
+    if (input) {
+      input.focus();
+      if (typeof selectionStart === 'number' && typeof selectionEnd === 'number') {
+        try { input.setSelectionRange(selectionStart, selectionEnd); } catch (_) { /* ignore */ }
+      }
+    }
+  }
+
+  updateTimesFooter();
+}
+
+function parseBulkDurationFields() {
+  const matchRaw = String(document.getElementById('liveBulkMatchInput')?.value || '').trim();
+  const bufferRaw = String(document.getElementById('liveBulkBufferInput')?.value || '').trim();
+  let matchMinutes = null;
+  let bufferMinutes = null;
+
+  if (matchRaw) {
+    matchMinutes = Number(matchRaw);
+    if (!Number.isFinite(matchMinutes) || matchMinutes < 0) {
+      showToast('Match duration must be a non-negative number.', true);
+      return null;
+    }
+  }
+  if (bufferRaw) {
+    bufferMinutes = Number(bufferRaw);
+    if (!Number.isFinite(bufferMinutes) || bufferMinutes < 0) {
+      showToast('Buffer duration must be a non-negative number.', true);
+      return null;
+    }
+  }
+  if (matchMinutes == null && bufferMinutes == null) {
+    showToast('Enter at least one of Match or Buffer duration.', true);
+    return null;
+  }
+  return { matchMinutes, bufferMinutes };
+}
+
+function applyDurationsToIds(ids, { matchMinutes = null, bufferMinutes = null } = {}) {
+  const sched = ctx.state;
+  if (!sched || !ctx.canEdit) return 0;
+  const targets = [...new Set((ids || []).map((id) => String(id || '').trim()).filter(Boolean))];
+  if (!targets.length) return 0;
+  if (!sched.match_durations) sched.match_durations = {};
+  if (!sched.buffer_durations) sched.buffer_durations = {};
+  targets.forEach((id) => {
+    if (matchMinutes != null) sched.match_durations[id] = Math.max(0, Number(matchMinutes) || 0);
+    if (bufferMinutes != null) sched.buffer_durations[id] = Math.max(0, Number(bufferMinutes) || 0);
+  });
+  markDurationsDirty();
+  return targets.length;
+}
+
+function applyBulkToSelected() {
+  const parsed = parseBulkDurationFields();
+  if (!parsed) return;
+  const ids = [...ctx.selectedDurationIds];
+  if (!ids.length) {
+    showToast('No divisions selected.', true);
+    return;
+  }
+  const n = applyDurationsToIds(ids, parsed);
+  renderTimesTable();
+  showToast(`Updated durations for ${n} division${n === 1 ? '' : 's'}.`);
+}
+
+function applyBulkToAllShown() {
+  const parsed = parseBulkDurationFields();
+  if (!parsed) return;
+  const ids = catalogFiltered().map((e) => String(e.id));
+  if (!ids.length) {
+    showToast('No divisions are currently shown.', true);
+    return;
+  }
+  const n = applyDurationsToIds(ids, parsed);
+  renderTimesTable();
+  showToast(`Updated durations for ${n} division${n === 1 ? '' : 's'}.`);
+}
+
+function resetAllTimes() {
+  if (!ctx.canEdit || !ctx.state) return;
+  const hasAny = Object.keys(ctx.state.match_durations || {}).length
+    || Object.keys(ctx.state.buffer_durations || {}).length;
+  if (!hasAny) {
+    showToast('No category times to reset.');
+    return;
+  }
+  if (!window.confirm('Clear match and buffer times for all divisions?\n\nRing placements are kept.')) {
+    return;
+  }
+  ctx.state.match_durations = {};
+  ctx.state.buffer_durations = {};
+  markDurationsDirty();
+  renderTimesTable();
+  showToast('All category times cleared.');
+}
+
+function setCellDuration(id, field, rawValue) {
+  if (!ctx.canEdit || !ctx.state) return;
+  const value = Number(rawValue);
+  if (!Number.isFinite(value) || value < 0) {
+    showToast('Value must be a non-negative number.', true);
+    renderTimesTable();
+    return;
+  }
+  if (!ctx.state.match_durations) ctx.state.match_durations = {};
+  if (!ctx.state.buffer_durations) ctx.state.buffer_durations = {};
+  if (field === 'match') ctx.state.match_durations[String(id)] = value;
+  else ctx.state.buffer_durations[String(id)] = value;
+  markDurationsDirty();
+  renderTimesTable();
 }
 
 function applyDayFieldFromInput(input) {
@@ -882,26 +1256,76 @@ async function autoFillSchedule() {
   renderViewer();
   showToast(
     result.placed
-      ? `Auto-filled ${result.placed} division${result.placed === 1 ? '' : 's'}. Save to keep.`
+      ? `Auto-filled ${result.placed} division${result.placed === 1 ? '' : 's'}.`
       : (result.skipped
         ? 'Auto-fill finished with placements skipped (check day windows / durations).'
-        : 'Auto-fill complete. Save to keep.')
+        : 'Auto-fill complete.')
   );
+}
+
+function placedIdsInScheduleOrder(sched) {
+  return Object.entries(sched?.placements || {})
+    .map(([id, placement]) => ({
+      id: String(id),
+      day: Number(placement.day_index || 0),
+      ring: Number(placement.ring_index || 0),
+      start: Number(placement.start_offset_minutes || 0)
+    }))
+    .sort((a, b) => (
+      a.day - b.day
+      || a.start - b.start
+      || a.ring - b.ring
+      || a.id.localeCompare(b.id)
+    ))
+    .map((row) => row.id);
+}
+
+async function reflowPlacedSchedule() {
+  if (!ctx.canEdit || !ctx.state) return null;
+  clampLocalScheduleBounds();
+  const divisionIds = placedIdsInScheduleOrder(ctx.state);
+  if (!divisionIds.length) return { placed: 0, skipped: 0, reflowed: false };
+
+  const result = await apiFetch(
+    `/api/live-schedule/${encodeURIComponent(ctx.clientId)}/${encodeURIComponent(ctx.eventId)}/pack`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        state: ctx.state,
+        divisionIds,
+        replaceExisting: true
+      })
+    }
+  );
+  ctx.state = result.state;
+  return {
+    placed: result.placed || 0,
+    skipped: result.skipped || 0,
+    reflowed: true
+  };
 }
 
 function renderViewer() {
   const sched = ctx.state;
   if (!sched) return;
   syncDaySelect();
+  syncToolTabUi();
   renderScheduleSettings();
-  renderBoard();
-  renderScratch();
+  if (ctx.toolTab === 'times' && isToolMode() && ctx.canEdit) {
+    renderTimesTable();
+  } else {
+    renderBoard();
+    renderScratch();
+  }
 
   const saveBtn = document.getElementById('liveSaveBtn');
   const qrBtn = document.getElementById('liveDownloadQrBtn');
   const eventWrap = document.getElementById('liveEventSelectWrap');
   if (saveBtn) saveBtn.hidden = !ctx.canEdit;
-  if (qrBtn) qrBtn.hidden = !(ctx.canEdit && ctx.clientId && ctx.eventId);
+  if (qrBtn) {
+    const onScheduleSettings = isToolMode() && ctx.canEdit && ctx.toolTab === 'times';
+    qrBtn.hidden = !(ctx.canEdit && ctx.clientId && ctx.eventId) || onScheduleSettings;
+  }
   if (eventWrap) eventWrap.hidden = !isToolMode();
   updateSaveButtonAppearance();
 
@@ -1017,26 +1441,63 @@ async function refreshSchedule({ silent = false } = {}) {
   if (!silent && isToolMode()) showToast('Schedule loaded.');
 }
 
-async function saveSchedule() {
+async function saveSchedule({ silent = false } = {}) {
   if (!ctx.canEdit || !ctx.state) return;
-  const timezone = resolveTimeZone();
-  ctx.timezone = timezone;
-  ctx.state.timezone = timezone;
-  const saved = await apiFetch(
-    `/api/live-schedule/${encodeURIComponent(ctx.clientId)}/${encodeURIComponent(ctx.eventId)}`,
-    {
-      method: 'PUT',
-      body: JSON.stringify({ state: ctx.state })
-    }
-  );
-  ctx.state = saved.state;
-  ctx.updatedAt = saved.updated_at;
-  if (saved.timezone && isValidTimeZone(saved.timezone)) {
-    ctx.timezone = saved.timezone;
+  if (ctx.autoSaveInFlight) {
+    if (!silent) scheduleAutoSave();
+    return;
   }
-  clearDirty();
-  renderViewer();
-  showToast('Schedule saved.');
+  cancelAutoSave();
+  ctx.autoSaveInFlight = true;
+  try {
+    const timezone = resolveTimeZone();
+    ctx.timezone = timezone;
+    ctx.state.timezone = timezone;
+
+    let reflow = null;
+    if (ctx.durationsDirty) {
+      reflow = await reflowPlacedSchedule();
+    }
+
+    const saved = await apiFetch(
+      `/api/live-schedule/${encodeURIComponent(ctx.clientId)}/${encodeURIComponent(ctx.eventId)}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ state: ctx.state })
+      }
+    );
+    ctx.state = saved.state;
+    ctx.updatedAt = saved.updated_at;
+    if (saved.timezone && isValidTimeZone(saved.timezone)) {
+      ctx.timezone = saved.timezone;
+    }
+    clearDirty();
+    renderViewer();
+
+    if (silent) {
+      if (reflow?.reflowed && reflow.skipped) {
+        showToast(
+          `Saved — board reflowed (${reflow.placed} placed, ${reflow.skipped} moved to scratch).`
+        );
+      }
+      return;
+    }
+
+    if (reflow?.reflowed) {
+      if (reflow.skipped) {
+        showToast(
+          `Schedule saved and board reflowed (${reflow.placed} placed, ${reflow.skipped} moved to scratch).`
+        );
+      } else {
+        showToast(`Schedule saved and board reflowed (${reflow.placed} placed).`);
+      }
+    } else {
+      showToast('Schedule saved.');
+    }
+  } finally {
+    ctx.autoSaveInFlight = false;
+    if (ctx.dirty) scheduleAutoSave();
+  }
 }
 
 function bindDragDrop() {
@@ -1384,6 +1845,106 @@ function bindViewerEvents() {
 
   bindDragDrop();
   bindContextMenu();
+  bindTimesPanel();
+}
+
+function bindTimesPanel() {
+  if (ctx.timesBound) return;
+  ctx.timesBound = true;
+
+  document.getElementById('liveToolTabs')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-live-tab]');
+    if (!btn || !ctx.canEdit) return;
+    setToolTab(btn.getAttribute('data-live-tab'));
+  });
+
+  document.getElementById('liveApplySelectedBtn')?.addEventListener('click', () => {
+    applyBulkToSelected();
+  });
+  document.getElementById('liveApplyAllBtn')?.addEventListener('click', () => {
+    applyBulkToAllShown();
+  });
+  document.getElementById('liveResetTimesBtn')?.addEventListener('click', () => {
+    resetAllTimes();
+  });
+
+  document.getElementById('liveTimesSelectAll')?.addEventListener('change', (e) => {
+    if (!ctx.canEdit) return;
+    const checked = Boolean(e.target.checked);
+    catalogFiltered().forEach((entry) => {
+      const id = String(entry.id);
+      if (checked) ctx.selectedDurationIds.add(id);
+      else ctx.selectedDurationIds.delete(id);
+    });
+    renderTimesTable();
+  });
+
+  document.getElementById('liveEventFilterBtns')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-event-filter]');
+    if (!btn) return;
+    const key = btn.getAttribute('data-event-filter');
+    if (!key) return;
+    if (ctx.eventFilters.has(key)) ctx.eventFilters.delete(key);
+    else ctx.eventFilters.add(key);
+    renderTimesTable();
+  });
+
+  document.getElementById('liveBeltFilterBtns')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-belt-filter]');
+    if (!btn) return;
+    const key = btn.getAttribute('data-belt-filter');
+    if (!key) return;
+    if (ctx.beltFilters.has(key)) ctx.beltFilters.delete(key);
+    else ctx.beltFilters.add(key);
+    renderTimesTable();
+  });
+
+  const body = document.getElementById('liveTimesBody');
+  body?.addEventListener('click', (e) => {
+    if (!ctx.canEdit) return;
+    if (e.target.closest('input.live-times-cell-input')) return;
+    const row = e.target.closest('tr[data-id]');
+    if (!row) return;
+    const id = row.getAttribute('data-id');
+    const check = e.target.closest('.live-times-row-check');
+    if (check) {
+      if (check.checked) ctx.selectedDurationIds.add(id);
+      else ctx.selectedDurationIds.delete(id);
+      row.classList.toggle('selected', check.checked);
+      updateTimesFooter();
+      const selectAll = document.getElementById('liveTimesSelectAll');
+      if (selectAll) {
+        const entries = catalogFiltered();
+        selectAll.checked = entries.length > 0
+          && entries.every((entry) => ctx.selectedDurationIds.has(String(entry.id)));
+      }
+      return;
+    }
+    if (e.shiftKey || e.metaKey || e.ctrlKey) {
+      if (ctx.selectedDurationIds.has(id)) ctx.selectedDurationIds.delete(id);
+      else ctx.selectedDurationIds.add(id);
+    } else {
+      ctx.selectedDurationIds.clear();
+      ctx.selectedDurationIds.add(id);
+    }
+    renderTimesTable();
+  });
+
+  body?.addEventListener('change', (e) => {
+    const input = e.target.closest('.live-times-cell-input');
+    if (!input || !ctx.canEdit) return;
+    const id = input.getAttribute('data-id');
+    const field = input.classList.contains('live-times-match') ? 'match' : 'buffer';
+    setCellDuration(id, field, input.value);
+  });
+
+  body?.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    const input = e.target.closest('.live-times-cell-input');
+    if (!input) return;
+    e.preventDefault();
+    input.blur();
+  });
 }
 
 function formatOptionLabel(item) {

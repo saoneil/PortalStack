@@ -119,6 +119,216 @@ body:has(.live-schedule-page) {
   display: none !important;
 }
 
+.live-schedule-settings.is-times-tab .live-settings-group:not(.live-settings-actions) {
+  display: none;
+}
+
+.live-schedule-settings.is-times-tab .live-settings-group.live-settings-actions {
+  margin-left: 0;
+  border-left: 0;
+  padding-left: 0;
+}
+
+.live-tool-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0 0 10px;
+  flex: 0 0 auto;
+}
+
+.live-tool-tabs[hidden] {
+  display: none !important;
+}
+
+.live-times {
+  display: none;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  gap: 12px;
+}
+
+.live-times.is-active {
+  display: grid;
+  grid-template-columns: minmax(180px, 20%) minmax(0, 80%);
+}
+
+.live-times-params {
+  min-width: 0;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid rgba(0, 212, 255, 0.28);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.22);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.live-times-heading {
+  margin: 0;
+  font-size: 14px;
+  color: #00d4ff;
+  letter-spacing: 0.03em;
+}
+
+.live-times-filters-heading {
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 212, 255, 0.22);
+}
+
+.live-times-params .live-inline-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.live-times-bulk-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.live-times-num {
+  width: 6.3ch;
+  min-width: 9.0ch;
+  max-width: 9.0ch;
+  flex: 0 0 9.0ch;
+  padding: 1px 5px;
+  line-height: 1.15;
+  font-size: 12px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  appearance: textfield;
+  -moz-appearance: textfield;
+  box-sizing: border-box;
+}
+
+.live-times-table .live-times-cell-input {
+  width: 4.2ch;
+  min-width: 4.2ch;
+  max-width: 4.2ch;
+  padding: 4px 5px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.live-times-num::-webkit-outer-spin-button,
+.live-times-num::-webkit-inner-spin-button,
+.live-times-table .live-times-cell-input::-webkit-outer-spin-button,
+.live-times-table .live-times-cell-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.live-times-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.live-times-actions .da-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.live-times-filter-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.live-times-filter-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.live-times-filter-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.live-filter-btn {
+  font-size: 11px;
+  padding: 4px 8px;
+  opacity: 0.72;
+}
+
+.live-filter-btn.is-active {
+  opacity: 1;
+  border-color: #00d4ff;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, 0.12);
+}
+
+.live-times-footer {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.live-times-grid-wrap {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid rgba(0, 212, 255, 0.28);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.live-times-table-wrap {
+  margin: 0;
+  max-height: none;
+  height: 100%;
+  overflow: auto;
+}
+
+.live-times-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.live-times-table th,
+.live-times-table td {
+  white-space: nowrap;
+}
+
+.live-times-table th:nth-child(2),
+.live-times-table td:nth-child(2) {
+  white-space: normal;
+  min-width: 180px;
+}
+
+.live-times-check-col {
+  width: 36px;
+  text-align: center;
+}
+
+.live-times-table tbody tr {
+  cursor: pointer;
+}
+
+.live-times-table tbody tr.selected {
+  background: rgba(0, 212, 255, 0.12);
+}
+
+.live-stage[hidden],
+.live-times[hidden] {
+  display: none !important;
+}
+
 .live-settings-row {
   display: flex;
   flex-wrap: wrap;
@@ -256,15 +466,42 @@ body:has(.live-schedule-page) {
 }
 
 .live-board-wrap {
-  padding: 12px;
+  padding: 12px 12px 28px;
   position: relative;
+  box-sizing: border-box;
 }
 
 .live-board,
 .da-schedule-board.live-board {
-  overflow: visible;
+  overflow: visible !important;
+  flex: none !important;
   min-height: 0;
   height: auto;
+  width: 100%;
+}
+
+.live-schedule-page .da-schedule-timeline {
+  overflow: visible;
+  position: relative;
+  grid-template-rows: 28px auto;
+  width: max-content;
+  min-width: 100%;
+  box-sizing: border-box;
+}
+
+.live-schedule-page .da-schedule-ring-lane {
+  min-height: calc(var(--da-sched-slots) * var(--da-sched-slot-h));
+  height: calc(var(--da-sched-slots) * var(--da-sched-slot-h));
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+.live-schedule-page .da-schedule-time-axis {
+  box-sizing: border-box;
+}
+
+.live-schedule-page .da-schedule-block {
+  box-sizing: border-box;
 }
 
 .live-scratch {
@@ -335,6 +572,8 @@ body:has(.live-schedule-page) {
 
 .live-now-line {
   position: absolute;
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
   left: 0;
   right: 0;
   height: 3px;
@@ -591,6 +830,16 @@ html.live-tool .live-schedule-main {
   max-width: none;
   padding: 6px 12px 8px;
   gap: 6px;
+}
+
+html.live-tool .live-panel-board {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+html.live-tool .live-times.is-active {
+  flex: 1 1 auto;
 }
 
 html.live-tool .live-schedule-label {
@@ -857,6 +1106,16 @@ html.live-tool .live-viewer-event-name {
     grid-template-columns: 1fr;
   }
 
+  .live-times.is-active {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    overflow: auto;
+  }
+
+  .live-times-params {
+    max-height: none;
+  }
+
   .live-schedule-main {
     padding: 18px 14px 40px;
   }
@@ -957,11 +1216,82 @@ html.live-tool .live-viewer-event-name {
     align-items: stretch;
   }
 
+  html.live-viewer .live-schedule-main {
+    padding: 10px 8px 18px;
+  }
+
+  html.live-viewer .live-viewer-event-name {
+    display: block;
+    margin: 0 0 12px;
+    font-size: clamp(18px, 5.8vw, 26px);
+    line-height: 1.2;
+    text-align: center;
+    word-break: break-word;
+  }
+
+  html.live-viewer .live-viewer-day {
+    margin-bottom: 18px;
+  }
+
+  html.live-viewer .live-viewer-day-title {
+    font-size: 14px;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+
+  html.live-viewer .live-board-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    padding-bottom: 4px;
+  }
+
+  html.live-viewer .da-schedule-timeline {
+    --da-sched-time-w: 46px;
+    --da-sched-slot-h: 28px;
+    min-width: max(100%, calc(var(--da-sched-time-w) + var(--da-sched-cols, 3) * 112px));
+    border-radius: 10px;
+  }
+
+  html.live-viewer .da-schedule-timeline-corner,
+  html.live-viewer .da-schedule-timeline-ring-head {
+    font-size: 11px;
+    padding: 6px 4px;
+    line-height: 1.15;
+  }
+
+  html.live-viewer .da-schedule-time-tick {
+    font-size: 10px;
+  }
+
+  html.live-viewer .da-schedule-block {
+    left: 3px;
+    right: 3px;
+    padding: 2px 4px;
+    border-radius: 8px;
+    border-left-width: 3px;
+  }
+
   html.live-viewer .da-schedule-block strong {
-    font-size: clamp(14px, 4.2vw, 28px);
+    font-size: clamp(11px, 3.4vw, 16px);
+    line-height: 1.15;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
   }
 
   html.live-viewer .da-schedule-block span {
-    font-size: clamp(12px, 3.6vw, 22px);
+    font-size: clamp(10px, 3vw, 13px);
+    line-height: 1.1;
+  }
+
+  html.live-viewer .live-panel h2 {
+    font-size: 18px;
+  }
+
+  html.live-viewer .live-hint {
+    font-size: 13px;
   }
 }

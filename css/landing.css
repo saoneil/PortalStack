@@ -439,6 +439,13 @@ table button:hover {
   -webkit-overflow-scrolling: touch;
 }
 
+.pricing-modal-body td:nth-child(2) {
+  text-align: center;
+  line-height: 1.25;
+  white-space: normal;
+  vertical-align: middle;
+}
+
 .pricing-lang-panel {
   color: #fff;
   font-size: 17px;
@@ -646,6 +653,14 @@ table button:hover {
   #pricingLanguageSelect {
     font-size: 15px;
     max-width: 200px;
+  }
+
+  #pricingOverlay th:nth-child(2),
+  #pricingOverlay td:nth-child(2) {
+    text-align: center;
+    line-height: 1.2;
+    white-space: normal;
+    vertical-align: middle;
   }
 
   #pricingOverlay th:nth-child(3),
@@ -874,6 +889,54 @@ table button:hover {
 .event-select:focus {
   outline: none;
   box-shadow: 0 0 12px 2px #00d4ff66;
+}
+
+.event-results-tool {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.event-results-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  max-width: 220px;
+  padding: 6px 10px;
+  font-size: 14px;
+  border-radius: 6px;
+}
+
+.event-results-download-btn {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  border: 2px solid #00d4ff;
+  border-radius: 6px;
+  background: #0a2a33;
+  color: #00d4ff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.event-results-download-btn:hover:not(:disabled) {
+  background: #00d4ff;
+  color: #042028;
+  box-shadow: 0 0 10px #00d4ff66;
+}
+
+.event-results-download-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* Scrollable table wrapper */
@@ -1164,10 +1227,12 @@ table button:hover {
   margin-bottom: 8px;
 }
 
-.form-group input,
+.form-group input:not([type="checkbox"]),
 .form-group select,
 .form-group textarea {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   background: #222;
   border: 2px solid #00d4ff44;
   border-radius: 6px;
@@ -1185,7 +1250,7 @@ table button:hover {
   line-height: 1.45;
 }
 
-.form-group input:focus,
+.form-group input:not([type="checkbox"]):focus,
 .form-group select:focus,
 .form-group textarea:focus {
   outline: none;
@@ -1202,25 +1267,39 @@ table button:hover {
 .event-checkbox-grid {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 10px;
   margin-top: 8px;
 }
 
 .event-checkbox-item {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
+  justify-content: flex-start;
+  gap: 8px;
+  width: auto;
+  max-width: 100%;
   color: rgba(255, 255, 255, 0.9);
   font-size: 14px;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
-.event-checkbox-item input {
-  width: 16px;
-  height: 16px;
-  margin: 0;
+.event-checkbox-item input,
+.event-checkbox-item input[type="checkbox"] {
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px;
+  max-width: 16px;
+  margin: 0 !important;
+  padding: 0 !important;
+  flex: 0 0 16px;
   accent-color: #00d4ff;
   cursor: pointer;
+  box-sizing: border-box;
+  border: none;
+  background: transparent;
+  appearance: auto;
 }
 
 .custom-event-add-row {
@@ -1337,19 +1416,142 @@ table button:hover {
   }
 
   .large-modal-overlay {
-    padding: 10px;
-    align-items: flex-start;
+    padding: 6px;
+    align-items: stretch;
   }
 
   .large-modal-content {
     min-width: 0;
     max-width: 100%;
     width: 100%;
-    max-height: 90dvh;
-    height: auto;
+    max-height: min(96dvh, 96vh);
+    height: min(96dvh, 96vh);
     min-height: 0;
-    padding: 20px;
-    margin: 12px 0;
+    padding: 14px 12px 16px;
+    margin: 0;
+    border-radius: 12px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #eventCreationOverlay .large-modal-content,
+  #eventRegistrationOverlay .large-modal-content {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  #eventCreationOverlay .event-form,
+  #eventRegistrationOverlay .event-form {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  #eventCreationOverlay .form-group,
+  #eventRegistrationOverlay .form-group,
+  #eventCreationOverlay .form-row,
+  #eventRegistrationOverlay .form-row {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  #eventCreationOverlay .modal-title,
+  #eventRegistrationOverlay .modal-title {
+    font-size: 18px;
+    margin: 0 36px 14px 0;
+  }
+
+  #eventCreationOverlay .form-group,
+  #eventRegistrationOverlay .form-group {
+    margin-bottom: 12px;
+  }
+
+  #eventCreationOverlay .form-group label,
+  #eventRegistrationOverlay .form-group label {
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+
+  #eventCreationOverlay .form-group input:not([type="checkbox"]),
+  #eventCreationOverlay .form-group select,
+  #eventCreationOverlay .form-group textarea,
+  #eventRegistrationOverlay .form-group input:not([type="checkbox"]),
+  #eventRegistrationOverlay .form-group select,
+  #eventRegistrationOverlay .form-group textarea {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    font-size: 16px;
+    padding: 8px 10px;
+  }
+
+  #eventCreationOverlay .form-row,
+  #eventRegistrationOverlay .form-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  #eventCreationOverlay .event-checkbox-grid,
+  #eventRegistrationOverlay .event-checkbox-grid {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  #eventCreationOverlay .event-checkbox-item,
+  #eventRegistrationOverlay .event-checkbox-item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    width: auto;
+    max-width: 100%;
+    font-size: 13px;
+    padding: 4px 0;
+  }
+
+  #eventCreationOverlay .event-checkbox-item input[type="checkbox"],
+  #eventRegistrationOverlay .event-checkbox-item input[type="checkbox"] {
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px;
+    max-width: 16px;
+    margin: 0 !important;
+    padding: 0 !important;
+    flex: 0 0 16px;
+  }
+
+  #eventCreationOverlay .custom-event-add-row,
+  #eventRegistrationOverlay .custom-event-add-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  #eventCreationOverlay #eventWaiverTextInput,
+  #eventRegistrationOverlay #editEventWaiverText {
+    min-height: 88px;
+  }
+
+  #eventCreationOverlay .event-form-submit,
+  #eventRegistrationOverlay .event-form-submit {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin: 12px 0 0;
+    font-size: 14px;
+    padding: 10px 12px;
   }
 
   .draw-creation-modal-content {
@@ -1454,6 +1656,17 @@ table button:hover {
     width: 100%;
     min-width: 0;
     font-size: 16px;
+  }
+
+  .event-results-tool {
+    flex-wrap: nowrap;
+    width: 100%;
+  }
+
+  .event-results-tool .event-results-select {
+    width: auto;
+    flex: 1 1 auto;
+    max-width: none;
   }
 
   .scrollable-table-wrapper {

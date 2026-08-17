@@ -1249,10 +1249,101 @@ function renderEventCards(events) {
 function updateGridHint() {
   if (!eventGridHint) return;
   if (selectedEventId) {
-    eventGridHint.textContent = 'complete registration below';
+    eventGridHint.textContent = isRegistrationClosed(selectedEventId)
+      ? 'event details above'
+      : 'complete registration below';
   } else {
-    eventGridHint.textContent = 'tap an event to register';
+    eventGridHint.textContent = 'tap an event for details';
   }
+}
+
+var eventPublicResources = document.getElementById('eventPublicResources');
+var eventDrawsLink = document.getElementById('eventDrawsLink');
+var eventDigitalIdLink = document.getElementById('eventDigitalIdLink');
+var eventLiveScheduleLink = document.getElementById('eventLiveScheduleLink');
+var publicResourcesRequestId = 0;
+
+function clearEventPublicResources() {
+  if (eventPublicResources) eventPublicResources.hidden = true;
+  if (eventDrawsLink) {
+    eventDrawsLink.hidden = true;
+    eventDrawsLink.removeAttribute('href');
+  }
+  if (eventDigitalIdLink) {
+    eventDigitalIdLink.hidden = true;
+    eventDigitalIdLink.removeAttribute('href');
+  }
+  if (eventLiveScheduleLink) {
+    eventLiveScheduleLink.hidden = true;
+    eventLiveScheduleLink.removeAttribute('href');
+  }
+}
+
+function syncEventPublicResources(eventId) {
+  if (!eventId) {
+    clearEventPublicResources();
+    return;
+  }
+
+  clearEventPublicResources();
+
+  var requestId = ++publicResourcesRequestId;
+  fetch('/api/registration/events/' + encodeURIComponent(eventId) + '/resources')
+    .then(function(res) {
+      return res.json().then(function(data) {
+        return { ok: res.ok, data: data };
+      });
+    })
+    .then(function(result) {
+      if (requestId !== publicResourcesRequestId) return;
+      if (String(selectedEventId) !== String(eventId)) return;
+      if (!result.ok || !result.data) {
+        clearEventPublicResources();
+        return;
+      }
+
+      var data = result.data;
+      var hasAny = false;
+
+      if (eventDrawsLink) {
+        if (data.hasDraws && data.drawsPdfUrl) {
+          eventDrawsLink.href = data.drawsPdfUrl;
+          eventDrawsLink.hidden = false;
+          hasAny = true;
+        } else {
+          eventDrawsLink.hidden = true;
+          eventDrawsLink.removeAttribute('href');
+        }
+      }
+
+      if (eventDigitalIdLink) {
+        if (data.hasDraws && data.digitalIdUrl) {
+          eventDigitalIdLink.href = data.digitalIdUrl;
+          eventDigitalIdLink.hidden = false;
+          hasAny = true;
+        } else {
+          eventDigitalIdLink.hidden = true;
+          eventDigitalIdLink.removeAttribute('href');
+        }
+      }
+
+      if (eventLiveScheduleLink) {
+        if (data.hasSchedule && data.liveScheduleUrl) {
+          eventLiveScheduleLink.href = data.liveScheduleUrl;
+          eventLiveScheduleLink.hidden = false;
+          hasAny = true;
+        } else {
+          eventLiveScheduleLink.hidden = true;
+          eventLiveScheduleLink.removeAttribute('href');
+        }
+      }
+
+      if (eventPublicResources) eventPublicResources.hidden = !hasAny;
+    })
+    .catch(function() {
+      if (requestId !== publicResourcesRequestId) return;
+      clearEventPublicResources();
+    });
 }
 
 function isRegistrationClosed(eventId) {
@@ -1392,8 +1483,10 @@ function renderFocusStage(eventId) {
 function syncGridFocusState() {
   if (selectedEventId) {
     renderFocusStage(selectedEventId);
+    syncEventPublicResources(selectedEventId);
   } else {
     clearFocusStage();
+    clearEventPublicResources();
   }
   updateGridHint();
 }
@@ -1428,32 +1521,28 @@ function selectEvent(eventId) {
 
   var isClosed = isRegistrationClosed(eventId);
 
+  // Always show event details + public resource links (draws / digital ID / schedule),
+  // even when registration is closed.
   if (isClosed) {
     registrationFlow.hidden = true;
     registrationClosedWarning.hidden = false;
     resetRegistrationForm();
     setFormStatus('');
-    updateEventUrl(eventId);
-    syncGridFocusState();
-    syncWaiverSubmitState();
-    logInteraction('event_selected_closed', {
-      eventId: eventId,
-      eventName: getEventField(eventsById[eventId], 'Event Name')
-    });
   } else {
     registrationClosedWarning.hidden = true;
     registrationFlow.hidden = false;
     resetRegistrationForm();
     syncEventCheckboxVisibility();
     setFormStatus('');
-    updateEventUrl(eventId);
-    syncGridFocusState();
-    syncWaiverSubmitState();
-    logInteraction('event_selected', {
-      eventId: eventId,
-      eventName: getEventField(eventsById[eventId], 'Event Name')
-    });
   }
+
+  updateEventUrl(eventId);
+  syncGridFocusState();
+  syncWaiverSubmitState();
+  logInteraction(isClosed ? 'event_selected_closed' : 'event_selected', {
+    eventId: eventId,
+    eventName: getEventField(eventsById[eventId], 'Event Name')
+  });
 }
 
 
@@ -1513,7 +1602,7 @@ if (backToEventsBtn) {
   });
 }
 
-logInteraction('page_view', { description: 'Event registration page loaded' });
+logInteraction('page_view', { description: 'Event information page loaded' });
 
 fetch('/api/registration/events')
   .then(function(res) {

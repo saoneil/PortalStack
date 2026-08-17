@@ -1,0 +1,7 @@
+-- Fake draws_results for event 4 ("King of PMA V").
+--
+-- Prefer the Node seeder:
+--   node sql/run_seed_fake_draw_results_event4.js
+--
+-- PL overall ranks: final winner 1st, final loser 2nd, SF losers tied 3rd
+-- (or 3rd/4th when a bronze match is present). Pool W-L do not set overall place.

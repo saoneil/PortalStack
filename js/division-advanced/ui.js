@@ -567,18 +567,29 @@ export function combineSoloDivisionsLocally() {
   return { merged, remaining };
 }
 
+function sortEventsByScheduleDate(events) {
+  return (Array.isArray(events) ? events.slice() : []).sort((a, b) => {
+    const aTime = a?.event_date_start ? new Date(a.event_date_start).getTime() : Number.POSITIVE_INFINITY;
+    const bTime = b?.event_date_start ? new Date(b.event_date_start).getTime() : Number.POSITIVE_INFINITY;
+    const aValid = Number.isFinite(aTime);
+    const bValid = Number.isFinite(bTime);
+    if (aValid && bValid && aTime !== bTime) return aTime - bTime;
+    if (aValid !== bValid) return aValid ? -1 : 1;
+    return String(a?.event_name || '').localeCompare(String(b?.event_name || ''));
+  });
+}
+
 export async function loadEvents() {
   // Prefer events already loaded by the classic boot script (same as Event Management).
   if (Array.isArray(window.__daClientEvents) && window.__daClientEvents.length) {
-    state.events = window.__daClientEvents;
-    return state.events;
+    state.events = sortEventsByScheduleDate(window.__daClientEvents);
+  } else {
+    // Same fetch path as Event Management (`loadClientEvents` in landing.html).
+    const res = await fetch('/api/client-events', { credentials: 'same-origin' });
+    if (!res.ok) throw new Error('Unable to load your events. Please try again.');
+    const events = (await res.json()) || [];
+    state.events = sortEventsByScheduleDate(Array.isArray(events) ? events : []);
   }
-
-  // Same fetch path as Event Management (`loadClientEvents` in landing.html).
-  const res = await fetch('/api/client-events', { credentials: 'same-origin' });
-  if (!res.ok) throw new Error('Unable to load your events. Please try again.');
-  const events = (await res.json()) || [];
-  state.events = Array.isArray(events) ? events : [];
   window.__daClientEvents = state.events;
 
   const select = document.getElementById('eventSelect');

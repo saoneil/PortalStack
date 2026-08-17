@@ -430,6 +430,7 @@ function isEventOpenForRegistration(events, eventId) {
 const PUBLIC_REGISTRATION_EVENTS_SQL = `
   SELECT
     id,
+    client_id,
     event_name,
     event_name AS \`Event Name\`,
     event_date_start,
@@ -721,6 +722,16 @@ app.get('/live-schedule/:clientId/:eventId', (req, res) => {
   res.sendFile(path.join(__dirname, 'html', 'live-schedule.html'));
 });
 
+app.get('/digital-id/:clientId/:eventId', (req, res) => {
+  res.set({
+    'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+    Pragma: 'no-cache',
+    Expires: '0',
+    'X-Robots-Tag': 'noindex, nofollow, noarchive'
+  });
+  res.sendFile(path.join(__dirname, 'html', 'digital-id.html'));
+});
+
 app.get('/privacy', (req, res) => {
   res.sendFile(path.join(__dirname, 'html', 'privacy.html'));
 });
@@ -992,6 +1003,119 @@ app.get('/api/registration/events/:id/waiver', registrationApiLimiter, (req, res
         waiverRequired: Number(row.waiver_required) === 1
       });
     });
+  });
+});
+
+const { createStore: createDivisionStore } = require('./lib/division-tool/store');
+const { buildPdfFilesFromState } = require('./lib/division-tool/draws-pdf');
+const { ALL_DRAWS_PDF_FILENAME } = require('./lib/division-tool/constants');
+const registrationDivisionStore = createDivisionStore(db);
+
+function catalogHasDrawAthletes(drawsState) {
+  return !!(drawsState && Array.isArray(drawsState.catalog)
+    && drawsState.catalog.some((entry) => Number(entry.athlete_count || 0) > 0));
+}
+
+function loadPublicRegistrationEventMeta(eventId, callback) {
+  const sql = `
+    SELECT id, client_id, event_name
+    FROM events
+    WHERE id = ?
+      AND active = 1
+      AND COALESCE(event_date_end, event_date_start) >= CURDATE()
+    LIMIT 1
+  `;
+  db.query(sql, [eventId], (err, results) => {
+    if (err) return callback(err);
+    if (!results || !results.length) return callback(null, null);
+    const row = results[0];
+    callback(null, {
+      id: String(row.id),
+      clientId: String(row.client_id || '').trim(),
+      eventName: row.event_name || ''
+    });
+  });
+}
+
+app.get('/api/registration/events/:id/resources', registrationApiLimiter, async (req, res) => {
+  const eventId = toNullableString(req.params.id, 45);
+  if (!eventId) {
+    return res.status(400).json({ error: 'Event id is required.' });
+  }
+
+  loadPublicRegistrationEventMeta(eventId, async (err, eventMeta) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Unable to load event resources. Please try again shortly.' });
+    }
+    if (!eventMeta || !eventMeta.clientId) {
+      return res.status(404).json({ error: 'Event not found.' });
+    }
+
+    try {
+      const loaded = await registrationDivisionStore.loadDraws(eventId, eventMeta.clientId);
+      const hasDraws = catalogHasDrawAthletes(loaded && loaded.state);
+      const schedule = await registrationDivisionStore.loadPublicSchedule(eventMeta.clientId, eventId);
+      const hasSchedule = !!(schedule && schedule.state);
+
+      res.json({
+        eventId: eventMeta.id,
+        clientId: eventMeta.clientId,
+        hasDraws,
+        hasSchedule,
+        drawsPdfUrl: hasDraws
+          ? `/api/registration/events/${encodeURIComponent(eventMeta.id)}/draws.pdf`
+          : null,
+        digitalIdUrl: hasDraws
+          ? `/digital-id/${encodeURIComponent(eventMeta.clientId)}/${encodeURIComponent(eventMeta.id)}`
+          : null,
+        liveScheduleUrl: hasSchedule
+          ? `/live-schedule/${encodeURIComponent(eventMeta.clientId)}/${encodeURIComponent(eventMeta.id)}`
+          : null
+      });
+    } catch (loadErr) {
+      console.error(loadErr);
+      res.status(500).json({ error: 'Unable to load event resources. Please try again shortly.' });
+    }
+  });
+});
+
+app.get('/api/registration/events/:id/draws.pdf', registrationApiLimiter, (req, res) => {
+  const eventId = toNullableString(req.params.id, 45);
+  if (!eventId) {
+    return res.status(400).json({ error: 'Event id is required.' });
+  }
+
+  loadPublicRegistrationEventMeta(eventId, async (err, eventMeta) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Unable to load draws. Please try again shortly.' });
+    }
+    if (!eventMeta || !eventMeta.clientId) {
+      return res.status(404).json({ error: 'Draws not found.' });
+    }
+
+    try {
+      const loaded = await registrationDivisionStore.loadDraws(eventId, eventMeta.clientId);
+      const drawsState = loaded && loaded.state;
+      if (!catalogHasDrawAthletes(drawsState)) {
+        return res.status(404).json({ error: 'Draws not found.' });
+      }
+
+      const pdfFiles = await buildPdfFilesFromState(drawsState, { eventName: eventMeta.eventName || '' });
+      const pdfBuffer = pdfFiles && pdfFiles[ALL_DRAWS_PDF_FILENAME];
+      if (!pdfBuffer || !pdfBuffer.length) {
+        return res.status(404).json({ error: 'Draws not found.' });
+      }
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="${ALL_DRAWS_PDF_FILENAME}"`);
+      res.setHeader('Cache-Control', 'private, max-age=60');
+      res.send(pdfBuffer);
+    } catch (pdfErr) {
+      console.error(pdfErr);
+      res.status(500).json({ error: 'Unable to build draws PDF. Please try again shortly.' });
+    }
   });
 });
 
@@ -1302,7 +1426,7 @@ app.get('/api/release-notes-list', requireLogin, (req, res) => {
 // API endpoint to list events owned by the authenticated client
 app.get('/api/client-events', requireLogin, (req, res) => {
   const clientId = req.session.clientId;
-  const sql = 'SELECT id, active, event_name, event_date_start, event_date_end, registration_open_date, registration_close_date, event_location, event_events, event_link, event_contact, LENGTH(event_poster) > 0 AS has_poster, waiver_required, waiver_text FROM events WHERE client_id = ? ORDER BY event_date_start DESC, event_name ASC';
+  const sql = 'SELECT id, active, event_name, event_date_start, event_date_end, registration_open_date, registration_close_date, event_location, event_events, event_link, event_contact, LENGTH(event_poster) > 0 AS has_poster, waiver_required, waiver_text FROM events WHERE client_id = ? ORDER BY event_date_start ASC, event_name ASC';
 
   db.query(sql, [clientId], (err, results) => {
     if (err) {

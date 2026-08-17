@@ -104,13 +104,28 @@
               <a href="#" id="openLiveScheduleToolBtn">Tool</a>/<a href="#" id="openLiveScheduleViewerBtn">Viewer</a>
             </td>
           </tr>
+          <!-- Umpire Management — re-enable later
           <tr>
             <td>Umpire Management</td>
             <td>coming soon</td>
           </tr>
+          -->
           <tr>
             <td>Digital ID Card</td>
-            <td>coming soon</td>
+            <td>
+              <a href="#" id="openDigitalIdToolBtn">Open Tool</a>
+            </td>
+          </tr>
+          <tr>
+            <td>Get Event Results</td>
+            <td>
+              <div class="event-results-tool">
+                <select id="eventResultsSelect" class="event-select event-results-select" aria-label="Select event with results">
+                  <option value="">— loading —</option>
+                </select>
+                <button type="button" id="downloadEventResultsBtn" class="event-results-download-btn" disabled title="Download results" aria-label="Download event results">↓</button>
+              </div>
+            </td>
           </tr>
         </table>
       </div>
@@ -428,7 +443,7 @@
   <div id="liveScheduleViewerPickerOverlay" class="confirm-dialog-overlay" hidden>
     <div class="confirm-dialog-card" role="dialog" aria-labelledby="liveScheduleViewerPickerTitle" aria-modal="true">
       <h3 id="liveScheduleViewerPickerTitle" class="confirm-dialog-title">view live schedule</h3>
-      <p class="confirm-dialog-text">Choose an event with a saved schedule to open the public viewer.</p>
+      <p id="liveScheduleViewerPickerIntro" class="confirm-dialog-text">Choose an event with a saved schedule to open the public viewer.</p>
       <div class="event-select-container" style="margin: 0 0 8px;">
         <select id="liveScheduleViewerSelect" class="event-select" aria-label="Select saved schedule">
           <option value="">— loading —</option>
@@ -444,9 +459,9 @@
 
   <div id="advancedAccessDeniedModal" class="confirm-dialog-overlay" hidden>
     <div class="confirm-dialog-card" role="dialog" aria-labelledby="advancedAccessDeniedTitle" aria-modal="true">
-      <h2 id="advancedAccessDeniedTitle" class="confirm-dialog-title">access denied</h2>
+      <h2 id="advancedAccessDeniedTitle" class="confirm-dialog-title">higher tier required</h2>
       <div class="confirm-dialog-body">
-        <p>You currently don't have access to this feature. Please email <a href="mailto:performance.ma.can@gmail.com?subject=PMA%20Advanced%20Division%20Tool%20access%20request&body=Hello%2C%0A%0AI%20would%20like%20to%20request%20access%20to%20the%20Advanced%20Division%20Creation%20tool.%0A%0AName%3A%0AClub%20%2F%20organization%3A%0AEmail%3A%0A%0AThank%20you." style="color: #00d4ff; text-decoration: underline;">PMA</a> to request access.</p>
+        <p>This organizer tool needs the <strong>Organizer Tools</strong> tier (advanced principle user). Your account can use payments and event creation/management. Please email <a href="mailto:performance.ma.can@gmail.com?subject=PMA%20Organizer%20Tools%20access%20request&body=Hello%2C%0A%0AI%20would%20like%20to%20request%20Organizer%20Tools%20(advanced)%20access.%0A%0AName%3A%0AClub%20%2F%20organization%3A%0AEmail%3A%0A%0AThank%20you." style="color: #00d4ff; text-decoration: underline;">PMA</a> to upgrade.</p>
       </div>
       <div class="confirm-dialog-actions">
         <button type="button" id="closeAdvancedAccessDeniedModal" class="confirm-dialog-btn confirm-dialog-btn-primary">ok</button>
@@ -492,6 +507,7 @@
     var hasPrincipleUserAccess = false;
     var hasPrincipleUserAdvancedAccess = false;
     var principleUserCheckInFlight = null;
+    var eventResultsSelectInitialized = false;
     var PRINCIPLE_USER_OVERLAYS = [
       'drawCreationOverlay',
       'liveScheduleToolOverlay',
@@ -512,7 +528,24 @@
         pricingBtn.hidden = !hasPrincipleUserAccess;
       }
 
-      if (!hasPrincipleUserAccess) {
+      if (hasPrincipleUserAccess) {
+        var resultsSelect = document.getElementById('eventResultsSelect');
+        var currentResultsEventId = resultsSelect && resultsSelect.value ? String(resultsSelect.value) : '';
+        if (hasPrincipleUserAdvancedAccess) {
+          // Preserve an in-progress selection — download / auth refresh must not wipe it.
+          loadEventResultsSelect({
+            silent: Boolean(currentResultsEventId || eventResultsSelectInitialized),
+            preserveValue: currentResultsEventId
+          });
+          eventResultsSelectInitialized = true;
+        } else {
+          // Principle users still see the row; advanced tools stay locked until upgrade.
+          lockEventResultsSelectForUpgrade();
+          eventResultsSelectInitialized = true;
+        }
+      } else {
+        eventResultsSelectInitialized = false;
+        resetEventResultsSelect();
         PRINCIPLE_USER_OVERLAYS.forEach(function(overlayId) {
           var overlay = document.getElementById(overlayId);
           if (overlay && overlay.style.display === 'flex') {
@@ -1350,7 +1383,8 @@
         });
     }
 
-    function formatRegistrationCellValue(field, value) {
+    function formatRegistrationCellValue(field, value, options) {
+      options = options || {};
       if (value === null || value === undefined) {
         return '';
       }
@@ -1370,6 +1404,8 @@
       }
 
       if (typeof value === 'number' && (field === 'individual_patterns' || field === 'individual_sparring' || field === 'individual_special_technique' || field === 'individual_power_test' || field === 'team_patterns' || field === 'team_sparring' || field === 'team_special_technique' || field === 'team_power_test' || field === 'pre_arranged_sparring')) {
+        // CSV: ASCII-only so Excel does not mojibake UTF-8 checkmarks.
+        if (options.csv) return value === 1 ? 'Y' : '';
         return value === 1 ? '✓' : '';
       }
 
@@ -1428,7 +1464,7 @@
 
       currentRegistrations.forEach(reg => {
         const row = headers.map(h => {
-          let value = formatRegistrationCellValue(h, reg[h]);
+          let value = formatRegistrationCellValue(h, reg[h], { csv: true });
           value = value.replace(/"/g, '""');
           if (value.includes(',') || value.includes('"') || value.includes('\n')) {
             return '"' + value + '"';
@@ -1438,7 +1474,8 @@
         csv += row.join(',') + '\n';
       });
 
-      const blob = new Blob([csv], { type: 'text/csv' });
+      // BOM helps Excel detect UTF-8 for names/accents; event flags stay ASCII "Y".
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -1510,6 +1547,13 @@
 
     document.getElementById('openLiveScheduleToolBtn').onclick = function(e) {
       e.preventDefault();
+      if (window.matchMedia('(max-width: 768px)').matches) {
+        showAppMessage({
+          title: 'not supported',
+          message: 'not supported on mobile devices, please view on a desktop device'
+        });
+        return;
+      }
       requirePrincipleUserAdvancedAccess(function() {
         logInteraction('open_live_schedule_tool', { description: 'Opened live event schedule tool modal' });
         var overlay = document.getElementById('liveScheduleToolOverlay');
@@ -1525,7 +1569,7 @@
       closeOverlay('liveScheduleToolOverlay', 'close_live_schedule_tool');
     };
 
-    var liveScheduleViewerPickerState = { clientId: '', items: [] };
+    var liveScheduleViewerPickerState = { clientId: '', items: [], mode: 'viewer' };
 
     function formatLiveScheduleOptionLabel(item) {
       var date = item.eventDateStart
@@ -1543,14 +1587,30 @@
       if (overlay) overlay.hidden = true;
     }
 
-    function openLiveScheduleViewerPicker() {
+    function openLiveScheduleViewerPicker(mode) {
+      var pickerMode = mode === 'digital-id' ? 'digital-id' : 'viewer';
       var overlay = document.getElementById('liveScheduleViewerPickerOverlay');
       var select = document.getElementById('liveScheduleViewerSelect');
       var hint = document.getElementById('liveScheduleViewerPickerHint');
       var openBtn = document.getElementById('liveScheduleViewerPickerOpenBtn');
+      var title = document.getElementById('liveScheduleViewerPickerTitle');
+      var intro = document.getElementById('liveScheduleViewerPickerIntro');
       if (!overlay || !select || !openBtn) return;
 
-      liveScheduleViewerPickerState = { clientId: '', items: [] };
+      liveScheduleViewerPickerState = { clientId: '', items: [], mode: pickerMode };
+      if (title) {
+        title.textContent = pickerMode === 'digital-id'
+          ? 'draws / digital id card'
+          : 'view live schedule';
+      }
+      if (intro) {
+        intro.textContent = pickerMode === 'digital-id'
+          ? 'Choose an event with a saved schedule to open the public athlete lookup page.'
+          : 'Choose an event with a saved schedule to open the public viewer.';
+      }
+      if (openBtn) {
+        openBtn.textContent = pickerMode === 'digital-id' ? 'open tool' : 'open viewer';
+      }
       select.innerHTML = '<option value="">— loading —</option>';
       select.disabled = true;
       openBtn.disabled = true;
@@ -1610,7 +1670,270 @@
       e.preventDefault();
       requirePrincipleUserAdvancedAccess(function() {
         logInteraction('open_live_schedule_viewer_picker', { description: 'Opened live schedule viewer event picker' });
-        openLiveScheduleViewerPicker();
+        openLiveScheduleViewerPicker('viewer');
+      });
+    };
+
+    document.getElementById('openDigitalIdToolBtn').onclick = function(e) {
+      e.preventDefault();
+      requirePrincipleUserAdvancedAccess(function() {
+        logInteraction('open_digital_id_picker', { description: 'Opened draws/digital ID card event picker' });
+        openLiveScheduleViewerPicker('digital-id');
+      });
+    };
+
+    function formatEventResultsOptionLabel(item) {
+      var name = (item && item.eventName) || ('event ' + ((item && item.eventId) || ''));
+      var dateRaw = item && item.eventDateStart;
+      if (!dateRaw) return name;
+      var d = new Date(dateRaw);
+      if (Number.isNaN(d.getTime())) return name;
+      var y = d.getFullYear();
+      var m = String(d.getMonth() + 1).padStart(2, '0');
+      var day = String(d.getDate()).padStart(2, '0');
+      return name + ' (' + y + '-' + m + '-' + day + ')';
+    }
+
+    function syncEventResultsDownloadBtn() {
+      var select = document.getElementById('eventResultsSelect');
+      var btn = document.getElementById('downloadEventResultsBtn');
+      if (!btn) return;
+      if (hasPrincipleUserAccess && !hasPrincipleUserAdvancedAccess) {
+        // Visible but gated — click shows the higher-tier popup.
+        btn.disabled = false;
+        return;
+      }
+      btn.disabled = !(select && select.value && eventResultsSelectedMeta && eventResultsSelectedMeta.resultCount > 0);
+    }
+
+    function resetEventResultsSelect() {
+      var select = document.getElementById('eventResultsSelect');
+      var btn = document.getElementById('downloadEventResultsBtn');
+      eventResultsSelectedMeta = null;
+      eventResultsMetaRequestId += 1;
+      if (select) {
+        select.innerHTML = '<option value="">— no access —</option>';
+        select.disabled = true;
+      }
+      if (btn) btn.disabled = true;
+    }
+
+    function lockEventResultsSelectForUpgrade() {
+      var select = document.getElementById('eventResultsSelect');
+      var btn = document.getElementById('downloadEventResultsBtn');
+      eventResultsSelectedMeta = null;
+      eventResultsMetaRequestId += 1;
+      if (select) {
+        select.innerHTML = '<option value="">— higher tier required —</option>';
+        // Keep enabled so click/focus can show the upgrade popup.
+        select.disabled = false;
+      }
+      // Keep download clickable so principle users get the upgrade popup (not a dead control).
+      if (btn) btn.disabled = false;
+    }
+
+    function requireEventResultsAdvancedAccess(onAllowed) {
+      requirePrincipleUserAdvancedAccess(function() {
+        onAllowed();
+      });
+    }
+
+    var eventResultsListRequestId = 0;
+    var eventResultsMetaRequestId = 0;
+    var eventResultsSelectedMeta = null;
+
+    function loadEventResultsSelect(options) {
+      var opts = options || {};
+      var preserveValue = opts.preserveValue ? String(opts.preserveValue) : '';
+      var select = document.getElementById('eventResultsSelect');
+      var btn = document.getElementById('downloadEventResultsBtn');
+      if (!select) return Promise.resolve();
+      var requestId = ++eventResultsListRequestId;
+      if (!opts.silent) {
+        select.innerHTML = '<option value="">— loading —</option>';
+        select.disabled = true;
+        if (btn) btn.disabled = true;
+        eventResultsSelectedMeta = null;
+      }
+
+      return fetch('/api/division-advanced/results/events')
+        .then(function(res) {
+          if (!res.ok) {
+            return res.json().catch(function() { return {}; }).then(function(body) {
+              throw new Error((body && body.error) || 'Unable to load events with results.');
+            });
+          }
+          return res.json();
+        })
+        .then(function(data) {
+          if (requestId !== eventResultsListRequestId) return;
+          var items = (data && data.items) || [];
+          select.disabled = false;
+          if (!items.length) {
+            select.innerHTML = '<option value="">— no results saved —</option>';
+            eventResultsSelectedMeta = null;
+            if (btn) btn.disabled = true;
+            return;
+          }
+          var previous = preserveValue || select.value || '';
+          select.innerHTML = '<option value="">— choose an event —</option>' +
+            items.map(function(item) {
+              return '<option value="' + String(item.eventId).replace(/"/g, '&quot;') + '">' +
+                String(formatEventResultsOptionLabel(item))
+                  .replace(/&/g, '&amp;')
+                  .replace(/</g, '&lt;')
+                  .replace(/>/g, '&gt;') +
+                '</option>';
+            }).join('');
+          if (previous && items.some(function(item) { return String(item.eventId) === previous; })) {
+            select.value = previous;
+          } else if (!previous) {
+            eventResultsSelectedMeta = null;
+          }
+          syncEventResultsDownloadBtn();
+        })
+        .catch(function() {
+          if (requestId !== eventResultsListRequestId) return;
+          select.disabled = false;
+          select.innerHTML = '<option value="">— unable to load —</option>';
+          eventResultsSelectedMeta = null;
+          if (btn) btn.disabled = true;
+        });
+    }
+
+    function requerySelectedEventResults(forcedEventId) {
+      var select = document.getElementById('eventResultsSelect');
+      var btn = document.getElementById('downloadEventResultsBtn');
+      var eventId = forcedEventId != null && String(forcedEventId).trim() !== ''
+        ? String(forcedEventId).trim()
+        : (select && select.value);
+      eventResultsSelectedMeta = null;
+      if (!eventId) {
+        syncEventResultsDownloadBtn();
+        return Promise.resolve(null);
+      }
+      if (select && select.value !== eventId) {
+        select.value = eventId;
+      }
+      var requestId = ++eventResultsMetaRequestId;
+      if (btn) btn.disabled = true;
+
+      return fetch('/api/division-advanced/events/' + encodeURIComponent(eventId) + '/results/meta')
+        .then(function(res) {
+          if (!res.ok) {
+            return res.json().catch(function() { return {}; }).then(function(body) {
+              throw new Error((body && body.error) || 'Unable to check results.');
+            });
+          }
+          return res.json();
+        })
+        .then(function(meta) {
+          if (requestId !== eventResultsMetaRequestId) return null;
+          eventResultsSelectedMeta = meta || { resultCount: 0 };
+          if (!eventResultsSelectedMeta.resultCount) {
+            showAppMessage({
+              title: 'notice',
+              message: 'No saved results were found for that event yet. Finish scoring on the ring computers, then select the event again.'
+            });
+          }
+          syncEventResultsDownloadBtn();
+          return eventResultsSelectedMeta;
+        })
+        .catch(function(err) {
+          if (requestId !== eventResultsMetaRequestId) return null;
+          eventResultsSelectedMeta = null;
+          syncEventResultsDownloadBtn();
+          showAppMessage({
+            title: 'notice',
+            message: (err && err.message) || 'Unable to check results for that event.'
+          });
+          return null;
+        });
+    }
+
+    async function downloadSelectedEventResults(forcedEventId) {
+      var select = document.getElementById('eventResultsSelect');
+      var eventId = forcedEventId != null && String(forcedEventId).trim() !== ''
+        ? String(forcedEventId).trim()
+        : (select && select.value);
+      if (!eventId) {
+        showAppMessage({
+          title: 'notice',
+          message: 'Select an event from the Get Event Results dropdown first. If none appear, finish scoring a division (results save to the portal DB), then open the dropdown again.'
+        });
+        return;
+      }
+      var btn = document.getElementById('downloadEventResultsBtn');
+      if (btn) btn.disabled = true;
+      // Always re-check + rebuild from the live portal DB so every ring machine's saves are included.
+      var meta = await requerySelectedEventResults(eventId);
+      if (!meta || !meta.resultCount) return;
+      logInteraction('download_event_results', {
+        eventId: eventId,
+        resultCount: meta.resultCount,
+        description: 'Downloaded event results PDF'
+      });
+      try {
+        var res = await fetch(
+          '/api/division-advanced/events/' + encodeURIComponent(eventId) + '/results.pdf'
+        );
+        if (!res.ok) {
+          var body = await res.json().catch(function() { return {}; });
+          throw new Error((body && body.error) || 'Unable to download results.');
+        }
+        var blob = await res.blob();
+        var disposition = res.headers.get('Content-Disposition') || '';
+        var headerMatch = /filename="?([^"]+)"?/i.exec(disposition);
+        var filename = headerMatch ? headerMatch[1] : ('event_' + eventId + '_results.pdf');
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        showAppMessage({
+          title: 'download failed',
+          message: (err && err.message) || 'Unable to download results.'
+        });
+      } finally {
+        if (select && eventId) select.value = eventId;
+        syncEventResultsDownloadBtn();
+      }
+    }
+
+    document.getElementById('eventResultsSelect').onchange = function() {
+      requerySelectedEventResults(this.value);
+    };
+
+    document.getElementById('eventResultsSelect').addEventListener('mousedown', function(e) {
+      if (hasPrincipleUserAccess && !hasPrincipleUserAdvancedAccess) {
+        e.preventDefault();
+        showAdvancedAccessDeniedModal();
+      }
+    });
+
+    document.getElementById('eventResultsSelect').addEventListener('click', function(e) {
+      if (hasPrincipleUserAccess && !hasPrincipleUserAdvancedAccess) {
+        e.preventDefault();
+        showAdvancedAccessDeniedModal();
+      }
+    });
+
+    document.getElementById('eventResultsSelect').addEventListener('focus', function() {
+      if (!hasPrincipleUserAdvancedAccess) return;
+      var select = document.getElementById('eventResultsSelect');
+      loadEventResultsSelect({ silent: true, preserveValue: select && select.value });
+    });
+
+    document.getElementById('downloadEventResultsBtn').onclick = function() {
+      var select = document.getElementById('eventResultsSelect');
+      // Capture before the async access check — that refresh used to wipe the dropdown.
+      var eventId = select && select.value ? String(select.value) : '';
+      requireEventResultsAdvancedAccess(function() {
+        downloadSelectedEventResults(eventId);
       });
     };
 
@@ -1627,17 +1950,21 @@
       var select = document.getElementById('liveScheduleViewerSelect');
       var eventId = select && select.value;
       var clientId = liveScheduleViewerPickerState.clientId;
+      var mode = liveScheduleViewerPickerState.mode || 'viewer';
       if (!eventId || !clientId) {
         showAppMessage({ title: 'select an event', message: 'Please select an event with a saved schedule.' });
         return;
       }
-      logInteraction('open_live_schedule_viewer', {
-        description: 'Opened live event schedule viewer in a new tab',
+      var pathPrefix = mode === 'digital-id' ? '/digital-id/' : '/live-schedule/';
+      logInteraction(mode === 'digital-id' ? 'open_digital_id_tool' : 'open_live_schedule_viewer', {
+        description: mode === 'digital-id'
+          ? 'Opened draws/digital ID card page in a new tab'
+          : 'Opened live event schedule viewer in a new tab',
         eventId: eventId
       });
       closeLiveScheduleViewerPicker();
       window.open(
-        '/live-schedule/' + encodeURIComponent(clientId) + '/' + encodeURIComponent(eventId),
+        pathPrefix + encodeURIComponent(clientId) + '/' + encodeURIComponent(eventId),
         '_blank',
         'noopener,noreferrer'
       );

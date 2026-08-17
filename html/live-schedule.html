@@ -82,6 +82,11 @@
         </div>
       </div>
 
+      <div class="live-tool-tabs" id="liveToolTabs" hidden>
+        <button type="button" class="da-tab active" data-live-tab="board">Board</button>
+        <button type="button" class="da-tab" data-live-tab="times">Schedule settings</button>
+      </div>
+
       <div class="live-stage" id="liveStage">
         <div class="live-board-wrap" id="liveBoardDrop">
           <h1 id="liveViewerEventName" class="live-viewer-event-name" hidden></h1>
@@ -89,6 +94,60 @@
         </div>
         <div class="live-scratch" id="liveScratchDrop" hidden>
           <ul id="liveScratchList" class="live-scratch-list"></ul>
+        </div>
+      </div>
+
+      <div class="live-times" id="liveTimesPanel" hidden>
+        <aside class="live-times-params" aria-label="Time parameters">
+          <h2 class="live-times-heading">Time parameters</h2>
+          <p class="live-hint">Select one or more divisions on the right, then apply match and/or buffer minutes.</p>
+          <div class="live-times-bulk-row">
+            <label class="live-inline-label" for="liveBulkMatchInput">Match
+              <input type="text" id="liveBulkMatchInput" class="da-input da-input-sm live-times-num" inputmode="decimal" maxlength="5" placeholder="3.5" autocomplete="off">
+            </label>
+            <label class="live-inline-label" for="liveBulkBufferInput">Buffer
+              <input type="text" id="liveBulkBufferInput" class="da-input da-input-sm live-times-num" inputmode="decimal" maxlength="5" placeholder="0.5" autocomplete="off">
+            </label>
+          </div>
+          <div class="live-times-actions">
+            <button type="button" id="liveApplySelectedBtn" class="da-btn da-btn-primary">Apply to selected</button>
+            <button type="button" id="liveApplyAllBtn" class="da-btn">Apply to all shown</button>
+            <button type="button" id="liveResetTimesBtn" class="da-btn da-btn-danger">Reset all times</button>
+          </div>
+
+          <h2 class="live-times-heading live-times-filters-heading">Filters</h2>
+          <div class="live-times-filter-block">
+            <span class="live-times-filter-label">Event type</span>
+            <div class="live-times-filter-btns" id="liveEventFilterBtns"></div>
+          </div>
+          <div class="live-times-filter-block">
+            <span class="live-times-filter-label">Belt</span>
+            <div class="live-times-filter-btns" id="liveBeltFilterBtns">
+              <button type="button" class="da-btn da-btn-sm live-filter-btn" data-belt-filter="gup">Gup</button>
+              <button type="button" class="da-btn da-btn-sm live-filter-btn" data-belt-filter="dan">Dan</button>
+            </div>
+          </div>
+          <p id="liveTimesFooter" class="live-times-footer"></p>
+        </aside>
+        <div class="live-times-grid-wrap" aria-label="Division durations">
+          <div class="da-table-wrap live-times-table-wrap">
+            <table class="da-table live-times-table" id="liveTimesTable">
+              <thead>
+                <tr>
+                  <th class="live-times-check-col"><input type="checkbox" id="liveTimesSelectAll" aria-label="Select all shown"></th>
+                  <th>Division</th>
+                  <th>Event</th>
+                  <th>Type</th>
+                  <th>Athletes</th>
+                  <th># Matches</th>
+                  <th>Match (min)</th>
+                  <th>Buffer (min)</th>
+                  <th>Total duration</th>
+                </tr>
+              </thead>
+              <tbody id="liveTimesBody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>

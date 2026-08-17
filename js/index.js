@@ -10,7 +10,7 @@ function logInteraction(action, details) {
 logInteraction('page_view', { description: 'Portal chooser page loaded' });
 
 document.getElementById('eventRegistrationBtn').addEventListener('click', function() {
-  logInteraction('navigate_event_registration', { description: 'User clicked Event Registration button' });
+  logInteraction('navigate_event_information', { description: 'User clicked Event Information button' });
 });
 
 document.getElementById('organizerPortalBtn').addEventListener('click', function() {

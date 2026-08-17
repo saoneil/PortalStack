@@ -16,10 +16,82 @@ function setPrompt(message, { hidden = false } = {}) {
   prompt.hidden = hidden;
 }
 
-function setRingPct(pct) {
+let ringPctValue = 0;
+let ringWorkingTimer = null;
+
+function getRingPct() {
+  const ring = document.getElementById('workflowStatusRing');
+  if (!ring) return ringPctValue;
+  const raw = Number.parseFloat(ring.style.getPropertyValue('--p'));
+  if (Number.isFinite(raw)) return raw;
+  return ringPctValue;
+}
+
+function setRingPct(pct, { instant = false } = {}) {
   const ring = document.getElementById('workflowStatusRing');
   if (!ring) return;
-  ring.style.setProperty('--p', String(Math.max(0, Math.min(100, Math.round(pct)))));
+  const next = Math.max(0, Math.min(100, Number(pct) || 0));
+  ringPctValue = next;
+  ring.classList.toggle('da-ring-working', false);
+  if (instant) {
+    ring.classList.add('da-ring-no-transition');
+    ring.style.setProperty('--p', String(next));
+    void ring.offsetWidth;
+    ring.classList.remove('da-ring-no-transition');
+    return;
+  }
+  ring.style.setProperty('--p', String(next));
+}
+
+function stopRingWorking() {
+  if (ringWorkingTimer) {
+    clearInterval(ringWorkingTimer);
+    ringWorkingTimer = null;
+  }
+  const ring = document.getElementById('workflowStatusRing');
+  ring?.classList.remove('da-ring-working');
+}
+
+/**
+ * Slowly fill the status ring toward `ceiling` while async work runs.
+ * Stops just short of the ceiling so the final phase jump still reads as completion.
+ */
+function startRingWorking({ from = null, ceiling = 90, step = 0.45, everyMs = 90 } = {}) {
+  stopRingWorking();
+  const ring = document.getElementById('workflowStatusRing');
+  if (!ring) return;
+  if (from != null) setRingPct(from, { instant: true });
+  const cap = Math.max(getRingPct() + 0.5, Math.min(99.5, Number(ceiling) || 90));
+  ring.classList.add('da-ring-working');
+  ringWorkingTimer = window.setInterval(() => {
+    const cur = getRingPct();
+    if (cur >= cap - 0.05) return;
+    // Ease: smaller steps as we near the ceiling
+    const remain = cap - cur;
+    const delta = Math.min(remain, Math.max(0.08, step * (0.35 + 0.65 * (remain / Math.max(cap, 1)))));
+    const next = Math.min(cap, cur + delta);
+    ringPctValue = next;
+    ring.style.setProperty('--p', String(next));
+  }, everyMs);
+}
+
+async function withRingWorking(work, {
+  from = null,
+  ceiling = 90,
+  prompt = null,
+  donePct = null
+} = {}) {
+  if (prompt) setPrompt(prompt, { hidden: false });
+  startRingWorking({ from, ceiling });
+  try {
+    const result = await work();
+    stopRingWorking();
+    if (donePct != null) setRingPct(donePct);
+    return result;
+  } catch (err) {
+    stopRingWorking();
+    throw err;
+  }
 }
 
 function showScreen(screen) {
@@ -40,6 +112,7 @@ function showScreen(screen) {
 }
 
 function setWheelPhase(phase) {
+  stopRingWorking();
   state.wheelPhase = phase;
   const choice = document.getElementById('daDivisionChoice');
   const ready = document.getElementById('daCreateDrawsChoice');
@@ -58,9 +131,12 @@ function setWheelPhase(phase) {
     setPrompt('divisions ready — create draws', { hidden: false });
     setRingPct(64);
   } else if (phase === 'complete') {
-    setPrompt('complete', { hidden: false });
+    setPrompt('Complete - Proceed to scoring application', { hidden: false });
     setRingPct(100);
   }
+
+  const progress = document.getElementById('workflowProgressText');
+  if (progress) progress.classList.toggle('is-complete', phase === 'complete');
 }
 
 function soloCombinedStorageKey(eventId = state.eventId) {
@@ -96,7 +172,7 @@ function syncCombineSoloButton() {
     btn.disabled = true;
     btn.classList.add('da-choice-btn-done');
     btn.textContent = clicked ? 'Solo Divisions Combined' : 'No Solo Divisions';
-  } else {
+      } else {
     btn.disabled = false;
     btn.classList.remove('da-choice-btn-done');
     btn.textContent = 'Combine Solo Divisions';
@@ -251,7 +327,7 @@ async function startOver() {
     return;
   }
   const ok = await confirmStartOver();
-  if (!ok) return;
+    if (!ok) return;
   try {
     await apiFetch(`/api/division-advanced/events/${state.eventId}/profile-files`, {
       method: 'DELETE'
@@ -341,8 +417,13 @@ function bindEventSelect() {
     setWheelPhase('pick');
     setPrompt('loading event…');
     try {
-      await loadSavedForEvent();
-      await refreshWheelFromStatus();
+      await withRingWorking(
+        async () => {
+          await loadSavedForEvent();
+          await refreshWheelFromStatus();
+        },
+        { from: 0, ceiling: 24, prompt: 'loading event…' }
+      );
     } catch (err) {
       showToast(err.message || 'unable to load event data.', true);
       setWheelPhase('choose');
@@ -359,17 +440,23 @@ function bindWheelActions() {
     }
     setBusy(btn, true);
     try {
-      requireEvent();
-      const data = await apiFetch('/api/division-advanced/divisions/create-all-defaults', {
-        method: 'POST'
-      });
-      state.leaves = data.leaves || [];
-      if (data.failures?.length) showToast(`skipped: ${data.failures.join(', ')}`, true);
-      const count = await saveDivisionsForEvent(state.leaves);
-      showToast(`saved ${count} default divisions for this event.`);
-      await refreshWheelFromStatus();
+      await withRingWorking(
+        async () => {
+          requireEvent();
+          const data = await apiFetch('/api/division-advanced/divisions/create-all-defaults', {
+            method: 'POST'
+          });
+          state.leaves = data.leaves || [];
+          if (data.failures?.length) showToast(`skipped: ${data.failures.join(', ')}`, true);
+          const count = await saveDivisionsForEvent(state.leaves);
+          showToast(`saved ${count} default divisions for this event.`);
+          await refreshWheelFromStatus();
+        },
+        { from: 28, ceiling: 60, prompt: 'building default divisions…' }
+      );
     } catch (err) {
       showToast(err.message, true);
+      setWheelPhase('choose');
     } finally {
       setBusy(btn, false);
     }
@@ -407,15 +494,21 @@ function bindWheelActions() {
     const toggle = document.getElementById('wheelTemplateToggle');
     if (toggle) toggle.disabled = true;
     try {
-      const data = await apiFetch(`/api/division-advanced/divisions/templates/${id}`);
-      state.leaves = data.leaves || [];
-      if (!state.leaves.length) throw new Error('that template has no divisions.');
-      await saveDivisionsForEvent(state.leaves);
-      renderDivisionsTable();
-      showToast(`loaded template "${data.nickname || name}" for this event.`);
-      await refreshWheelFromStatus();
+      await withRingWorking(
+        async () => {
+          const data = await apiFetch(`/api/division-advanced/divisions/templates/${id}`);
+          state.leaves = data.leaves || [];
+          if (!state.leaves.length) throw new Error('that template has no divisions.');
+          await saveDivisionsForEvent(state.leaves);
+          renderDivisionsTable();
+          showToast(`loaded template "${data.nickname || name}" for this event.`);
+          await refreshWheelFromStatus();
+        },
+        { from: 28, ceiling: 60, prompt: 'loading template…' }
+      );
     } catch (err) {
       showToast(err.message, true);
+      setWheelPhase('choose');
     } finally {
       if (toggle) toggle.disabled = false;
     }
@@ -453,28 +546,34 @@ function bindWheelActions() {
     const btn = document.getElementById('createDrawsBtn');
     if (!state.eventId) {
       flashMissingEventSelect();
-      return;
-    }
+    return;
+  }
     setBusy(btn, true);
     try {
-      const saved = await apiFetch(
-        `/api/division-advanced/events/${state.eventId}/draws/create-from-divisions`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ leaves: state.leaves })
-        }
+      await withRingWorking(
+        async () => {
+          const saved = await apiFetch(
+            `/api/division-advanced/events/${state.eventId}/draws/create-from-divisions`,
+            {
+              method: 'POST',
+              body: JSON.stringify({ leaves: state.leaves })
+            }
+          );
+          state.drawsState = saved.state || null;
+          state.drawDirty = false;
+          state.selectedAthleteIndices = new Set();
+          state.drawSubtab = 'pool';
+          state.soloDivisionsCombined = false;
+          writeSoloCombinedFlag(false);
+          renderDraws();
+          showToast('draws created and saved.');
+          await refreshWheelFromStatus();
+        },
+        { from: 64, ceiling: 96, prompt: 'creating draws…' }
       );
-      state.drawsState = saved.state || null;
-      state.drawDirty = false;
-      state.selectedAthleteIndices = new Set();
-      state.drawSubtab = 'pool';
-      state.soloDivisionsCombined = false;
-      writeSoloCombinedFlag(false);
-      renderDraws();
-      showToast('draws created and saved.');
-      await refreshWheelFromStatus();
     } catch (err) {
       showToast(err.message, true);
+      setWheelPhase('ready');
     } finally {
       setBusy(btn, false);
     }
@@ -563,8 +662,8 @@ function bindWheelActions() {
       flashMissingEventSelect();
       return;
     }
-    setBusy(btn, true);
-    try {
+      setBusy(btn, true);
+      try {
       if (!state.drawsState) {
         await loadSavedForEvent();
       } else if (!(state.leaves || []).length) {
@@ -598,19 +697,19 @@ function bindWheelActions() {
           `combined ${merged} solo division${merged === 1 ? '' : 's'} into recommended draws.`
         );
       }
-    } catch (err) {
+      } catch (err) {
       showToast(err.message || 'unable to combine solo divisions.', true);
-    } finally {
-      setBusy(btn, false);
+      } finally {
+        setBusy(btn, false);
       syncCombineSoloButton();
-    }
-  });
+      }
+    });
 
   ['startOverReadyBtn', 'startOverCompleteBtn', 'startOverDivisionsBtn', 'startOverDrawsBtn']
     .forEach((id) => {
       document.getElementById(id)?.addEventListener('click', () => {
         startOver().catch((err) => showToast(err.message, true));
-      });
+  });
     });
 }
 
@@ -854,26 +953,26 @@ async function init() {
   }
 
   try {
-    const profile = await apiFetch('/api/profile');
+  const profile = await apiFetch('/api/profile');
     if (!(await applyProfile(profile))) {
       showToast('advanced division tool access required.', true);
       return;
     }
-    bindEventSelect();
+  bindEventSelect();
     bindWheelActions();
-    bindPatternForm();
-    bindDivisions();
-    bindDraws();
+  bindPatternForm();
+  bindDivisions();
+  bindDraws();
     try {
       await initPatternForm();
     } catch (err) {
       showToast(err?.message || 'pattern form failed to load.', true);
     }
     try {
-      await loadTemplates();
+  await loadTemplates();
     } catch (_) { /* ignore */ }
-    renderDivisionsTable();
-    renderDraws();
+  renderDivisionsTable();
+  renderDraws();
     await refreshWheelFromStatus();
   } catch (err) {
     try {

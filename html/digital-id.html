@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" href="/images/PMA_Score_8.png">
+  <title>Draws / Digital ID Card</title>
+  <link rel="stylesheet" href="/css/digital-id.css">
+</head>
+<body class="digital-id-page">
+  <main class="digital-id-main">
+    <header class="digital-id-header">
+      <p class="digital-id-kicker">Draws / Digital ID Card</p>
+      <h1 id="eventTitle" class="digital-id-title">Loading event…</h1>
+      <p id="eventMeta" class="digital-id-meta"></p>
+    </header>
+
+    <section class="digital-id-search" aria-label="Athlete lookup">
+      <label class="digital-id-label" for="athleteSearch">Find your schedule</label>
+      <div class="digital-id-input-wrap">
+        <input
+          id="athleteSearch"
+          class="digital-id-input"
+          type="search"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="Start typing your name..."
+          disabled
+        >
+        <ul id="athleteSuggestions" class="digital-id-suggestions" hidden role="listbox" aria-label="Matching athletes"></ul>
+      </div>
+      <p id="statusMessage" class="digital-id-status">Loading schedule…</p>
+    </section>
+
+    <section id="athleteResult" class="digital-id-result" hidden aria-live="polite">
+      <h2 id="selectedAthleteName" class="digital-id-result-name"></h2>
+      <p class="digital-id-result-lead">your divisions and estimated times:</p>
+      <div id="athleteDivisions" class="digital-id-divisions"></div>
+    </section>
+  </main>
+
+  <script src="/js/digital-id.js" defer></script>
+</body>
+</html>
