@@ -55,6 +55,11 @@ body {
   outline: none;
 }
 
+.home-link:hover,
+.home-link:focus {
+  color: #00d4ff;
+}
+
 .header-image-container {
   text-align: center;
   margin-top: 40px;
@@ -1359,7 +1364,8 @@ table button:hover {
     padding: 0 12px;
   }
 
-  .logout-link {
+  .logout-link,
+  .home-link {
     font-size: 14px;
   }
 

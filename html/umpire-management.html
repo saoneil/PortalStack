@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" href="/images/PMA_Score_8.png">
+  <title>Umpire Management</title>
+  <link rel="stylesheet" href="/css/landing.css">
+  <link rel="stylesheet" href="/css/division-advanced.css">
+  <link rel="stylesheet" href="/css/umpire-management.css">
+</head>
+<body class="umpire-mgmt-page">
+  <main class="umpire-mgmt-main">
+    <header class="umpire-mgmt-top">
+      <span class="umpire-mgmt-label">umpire management</span>
+      <div class="umpire-mgmt-event-row">
+        <label class="umpire-mgmt-event-label" for="umpireEventSelect">
+          <select id="umpireEventSelect" class="da-select da-select-sm umpire-mgmt-select" aria-label="Select event">
+            <option value="">— choose an event —</option>
+          </select>
+        </label>
+        <button type="button" id="umpireRefreshBtn" class="umpire-mgmt-refresh" title="Refresh from database" aria-label="Refresh from database">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path fill="currentColor" d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.75 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+          </svg>
+        </button>
+        <label class="umpire-mgmt-layout-label" for="umpireGridLayoutSelect">
+          <select id="umpireGridLayoutSelect" class="da-select da-select-sm umpire-mgmt-layout-select" aria-label="Ring grid layout">
+            <option value="1x">1 row</option>
+            <option value="2x2">2x2</option>
+            <option value="2x3">2x3</option>
+            <option value="2x4">2x4</option>
+            <option value="3x3">3x3</option>
+            <option value="3x4">3x4</option>
+          </select>
+        </label>
+        <button type="button" id="umpireOverlayScheduleBtn" class="umpire-mgmt-overlay-btn" aria-pressed="false">
+          <span>overlay</span>
+          <span>divisions</span>
+        </button>
+      </div>
+    </header>
+
+    <p id="umpireMgmtStatus" class="umpire-mgmt-status" hidden></p>
+
+    <div id="umpireMgmtStage" class="umpire-mgmt-stage" hidden>
+      <aside class="umpire-mgmt-pool" id="umpirePool" aria-label="Registered umpires">
+        <div class="umpire-mgmt-pool-head">
+          <h2 id="umpireCountHeading" class="umpire-mgmt-count">0 registered umpires</h2>
+          <p class="umpire-mgmt-hint">Click a ring to assign positions. Select referees, then drag onto a ring or into the ring window.</p>
+        </div>
+        <ul id="umpireList" class="umpire-mgmt-list"></ul>
+        <p id="umpireListEmpty" class="umpire-mgmt-empty" hidden>No umpires are registered for this event.</p>
+      </aside>
+      <section class="umpire-mgmt-boards" aria-label="Schedule rings">
+        <div id="umpireRingGrid" class="umpire-mgmt-rings"></div>
+        <p id="umpireRingsEmpty" class="umpire-mgmt-empty" hidden>No rings yet. Set rings in the Live Event Schedule tool.</p>
+        <div id="umpireRingModal" class="umpire-ring-modal" hidden>
+          <div class="umpire-ring-modal-card" id="umpireRingModalCard">
+            <header class="umpire-ring-modal-head">
+              <button type="button" id="umpireRingPrevBtn" class="umpire-ring-modal-nav" aria-label="Previous ring">‹</button>
+              <h2 id="umpireRingModalTitle" class="umpire-ring-modal-title">Ring 1</h2>
+              <button type="button" id="umpireRingClearBtn" class="umpire-ring-modal-clear">Clear Ring</button>
+              <button type="button" id="umpireRingNextBtn" class="umpire-ring-modal-nav" aria-label="Next ring">›</button>
+              <button type="button" id="umpireRingModalClose" class="umpire-ring-modal-close" aria-label="Close ring">✕</button>
+            </header>
+            <div id="umpireRingModalCols" class="umpire-ring-modal-cols"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script src="/js/umpire-management.js"></script>
+</body>
+</html>

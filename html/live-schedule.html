@@ -38,6 +38,7 @@
     <div id="liveContextMenu" class="live-context-menu" hidden>
       <button type="button" data-action="longer">Lengthen (+5 min)</button>
       <button type="button" data-action="shorter">Shorten (−5 min)</button>
+      <button type="button" data-action="delete-break" id="liveContextDeleteBreak" hidden>Delete break</button>
     </div>
 
     <section id="livePickerPanel" class="live-panel" hidden>
@@ -68,6 +69,14 @@
             <div class="live-settings-stack">
               <button type="button" id="liveAddRingBtn" class="da-btn da-btn-sm">Add ring</button>
               <button type="button" id="liveRemoveRingBtn" class="da-btn da-btn-sm">Remove ring</button>
+            </div>
+          </div>
+
+          <div class="live-settings-group live-settings-breaks">
+            <span class="live-inline-label">Breaks</span>
+            <div class="live-settings-stack">
+              <button type="button" id="liveAddBreakOneBtn" class="da-btn da-btn-sm">Add break (1 ring)</button>
+              <button type="button" id="liveAddBreakAllBtn" class="da-btn da-btn-sm">Add break (all rings)</button>
             </div>
           </div>
 

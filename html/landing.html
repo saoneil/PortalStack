@@ -68,6 +68,7 @@
 
   <div id="loggedInUser" class="logged-in-user" hidden>
     <span class="logged-in-user-label">user: <span id="loggedInUsername"></span></span>
+    <a id="homeLink" href="/" class="logout-link home-link">home</a>
     <form id="logoutForm" action="/logout" method="get" class="logout-form">
       <button type="submit" class="logout-link">logout</button>
     </form>
@@ -95,25 +96,25 @@
           <tr>
             <td>Draw Creation</td>
             <td>
-              <a href="#" id="openDrawCreationBtn">Open Tool</a>
+              <a href="#" id="openDrawCreationBtn">Build</a>
             </td>
           </tr>
           <tr>
             <td>Live Event Schedule</td>
             <td>
-              <a href="#" id="openLiveScheduleToolBtn">Tool</a>/<a href="#" id="openLiveScheduleViewerBtn">Viewer</a>
+              <a href="#" id="openLiveScheduleToolBtn">Editor</a>/<a href="#" id="openLiveScheduleViewerBtn">Viewer</a>
             </td>
           </tr>
-          <!-- Umpire Management — re-enable later
-          <tr>
-            <td>Umpire Management</td>
-            <td>coming soon</td>
-          </tr>
-          -->
           <tr>
             <td>Digital ID Card</td>
             <td>
               <a href="#" id="openDigitalIdToolBtn">Open Tool</a>
+            </td>
+          </tr>
+          <tr>
+            <td>Umpire Management</td>
+            <td>
+              <a href="#" id="openUmpireManagementBtn">Assign</a>
             </td>
           </tr>
           <tr>
@@ -440,6 +441,13 @@
     </div>
   </div>
 
+  <div id="umpireManagementOverlay" class="large-modal-overlay">
+    <div class="large-modal-content draw-creation-modal-content">
+      <button type="button" id="closeUmpireManagementBtn" class="modal-close-btn">✕</button>
+      <iframe id="umpireManagementFrame" class="draw-creation-frame" title="Umpire Management" src="about:blank"></iframe>
+    </div>
+  </div>
+
   <div id="liveScheduleViewerPickerOverlay" class="confirm-dialog-overlay" hidden>
     <div class="confirm-dialog-card" role="dialog" aria-labelledby="liveScheduleViewerPickerTitle" aria-modal="true">
       <h3 id="liveScheduleViewerPickerTitle" class="confirm-dialog-title">view live schedule</h3>
@@ -511,6 +519,7 @@
     var PRINCIPLE_USER_OVERLAYS = [
       'drawCreationOverlay',
       'liveScheduleToolOverlay',
+      'umpireManagementOverlay',
       'eventCreationOverlay',
       'eventRegistrationOverlay',
       'pricingOverlay'
@@ -954,7 +963,7 @@
     });
 
     // Allow clicking the backdrop itself to close each modal.
-    ['qrOverlay', 'releaseNotesOverlay', 'pricingOverlay', 'eventCreationOverlay', 'eventRegistrationOverlay', 'drawCreationOverlay', 'liveScheduleToolOverlay'].forEach(function(overlayId) {
+    ['qrOverlay', 'releaseNotesOverlay', 'pricingOverlay', 'eventCreationOverlay', 'eventRegistrationOverlay', 'drawCreationOverlay', 'liveScheduleToolOverlay', 'umpireManagementOverlay'].forEach(function(overlayId) {
       const overlay = document.getElementById(overlayId);
       if (!overlay) return;
       overlay.addEventListener('click', function(evt) {
@@ -977,7 +986,7 @@
         hideEventCreationConfirm();
         return;
       }
-      ['qrOverlay', 'releaseNotesOverlay', 'pricingOverlay', 'eventCreationOverlay', 'eventRegistrationOverlay', 'drawCreationOverlay', 'liveScheduleToolOverlay'].forEach(function(overlayId) {
+      ['qrOverlay', 'releaseNotesOverlay', 'pricingOverlay', 'eventCreationOverlay', 'eventRegistrationOverlay', 'drawCreationOverlay', 'liveScheduleToolOverlay', 'umpireManagementOverlay'].forEach(function(overlayId) {
         const overlay = document.getElementById(overlayId);
         if (overlay && overlay.style.display !== 'none') {
           overlay.style.display = 'none';
@@ -988,6 +997,9 @@
     // Log logout button click (server also logs it, but this captures the client-side intent)
     document.getElementById('logoutForm').addEventListener('submit', function() {
       logInteraction('logout', { description: 'User clicked logout' });
+    });
+    document.getElementById('homeLink').addEventListener('click', function() {
+      logInteraction('navigate_home', { description: 'User returned to index without logging out' });
     });
 
     // ========== EVENT CREATION MODAL ==========
@@ -1569,6 +1581,30 @@
       closeOverlay('liveScheduleToolOverlay', 'close_live_schedule_tool');
     };
 
+    document.getElementById('openUmpireManagementBtn').onclick = function(e) {
+      e.preventDefault();
+      if (window.matchMedia('(max-width: 768px)').matches) {
+        showAppMessage({
+          title: 'not supported',
+          message: 'not supported on mobile devices, please view on a desktop device'
+        });
+        return;
+      }
+      requirePrincipleUserAdvancedAccess(function() {
+        logInteraction('open_umpire_management', { description: 'Opened umpire management tool modal' });
+        var overlay = document.getElementById('umpireManagementOverlay');
+        var frame = document.getElementById('umpireManagementFrame');
+        if (frame && frame.getAttribute('src') === 'about:blank') {
+          frame.src = '/umpire-management';
+        }
+        overlay.style.display = 'flex';
+      });
+    };
+
+    document.getElementById('closeUmpireManagementBtn').onclick = function() {
+      closeOverlay('umpireManagementOverlay', 'close_umpire_management');
+    };
+
     var liveScheduleViewerPickerState = { clientId: '', items: [], mode: 'viewer' };
 
     function formatLiveScheduleOptionLabel(item) {
@@ -1600,7 +1636,7 @@
       liveScheduleViewerPickerState = { clientId: '', items: [], mode: pickerMode };
       if (title) {
         title.textContent = pickerMode === 'digital-id'
-          ? 'draws / digital id card'
+          ? 'digital id card'
           : 'view live schedule';
       }
       if (intro) {

@@ -2,6 +2,7 @@ const DEFAULT_MATCH = 3;
 const DEFAULT_BUFFER = 0.5;
 const SLOT = 5;
 const GAP = 5;
+const DEFAULT_BREAK_MINUTES = 30;
 const POLL_MS = 15000;
 const NOW_SCROLL_MS = 30000;
 const TIMELINE_HEADER_H = 28;
@@ -43,7 +44,9 @@ const ctx = {
   selectedDurationIds: new Set(),
   timesBound: false,
   eventFilters: new Set(),
-  beltFilters: new Set()
+  beltFilters: new Set(),
+  pendingBreak: null,
+  editSeq: 0
 };
 
 function liveMode() {
@@ -272,6 +275,7 @@ function catalogEntry(id) {
 function markDirty() {
   if (!ctx.canEdit) return;
   ctx.dirty = true;
+  ctx.editSeq = (ctx.editSeq || 0) + 1;
   updateSaveButtonAppearance();
   scheduleAutoSave();
 }
@@ -509,20 +513,229 @@ function startNowScroll() {
   }
 }
 
+function snapMinutes(minutes) {
+  let m = Math.max(0, Math.floor(Number(minutes) || 0));
+  const rem = m % SLOT;
+  if (rem) m += SLOT - rem;
+  return m;
+}
+
+function newBreakId() {
+  return `brk_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function isBreakId(id) {
+  return Boolean(ctx.state?.breaks?.[String(id)]);
+}
+
+function isScratched(id) {
+  return (ctx.state?.scratch_ids || []).some((x) => String(x) === String(id));
+}
+
+function breakDuration(block) {
+  return Math.max(SLOT, snapMinutes(Number(block?.duration_minutes || 0)));
+}
+
+function scheduleRingCount(sched = ctx.state) {
+  return Math.max(1, Math.min(32, Number(sched?.ring_count || 3)));
+}
+
+function breakRingSpan(block, ringCount = scheduleRingCount()) {
+  if (block?.all_rings) return Math.max(1, ringCount);
+  return Math.max(1, Number(block?.ring_span || 1));
+}
+
+function breakCoversRing(block, ringIndex, ringCount = scheduleRingCount()) {
+  if (block?.all_rings) return ringIndex >= 0 && ringIndex < ringCount;
+  const start = Number(block?.ring_index || 0);
+  const span = breakRingSpan(block, ringCount);
+  return ringIndex >= start && ringIndex < start + span;
+}
+
+function ringsForBreak(block, ringCount = scheduleRingCount()) {
+  if (block?.all_rings) {
+    return Array.from({ length: ringCount }, (_, r) => r);
+  }
+  const start = Number(block?.ring_index || 0);
+  const span = breakRingSpan(block, ringCount);
+  return Array.from({ length: span }, (_, i) => start + i).filter((r) => r >= 0 && r < ringCount);
+}
+
+function itemDuration(id) {
+  const br = ctx.state?.breaks?.[String(id)];
+  if (br) return breakDuration(br);
+  const entry = catalogEntry(id);
+  return entry ? displayDuration(entry, ctx.state) : SLOT;
+}
+
+function timelineDropTargetFromPoint(clientX, clientY) {
+  const stack = document.elementsFromPoint(clientX, clientY);
+  const lane = stack
+    .map((el) => (el.nodeType === 1 ? el.closest('.da-schedule-ring-lane[data-ring]') : null))
+    .find(Boolean);
+  const timeline = lane?.closest('.da-schedule-timeline[data-day-index]');
+  if (!lane || !timeline) return null;
+  const dayIndex = Number(timeline.getAttribute('data-day-index') || 0);
+  const ringIndex = Number(lane.getAttribute('data-ring') || 0);
+  const rect = lane.getBoundingClientRect();
+  const slotH = timelineSlotHeight(timeline);
+  const y = Math.max(0, clientY - rect.top);
+  const slotIndex = Math.max(0, Math.floor(y / slotH));
+  return {
+    dayIndex,
+    ringIndex,
+    startOffset: slotIndex * SLOT,
+    lane,
+    timeline,
+    slotH
+  };
+}
+
+function removeBreak(id, { skipNormalize = false } = {}) {
+  const sched = ctx.state;
+  const br = sched?.breaks?.[String(id)];
+  if (!br) return;
+  const start = Number(br.start_offset_minutes || 0);
+  const end = start + breakDuration(br);
+  const dayIndex = Number(br.day_index || 0);
+  const rings = ringsForBreak(br);
+  delete sched.breaks[String(id)];
+  if (ctx.selectedId === String(id)) ctx.selectedId = '';
+  rings.forEach((ringIndex) => closeGapOnRing(dayIndex, ringIndex, start, end, id));
+  if (!skipNormalize) normalizeAllOverlaps();
+}
+
+function syncPendingBreakUi() {
+  const placing = Boolean(ctx.pendingBreak);
+  document.documentElement.classList.toggle('is-placing-break', placing);
+  document.getElementById('liveAddBreakOneBtn')?.classList.toggle('is-pending', placing && !ctx.pendingBreak.allRings);
+  document.getElementById('liveAddBreakAllBtn')?.classList.toggle('is-pending', placing && Boolean(ctx.pendingBreak.allRings));
+}
+
+function cancelPendingBreak({ silent = false } = {}) {
+  if (!ctx.pendingBreak) return;
+  ctx.pendingBreak = null;
+  syncPendingBreakUi();
+  document.getElementById('liveDragGhost')?.remove();
+  if (!silent) showToast('Break placement cancelled.');
+}
+
+function beginPendingBreak(allRings) {
+  if (!ctx.canEdit || !ctx.state) return;
+  hideContextMenu();
+  const wantAll = Boolean(allRings);
+  if (ctx.pendingBreak && Boolean(ctx.pendingBreak.allRings) === wantAll) {
+    cancelPendingBreak();
+    return;
+  }
+  ctx.pendingBreak = { allRings: wantAll, duration: DEFAULT_BREAK_MINUTES };
+  syncPendingBreakUi();
+  showToast(wantAll
+    ? 'Click a ring or the scratch pad to place a 30 min break on all rings.'
+    : 'Click a ring or the scratch pad to place a 30 min break.');
+}
+
+function placePendingBreakAt(dayIndex, ringIndex, startOffset) {
+  const pending = ctx.pendingBreak;
+  const sched = ctx.state;
+  if (!pending || !sched) return false;
+  sched.breaks = sched.breaks || {};
+  const id = newBreakId();
+  const ringCount = scheduleRingCount(sched);
+  const allRings = Boolean(pending.allRings);
+  sched.breaks[id] = {
+    day_index: Number(dayIndex),
+    ring_index: allRings ? 0 : Number(ringIndex),
+    ring_span: allRings ? ringCount : 1,
+    all_rings: allRings,
+    start_offset_minutes: Number(startOffset) || 0,
+    duration_minutes: Math.max(SLOT, snapMinutes(pending.duration))
+  };
+  const ok = placeBlockAt(id, dayIndex, allRings ? 0 : ringIndex, startOffset, { from: 'new' });
+  if (!ok) {
+    delete sched.breaks[id];
+    return false;
+  }
+  ctx.pendingBreak = null;
+  syncPendingBreakUi();
+  ctx.selectedId = id;
+  renderViewer();
+  showToast(allRings ? 'Break added on all rings.' : 'Break added.');
+  return true;
+}
+
+function placePendingBreakOnScratch() {
+  const pending = ctx.pendingBreak;
+  const sched = ctx.state;
+  if (!pending || !sched) return false;
+  sched.breaks = sched.breaks || {};
+  sched.scratch_ids = sched.scratch_ids || [];
+  const id = newBreakId();
+  const ringCount = scheduleRingCount(sched);
+  const allRings = Boolean(pending.allRings);
+  sched.breaks[id] = {
+    day_index: Number(sched.active_day_index || 0),
+    ring_index: 0,
+    ring_span: allRings ? ringCount : 1,
+    all_rings: allRings,
+    start_offset_minutes: 0,
+    duration_minutes: Math.max(SLOT, snapMinutes(pending.duration))
+  };
+  if (!sched.scratch_ids.includes(id)) sched.scratch_ids.push(id);
+  ctx.pendingBreak = null;
+  syncPendingBreakUi();
+  ctx.selectedId = id;
+  markDirty();
+  renderViewer();
+  showToast(allRings ? 'All-rings break added to scratch.' : 'Break added to scratch.');
+  return true;
+}
+
 function sendToScratch(ids) {
   const sched = ctx.state;
   if (!sched || !ids.length) return;
   sched.scratch_ids = sched.scratch_ids || [];
-  ids.forEach((id) => {
+  ids.forEach((rawId) => {
+    const id = String(rawId);
+    if (sched.breaks?.[id]) {
+      if (!isScratched(id)) {
+        const br = sched.breaks[id];
+        const start = Number(br.start_offset_minutes || 0);
+        const end = start + breakDuration(br);
+        const dayIndex = Number(br.day_index || 0);
+        ringsForBreak(br).forEach((ringIndex) => {
+          closeGapOnRing(dayIndex, ringIndex, start, end, id);
+        });
+      }
+      if (!sched.scratch_ids.includes(id)) sched.scratch_ids.push(id);
+      return;
+    }
+    const placement = sched.placements?.[id];
+    const entry = catalogEntry(id);
+    let vacated = null;
+    if (placement && entry) {
+      const start = Number(placement.start_offset_minutes || 0);
+      vacated = {
+        dayIndex: Number(placement.day_index || 0),
+        ringIndex: Number(placement.ring_index || 0),
+        start,
+        end: start + displayDuration(entry, sched)
+      };
+    }
     if (sched.placements) delete sched.placements[id];
     if (!sched.scratch_ids.includes(id)) sched.scratch_ids.push(id);
+    if (vacated) {
+      closeGapOnRing(vacated.dayIndex, vacated.ringIndex, vacated.start, vacated.end, id);
+    }
   });
+  normalizeAllOverlaps();
   markDirty();
 }
 
 function ringDayBlocks(dayIndex, ringIndex, excludeId = null) {
   const sched = ctx.state;
   const blocks = [];
+  const ringCount = scheduleRingCount(sched);
   Object.entries(sched.placements || {}).forEach(([id, placement]) => {
     if (excludeId != null && String(id) === String(excludeId)) return;
     if (Number(placement.day_index || 0) !== Number(dayIndex)) return;
@@ -531,100 +744,200 @@ function ringDayBlocks(dayIndex, ringIndex, excludeId = null) {
     if (!entry) return;
     const start = Number(placement.start_offset_minutes || 0);
     const duration = displayDuration(entry, sched);
-    blocks.push({ id: String(id), placement, start, duration, end: start + duration });
+    blocks.push({
+      id: String(id),
+      kind: 'division',
+      placement,
+      start,
+      duration,
+      end: start + duration
+    });
+  });
+  Object.entries(sched.breaks || {}).forEach(([id, block]) => {
+    if (excludeId != null && String(id) === String(excludeId)) return;
+    if (isScratched(id)) return;
+    if (Number(block.day_index || 0) !== Number(dayIndex)) return;
+    if (!breakCoversRing(block, ringIndex, ringCount)) return;
+    const start = Number(block.start_offset_minutes || 0);
+    const duration = breakDuration(block);
+    blocks.push({
+      id: String(id),
+      kind: 'break',
+      block,
+      allRings: Boolean(block.all_rings),
+      span: breakRingSpan(block, ringCount),
+      start,
+      duration,
+      end: start + duration
+    });
   });
   blocks.sort((a, b) => a.start - b.start || a.id.localeCompare(b.id));
   return blocks;
 }
 
-function pushSubsequentOnRing(anchorId) {
-  const sched = ctx.state;
-  const placement = sched?.placements?.[anchorId];
-  const entry = catalogEntry(anchorId);
-  if (!placement || !entry) return;
-
-  const dayIndex = Number(placement.day_index || 0);
-  const ringIndex = Number(placement.ring_index || 0);
-  const myStart = Number(placement.start_offset_minutes || 0);
-  const myDuration = displayDuration(entry, sched);
-  let frontier = myStart + myDuration + GAP;
-
-  const subsequent = ringDayBlocks(dayIndex, ringIndex, anchorId)
-    .filter((block) => block.start >= myStart);
-
-  subsequent.forEach((block) => {
-    if (block.start < frontier) {
-      block.placement.start_offset_minutes = frontier;
-      frontier = frontier + block.duration + GAP;
-    } else {
-      frontier = block.start + block.duration + GAP;
-    }
-  });
-}
-
-function resolveRingAfterFixed(dayIndex, ringIndex, fixedId) {
-  const sched = ctx.state;
-  const fixed = sched?.placements?.[fixedId];
-  const fixedEntry = catalogEntry(fixedId);
-  if (!fixed || !fixedEntry) return;
-
-  const fixedStart = Number(fixed.start_offset_minutes || 0);
-  const fixedEnd = fixedStart + displayDuration(fixedEntry, sched);
-  const others = ringDayBlocks(dayIndex, ringIndex, fixedId);
-  const rest = others.filter((block) => block.end + GAP > fixedStart);
-
-  let frontier = fixedEnd + GAP;
-  rest.sort((a, b) => a.start - b.start || a.id.localeCompare(b.id));
-  rest.forEach((block) => {
-    if (block.start < frontier) {
-      block.placement.start_offset_minutes = frontier;
-      frontier = frontier + block.duration + GAP;
-    } else {
-      frontier = block.start + block.duration + GAP;
-    }
-  });
-}
-
-function placeFromScratchAt(id, dayIndex, ringIndex, startOffsetMinutes) {
-  const sched = ctx.state;
-  const entry = catalogEntry(id);
-  if (!sched || !entry) return false;
-
-  const duration = displayDuration(entry, sched);
-  if (duration <= 0) {
-    showToast('Division has no duration to place.', true);
-    return false;
+function applyBlockStart(meta, start) {
+  const snapped = Math.max(0, Math.floor(Number(start) / SLOT) * SLOT);
+  if (meta.kind === 'break') {
+    if (meta.block) meta.block.start_offset_minutes = snapped;
+  } else if (meta.placement) {
+    meta.placement.start_offset_minutes = snapped;
   }
+  meta.start = snapped;
+  meta.end = snapped + meta.duration;
+}
+
+function normalizeOverlapsOnRing(dayIndex, ringIndex) {
+  const blocks = ringDayBlocks(dayIndex, ringIndex);
+  for (let i = 1; i < blocks.length; i += 1) {
+    const prev = blocks[i - 1];
+    const cur = blocks[i];
+    const minStart = prev.end + GAP;
+    if (cur.start < minStart) applyBlockStart(cur, minStart);
+  }
+}
+
+function normalizeAllOverlaps() {
+  const sched = ctx.state;
+  if (!sched) return false;
+  const days = scheduleDays(sched);
+  const ringCount = scheduleRingCount(sched);
+  let changed = false;
+  for (let n = 0; n < 12; n += 1) {
+    let round = false;
+    days.forEach((_, dayIndex) => {
+      for (let ringIndex = 0; ringIndex < ringCount; ringIndex += 1) {
+        const before = ringDayBlocks(dayIndex, ringIndex).map((b) => `${b.id}:${b.start}`).join('|');
+        normalizeOverlapsOnRing(dayIndex, ringIndex);
+        const after = ringDayBlocks(dayIndex, ringIndex).map((b) => `${b.id}:${b.start}`).join('|');
+        if (before !== after) {
+          round = true;
+          changed = true;
+        }
+      }
+    });
+    if (!round) break;
+  }
+  return changed;
+}
+
+function closeGapOnRing(dayIndex, ringIndex, vacatedStart, vacatedEnd, excludeId = null) {
+  const shift = (Number(vacatedEnd) - Number(vacatedStart)) + GAP;
+  if (!(shift > 0)) return;
+  let expected = Number(vacatedEnd) + GAP;
+  const blocks = ringDayBlocks(dayIndex, ringIndex, excludeId)
+    .filter((block) => block.start >= Number(vacatedStart));
+  for (const block of blocks) {
+    if (block.start > expected) break;
+    if (block.kind === 'break' && (block.allRings || block.span > 1)) break;
+    const oldEnd = block.end;
+    applyBlockStart(block, Math.max(0, block.start - shift));
+    expected = oldEnd + GAP;
+  }
+}
+
+function snapshotBlockLocation(id) {
+  const sched = ctx.state;
+  const br = sched?.breaks?.[String(id)];
+  if (br) {
+    const start = Number(br.start_offset_minutes || 0);
+    const duration = breakDuration(br);
+    return {
+      dayIndex: Number(br.day_index || 0),
+      ringIndex: Number(br.ring_index || 0),
+      start,
+      end: start + duration,
+      allRings: Boolean(br.all_rings),
+      rings: ringsForBreak(br)
+    };
+  }
+  const placement = sched?.placements?.[String(id)];
+  const entry = catalogEntry(id);
+  if (!placement || !entry) return null;
+  const start = Number(placement.start_offset_minutes || 0);
+  const duration = displayDuration(entry, sched);
+  const ringIndex = Number(placement.ring_index || 0);
+  return {
+    dayIndex: Number(placement.day_index || 0),
+    ringIndex,
+    start,
+    end: start + duration,
+    allRings: false,
+    rings: [ringIndex]
+  };
+}
+
+function placeBlockAt(id, dayIndex, ringIndex, startOffsetMinutes, { from = 'scratch' } = {}) {
+  const sched = ctx.state;
+  if (!sched) return false;
+  const breakBlock = sched.breaks?.[String(id)] || null;
+  const entry = breakBlock ? null : catalogEntry(id);
+  if (!breakBlock && !entry) return false;
 
   const days = scheduleDays(sched);
   const day = days[dayIndex];
   if (!day) return false;
   const windowMins = dayWindowMinutes(day);
-  const ringCount = Math.max(1, Number(sched.ring_count || 3));
-  if (ringIndex < 0 || ringIndex >= ringCount) return false;
-  if (duration > windowMins) {
-    showToast('Division is longer than the day window.', true);
+  const ringCount = scheduleRingCount(sched);
+  const duration = breakBlock ? breakDuration(breakBlock) : displayDuration(entry, sched);
+  if (duration <= 0) {
+    showToast(breakBlock ? 'Break has no duration.' : 'Division has no duration to place.', true);
     return false;
   }
+  if (duration > windowMins) {
+    showToast('Item is longer than the day window.', true);
+    return false;
+  }
+
+  const allRings = Boolean(breakBlock?.all_rings);
+  const destRing = allRings ? 0 : Number(ringIndex);
+  if (!allRings && (destRing < 0 || destRing >= ringCount)) return false;
 
   let start = Math.max(0, Math.floor(Number(startOffsetMinutes) / SLOT) * SLOT);
   if (start + duration > windowMins) {
     start = Math.max(0, Math.floor((windowMins - duration) / SLOT) * SLOT);
   }
 
-  sched.placements = sched.placements || {};
-  sched.placements[String(id)] = {
-    day_index: Number(dayIndex),
-    ring_index: Number(ringIndex),
-    start_offset_minutes: start
-  };
-  sched.scratch_ids = (sched.scratch_ids || []).filter((x) => String(x) !== String(id));
-  resolveRingAfterFixed(dayIndex, ringIndex, String(id));
+  const old = from === 'board' ? snapshotBlockLocation(id) : null;
+
+  if (breakBlock) {
+    breakBlock.day_index = Number(dayIndex);
+    breakBlock.ring_index = destRing;
+    breakBlock.start_offset_minutes = start;
+    breakBlock.duration_minutes = duration;
+    if (allRings) breakBlock.ring_span = ringCount;
+    sched.scratch_ids = (sched.scratch_ids || []).filter((x) => String(x) !== String(id));
+  } else {
+    sched.placements = sched.placements || {};
+    sched.placements[String(id)] = {
+      day_index: Number(dayIndex),
+      ring_index: destRing,
+      start_offset_minutes: start
+    };
+    sched.scratch_ids = (sched.scratch_ids || []).filter((x) => String(x) !== String(id));
+  }
+
+  const destRings = allRings
+    ? Array.from({ length: ringCount }, (_, r) => r)
+    : [destRing];
+  destRings.forEach((r) => normalizeOverlapsOnRing(dayIndex, r));
+  normalizeAllOverlaps();
+
+  if (old) {
+    old.rings.forEach((r) => {
+      closeGapOnRing(old.dayIndex, r, old.start, old.end, String(id));
+    });
+    normalizeAllOverlaps();
+  }
 
   markDirty();
   renderViewer();
-  showToast('Placed from scratch.');
   return true;
+}
+
+function placeFromScratchAt(id, dayIndex, ringIndex, startOffsetMinutes) {
+  const ok = placeBlockAt(id, dayIndex, ringIndex, startOffsetMinutes, { from: 'scratch' });
+  if (ok) showToast('Placed from scratch.');
+  return ok;
 }
 
 function setMatchDurationForTargetTotal(id, targetMinutes) {
@@ -643,18 +956,50 @@ function setMatchDurationForTargetTotal(id, targetMinutes) {
 
 function adjustDurationSlots(id, slotDelta) {
   const sched = ctx.state;
+  if (!sched) return;
+
+  const br = sched.breaks?.[String(id)];
+  if (br) {
+    const current = breakDuration(br);
+    const target = Math.max(SLOT, current + slotDelta * SLOT);
+    if (target === current) return;
+    const start = Number(br.start_offset_minutes || 0);
+    const oldEnd = start + current;
+    br.duration_minutes = target;
+    const dayIndex = Number(br.day_index || 0);
+    const rings = ringsForBreak(br);
+    if (target > current) {
+      rings.forEach((ringIndex) => normalizeOverlapsOnRing(dayIndex, ringIndex));
+    } else {
+      rings.forEach((ringIndex) => closeGapOnRing(dayIndex, ringIndex, start + target, oldEnd, id));
+    }
+    normalizeAllOverlaps();
+    markDirty();
+    renderViewer();
+    showToast(slotDelta > 0 ? 'Lengthened break.' : 'Shortened break.');
+    return;
+  }
+
   const entry = catalogEntry(id);
-  if (!sched || !entry || !sched.placements?.[id]) return;
+  if (!entry || !sched.placements?.[id]) return;
 
   const current = displayDuration(entry, sched);
   const target = Math.max(SLOT, current + slotDelta * SLOT);
   if (target === current) return;
 
+  const placement = sched.placements[id];
+  const start = Number(placement.start_offset_minutes || 0);
+  const oldEnd = start + current;
   setMatchDurationForTargetTotal(id, target);
 
+  const dayIndex = Number(placement.day_index || 0);
+  const ringIndex = Number(placement.ring_index || 0);
   if (target > current) {
-    pushSubsequentOnRing(id);
+    normalizeOverlapsOnRing(dayIndex, ringIndex);
+  } else {
+    closeGapOnRing(dayIndex, ringIndex, start + target, oldEnd, id);
   }
+  normalizeAllOverlaps();
 
   markDurationsDirty();
   renderViewer();
@@ -681,11 +1026,14 @@ function showContextMenu(x, y, id) {
   const top = Math.min(y, window.innerHeight - height - pad);
   menu.style.left = `${Math.max(pad, left)}px`;
   menu.style.top = `${Math.max(pad, top)}px`;
+  const deleteBtn = document.getElementById('liveContextDeleteBreak');
+  if (deleteBtn) deleteBtn.hidden = !isBreakId(id);
   document.querySelectorAll('#liveBoard .da-schedule-block.is-selected').forEach((el) => {
     el.classList.remove('is-selected');
   });
-  const selected = document.querySelector(`#liveBoard .da-schedule-block[data-id="${CSS.escape(String(id))}"]`);
-  if (selected) selected.classList.add('is-selected');
+  document.querySelectorAll(`#liveBoard .da-schedule-block[data-id="${CSS.escape(String(id))}"]`).forEach((el) => {
+    el.classList.add('is-selected');
+  });
 }
 
 function dayTimelineHtml(sched, dayIndex) {
@@ -706,10 +1054,28 @@ function dayTimelineHtml(sched, dayIndex) {
     const duration = displayDuration(entry, sched);
     byRing[ring].push({
       id,
+      kind: 'division',
       name: entry.division_name,
       start,
       end: start + duration,
       duration
+    });
+  });
+  Object.entries(sched.breaks || {}).forEach(([id, br]) => {
+    if (isScratched(id)) return;
+    if (Number(br.day_index || 0) !== Number(dayIndex)) return;
+    const duration = breakDuration(br);
+    const start = Number(br.start_offset_minutes || 0);
+    const name = br.all_rings ? 'Break · all rings' : 'Break';
+    ringsForBreak(br, ringCount).forEach((ring) => {
+      byRing[ring].push({
+        id,
+        kind: 'break',
+        name,
+        start,
+        end: start + duration,
+        duration
+      });
     });
   });
   byRing.forEach((list) => list.sort((a, b) => a.start - b.start));
@@ -742,7 +1108,8 @@ function dayTimelineHtml(sched, dayIndex) {
             const topSlots = block.start / SLOT;
             const heightSlots = Math.max(1, block.duration / SLOT);
             const selected = ctx.canEdit && ctx.selectedId === String(block.id) ? 'is-selected' : '';
-            return `<div class="da-schedule-block ${selected}" data-id="${escapeHtml(block.id)}" data-slots="${heightSlots}" draggable="${draggable}"
+            const breakClass = block.kind === 'break' ? 'is-break' : '';
+            return `<div class="da-schedule-block ${selected} ${breakClass}" data-id="${escapeHtml(block.id)}" data-kind="${escapeHtml(block.kind || 'division')}" data-slots="${heightSlots}" draggable="${draggable}"
               style="top:calc(${topSlots} * var(--da-sched-slot-h)); height:calc(${heightSlots} * var(--da-sched-slot-h) - 2px);">
               <strong title="${escapeHtml(block.name)}">${escapeHtml(block.name)}</strong>
               <span>${fmtClock(startAbs, block.start)}–${fmtClock(startAbs, block.end)}</span>
@@ -788,11 +1155,31 @@ function fitDivisionBlockText(root) {
     if (!nameEl || !timeEl) return;
 
     const slots = Math.max(1, Number(block.getAttribute('data-slots')) || 1);
+    const isBreak = block.classList.contains('is-break');
     // Tool 5-min (1-slot) blocks are only ~22px tall — start much smaller.
+    // Breaks keep a smaller clock so the "Break" label stays dominant.
     let preferredName;
     let preferredTime;
     let minSize;
-    if (!toolMode) {
+    if (isBreak) {
+      if (!toolMode) {
+        preferredName = 28;
+        preferredTime = 13;
+        minSize = 8;
+      } else if (slots <= 1) {
+        preferredName = 11;
+        preferredTime = 6;
+        minSize = 5;
+      } else if (slots <= 2) {
+        preferredName = 14;
+        preferredTime = 8;
+        minSize = 6;
+      } else {
+        preferredName = 20;
+        preferredTime = 8;
+        minSize = 7;
+      }
+    } else if (!toolMode) {
       preferredName = 59;
       preferredTime = 50;
       minSize = 8;
@@ -887,14 +1274,19 @@ function renderScratch() {
 
   const slotH = scheduleSlotHeightPx();
   list.innerHTML = ids.map((id) => {
-    const entry = catalogEntry(id);
-    const name = entry?.division_name || id;
-    const duration = entry ? displayDuration(entry, ctx.state) : SLOT;
+    const br = ctx.state?.breaks?.[String(id)] || null;
+    const isBreak = Boolean(br);
+    const entry = isBreak ? null : catalogEntry(id);
+    const name = isBreak
+      ? (br.all_rings ? 'Break · all rings' : 'Break')
+      : (entry?.division_name || id);
+    const duration = isBreak ? breakDuration(br) : (entry ? displayDuration(entry, ctx.state) : SLOT);
     const heightSlots = Math.max(1, (duration || SLOT) / SLOT);
     const heightPx = Math.max(slotH - 2, heightSlots * slotH - 2);
     const selected = ctx.selectedId === String(id) ? 'selected' : '';
     const minsLabel = duration > 0 ? `${duration} min` : '';
-    return `<li class="live-scratch-item ${selected}" data-id="${escapeHtml(id)}" data-slots="${heightSlots}"
+    const kind = isBreak ? 'break' : 'division';
+    return `<li class="live-scratch-item ${selected} ${isBreak ? 'is-break' : ''}" data-id="${escapeHtml(id)}" data-kind="${kind}" data-slots="${heightSlots}"
       draggable="true" style="height:${heightPx}px; min-height:${heightPx}px;">
       <strong title="${escapeHtml(name)}">${escapeHtml(name)}</strong>
       ${minsLabel ? `<span>${escapeHtml(minsLabel)}</span>` : ''}
@@ -936,6 +1328,7 @@ function clampLocalScheduleBounds() {
   const dayCount = days.length;
   sched.active_day_index = Math.max(0, Math.min(Number(sched.active_day_index) || 0, dayCount - 1));
   sched.placements = sched.placements || {};
+  sched.breaks = sched.breaks || {};
   sched.scratch_ids = Array.isArray(sched.scratch_ids) ? sched.scratch_ids.map(String) : [];
   Object.entries(sched.placements).forEach(([id, placement]) => {
     const dayIndex = Number(placement?.day_index || 0);
@@ -944,6 +1337,24 @@ function clampLocalScheduleBounds() {
       delete sched.placements[id];
       if (!sched.scratch_ids.includes(String(id))) sched.scratch_ids.push(String(id));
     }
+  });
+  Object.entries(sched.breaks).forEach(([breakId, br]) => {
+    const dayIndex = Number(br?.day_index || 0);
+    if (dayIndex < 0 || dayIndex >= dayCount) {
+      delete sched.breaks[breakId];
+      return;
+    }
+    if (br.all_rings) {
+      br.ring_index = 0;
+      br.ring_span = ringCount;
+      return;
+    }
+    const ringIndex = Number(br?.ring_index || 0);
+    if (ringIndex < 0 || ringIndex >= ringCount) {
+      delete sched.breaks[breakId];
+      return;
+    }
+    br.ring_span = Math.min(Math.max(1, Number(br.ring_span || 1)), ringCount - ringIndex);
   });
 }
 
@@ -1022,6 +1433,10 @@ function syncToolTabUi() {
 
 function setToolTab(tab) {
   ctx.toolTab = tab === 'times' ? 'times' : 'board';
+  if (ctx.toolTab === 'board' && ctx.durationsDirty && normalizeAllOverlaps()) {
+    markDirty();
+  }
+  cancelPendingBreak({ silent: true });
   syncToolTabUi();
   renderViewer();
 }
@@ -1239,6 +1654,7 @@ function applyDayFieldFromInput(input) {
 
 async function autoFillSchedule() {
   if (!ctx.canEdit || !ctx.state) return;
+  cancelPendingBreak({ silent: true });
   clampLocalScheduleBounds();
   const result = await apiFetch(
     `/api/live-schedule/${encodeURIComponent(ctx.clientId)}/${encodeURIComponent(ctx.eventId)}/pack`,
@@ -1459,6 +1875,7 @@ async function saveSchedule({ silent = false } = {}) {
       reflow = await reflowPlacedSchedule();
     }
 
+    const seqAtStart = ctx.editSeq || 0;
     const saved = await apiFetch(
       `/api/live-schedule/${encodeURIComponent(ctx.clientId)}/${encodeURIComponent(ctx.eventId)}`,
       {
@@ -1466,6 +1883,12 @@ async function saveSchedule({ silent = false } = {}) {
         body: JSON.stringify({ state: ctx.state })
       }
     );
+    if ((ctx.editSeq || 0) !== seqAtStart) {
+      // A local edit landed while this save was in flight (e.g. lengthening a break).
+      // Keep the newer board and let the finally-block auto-save it.
+      ctx.updatedAt = saved.updated_at;
+      return;
+    }
     ctx.state = saved.state;
     ctx.updatedAt = saved.updated_at;
     if (saved.timezone && isValidTimeZone(saved.timezone)) {
@@ -1529,28 +1952,7 @@ function bindDragDrop() {
     dragImageEl = null;
   };
 
-  const dropTargetFromPoint = (clientX, clientY) => {
-    const stack = document.elementsFromPoint(clientX, clientY);
-    const lane = stack
-      .map((el) => (el.nodeType === 1 ? el.closest('.da-schedule-ring-lane[data-ring]') : null))
-      .find(Boolean);
-    const timeline = lane?.closest('.da-schedule-timeline[data-day-index]');
-    if (!lane || !timeline) return null;
-    const dayIndex = Number(timeline.getAttribute('data-day-index') || 0);
-    const ringIndex = Number(lane.getAttribute('data-ring') || 0);
-    const rect = lane.getBoundingClientRect();
-    const slotH = timelineSlotHeight(timeline);
-    const y = Math.max(0, clientY - rect.top);
-    const slotIndex = Math.max(0, Math.floor(y / slotH));
-    return {
-      dayIndex,
-      ringIndex,
-      startOffset: slotIndex * SLOT,
-      lane,
-      timeline,
-      slotH
-    };
-  };
+  const dropTargetFromPoint = timelineDropTargetFromPoint;
 
   const ensureDragGhost = (heightPx) => {
     let ghost = document.getElementById('liveDragGhost');
@@ -1564,8 +1966,16 @@ function bindDragDrop() {
     return ghost;
   };
 
-  const updateDragGhost = (clientX, clientY) => {
-    if (!activeDrag || activeDrag.from !== 'scratch') {
+  const ghostDurationFor = (payload) => {
+    if (ctx.pendingBreak && !payload) return ctx.pendingBreak.duration;
+    if (!payload?.id) return SLOT;
+    return itemDuration(payload.id);
+  };
+
+  const updateDragGhost = (clientX, clientY, payload = activeDrag) => {
+    const placing = Boolean(ctx.pendingBreak) && !payload;
+    const dragging = Boolean(payload && (payload.from === 'scratch' || payload.from === 'board'));
+    if (!placing && !dragging) {
       removeDragGhost();
       return null;
     }
@@ -1575,8 +1985,7 @@ function bindDragDrop() {
       return null;
     }
 
-    const entry = catalogEntry(activeDrag.id);
-    const duration = entry ? displayDuration(entry, ctx.state) : SLOT;
+    const duration = ghostDurationFor(payload);
     const heightSlots = Math.max(1, (duration || SLOT) / SLOT);
     const heightPx = heightSlots * target.slotH - 2;
     let start = Math.max(0, Math.floor(Number(target.startOffset) / SLOT) * SLOT);
@@ -1588,6 +1997,7 @@ function bindDragDrop() {
     const topPx = (start / SLOT) * target.slotH;
 
     const ghost = ensureDragGhost(heightPx);
+    ghost.classList.toggle('is-break', placing || isBreakId(payload?.id));
     if (ghost.parentNode !== target.lane) {
       target.lane.appendChild(ghost);
     }
@@ -1601,11 +2011,21 @@ function bindDragDrop() {
     const block = e.target.closest('.da-schedule-block[data-id]');
     if (!block || !e.dataTransfer) return;
     hideContextMenu();
+    cancelPendingBreak({ silent: true });
     block.classList.add('da-dragging');
-    setPayload(e.dataTransfer, { id: block.getAttribute('data-id'), from: 'board' });
+    document.querySelectorAll(`#liveBoard .da-schedule-block[data-id="${CSS.escape(block.getAttribute('data-id'))}"]`)
+      .forEach((el) => el.classList.add('da-dragging'));
+    setPayload(e.dataTransfer, {
+      id: block.getAttribute('data-id'),
+      from: 'board',
+      kind: block.getAttribute('data-kind') || 'division'
+    });
   });
 
   document.getElementById('liveBoard')?.addEventListener('dragend', (e) => {
+    document.querySelectorAll('#liveBoard .da-schedule-block.da-dragging').forEach((el) => {
+      el.classList.remove('da-dragging');
+    });
     e.target.closest('.da-schedule-block')?.classList.remove('da-dragging');
     activeDrag = null;
     clearDropTargets();
@@ -1665,22 +2085,31 @@ function bindDragDrop() {
     if (!ctx.canEdit || !payload || payload.from !== 'board') return;
     sendToScratch([payload.id]);
     renderViewer();
-    showToast('Moved to scratch.');
+    showToast(isBreakId(payload.id) ? 'Break moved to scratch.' : 'Moved to scratch.');
   });
 
   const boardDrop = document.getElementById('liveBoardDrop');
   boardDrop?.addEventListener('dragover', (e) => {
-    if (!ctx.canEdit || !activeDrag || activeDrag.from !== 'scratch') return;
+    const canPlacePending = Boolean(ctx.pendingBreak) && !activeDrag;
+    const canDropDrag = Boolean(activeDrag && (activeDrag.from === 'scratch' || activeDrag.from === 'board'));
+    if (!ctx.canEdit || (!canPlacePending && !canDropDrag)) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     boardDrop.classList.add('is-drop-target');
     updateDragGhost(e.clientX, e.clientY);
+  });
+  boardDrop?.addEventListener('mousemove', (e) => {
+    if (!ctx.canEdit || !ctx.pendingBreak || activeDrag) return;
+    updateDragGhost(e.clientX, e.clientY, null);
   });
   boardDrop?.addEventListener('dragleave', (e) => {
     if (!boardDrop.contains(e.relatedTarget)) {
       boardDrop.classList.remove('is-drop-target');
       removeDragGhost();
     }
+  });
+  boardDrop?.addEventListener('mouseleave', () => {
+    if (ctx.pendingBreak && !activeDrag) removeDragGhost();
   });
   boardDrop?.addEventListener('drop', (e) => {
     e.preventDefault();
@@ -1690,11 +2119,23 @@ function bindDragDrop() {
     removeDragGhost();
     removeDragImage();
     activeDrag = null;
-    if (!ctx.canEdit || !payload || payload.from !== 'scratch') return;
+    if (!ctx.canEdit) return;
 
     const target = preview || dropTargetFromPoint(e.clientX, e.clientY);
     if (!target) {
-      showToast('Drop onto a ring lane to place.', true);
+      if (payload) showToast('Drop onto a ring lane to place.', true);
+      return;
+    }
+
+    if (ctx.pendingBreak && !payload) {
+      placePendingBreakAt(target.dayIndex, target.ringIndex, target.startOffset);
+      return;
+    }
+    if (!payload || (payload.from !== 'scratch' && payload.from !== 'board')) return;
+
+    if (payload.from === 'board') {
+      const ok = placeBlockAt(payload.id, target.dayIndex, target.ringIndex, target.startOffset, { from: 'board' });
+      if (ok) showToast(isBreakId(payload.id) ? 'Break moved.' : 'Moved.');
       return;
     }
     placeFromScratchAt(payload.id, target.dayIndex, target.ringIndex, target.startOffset);
@@ -1713,14 +2154,27 @@ function bindContextMenu() {
     showContextMenu(e.clientX, e.clientY, block.getAttribute('data-id'));
   });
 
+  document.getElementById('liveContextMenu')?.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  });
+
   document.getElementById('liveContextMenu')?.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-action]');
     if (!btn || !ctx.contextId) return;
+    e.preventDefault();
+    e.stopPropagation();
     const id = ctx.contextId;
     const action = btn.getAttribute('data-action');
-    hideContextMenu();
     if (action === 'longer') adjustDurationSlots(id, 1);
     else if (action === 'shorter') adjustDurationSlots(id, -1);
+    else if (action === 'delete-break' && isBreakId(id)) {
+      removeBreak(id);
+      markDirty();
+      renderViewer();
+      showToast('Break deleted.');
+    }
+    hideContextMenu();
   });
 
   document.addEventListener('click', (e) => {
@@ -1731,7 +2185,10 @@ function bindContextMenu() {
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') hideContextMenu();
+    if (e.key === 'Escape') {
+      hideContextMenu();
+      cancelPendingBreak();
+    }
   });
 
   window.addEventListener('scroll', hideContextMenu, true);
@@ -1761,6 +2218,12 @@ function bindViewerEvents() {
     if (!ctx.canEdit || !ctx.state) return;
     const n = Math.min(32, (Number(ctx.state.ring_count) || 3) + 1);
     ctx.state.ring_count = n;
+    Object.values(ctx.state.breaks || {}).forEach((br) => {
+      if (br?.all_rings) {
+        br.ring_index = 0;
+        br.ring_span = n;
+      }
+    });
     markDirty();
     renderViewer();
   });
@@ -1808,6 +2271,14 @@ function bindViewerEvents() {
     applyDayFieldFromInput(input);
   });
 
+  document.getElementById('liveAddBreakOneBtn')?.addEventListener('click', () => {
+    beginPendingBreak(false);
+  });
+
+  document.getElementById('liveAddBreakAllBtn')?.addEventListener('click', () => {
+    beginPendingBreak(true);
+  });
+
   document.getElementById('liveAutoFillBtn')?.addEventListener('click', async () => {
     try {
       await autoFillSchedule();
@@ -1818,13 +2289,27 @@ function bindViewerEvents() {
 
   document.getElementById('liveBoard')?.addEventListener('click', (e) => {
     if (!isToolMode()) return;
+    if (ctx.pendingBreak && ctx.canEdit) {
+      const target = timelineDropTargetFromPoint(e.clientX, e.clientY);
+      if (!target) return;
+      e.preventDefault();
+      placePendingBreakAt(target.dayIndex, target.ringIndex, target.startOffset);
+      return;
+    }
     const block = e.target.closest('.da-schedule-block[data-id]');
     if (!block) return;
     ctx.selectedId = block.getAttribute('data-id');
     renderBoard();
   });
 
+  document.getElementById('liveScratchDrop')?.addEventListener('click', (e) => {
+    if (!ctx.canEdit || !ctx.pendingBreak) return;
+    e.preventDefault();
+    placePendingBreakOnScratch();
+  });
+
   document.getElementById('liveScratchList')?.addEventListener('click', (e) => {
+    if (ctx.pendingBreak) return;
     const item = e.target.closest('.live-scratch-item[data-id]');
     if (!item) return;
     ctx.selectedId = item.getAttribute('data-id');

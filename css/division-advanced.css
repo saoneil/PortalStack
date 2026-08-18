@@ -2227,6 +2227,11 @@ html.da-start-screen .da-template-toggle {
   opacity: 0.55;
 }
 
+.da-schedule-block.is-break {
+  border-left-color: #f0c420;
+  background: rgba(55, 42, 0, 0.92);
+}
+
 .da-schedule-block strong {
   display: block;
   color: #fff;

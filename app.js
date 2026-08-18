@@ -558,11 +558,7 @@ app.get('/', (req, res) => {
     'X-Robots-Tag': 'noindex, nofollow, noarchive',
     'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; font-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
   });
-  if (req.session.loggedIn) {
-    res.redirect('/landing');
-  } else {
-    res.sendFile(path.join(__dirname, 'html', 'index.html'));
-  }
+  res.sendFile(path.join(__dirname, 'html', 'index.html'));
 });
 
 app.get('/login', (req, res) => {
@@ -720,6 +716,16 @@ app.get('/live-schedule/:clientId/:eventId', (req, res) => {
     'X-Robots-Tag': 'noindex, nofollow, noarchive'
   });
   res.sendFile(path.join(__dirname, 'html', 'live-schedule.html'));
+});
+
+app.get('/umpire-management', requireLogin, (req, res) => {
+  res.set({
+    'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+    Pragma: 'no-cache',
+    Expires: '0',
+    'X-Robots-Tag': 'noindex, nofollow, noarchive'
+  });
+  res.sendFile(path.join(__dirname, 'html', 'umpire-management.html'));
 });
 
 app.get('/digital-id/:clientId/:eventId', (req, res) => {
@@ -1667,6 +1673,7 @@ const {
   createRequirePrincipleUserAdvanced
 } = require('./lib/division-tool/routes');
 const { registerLiveScheduleRoutes } = require('./lib/division-tool/live-schedule-routes');
+const { displayDurationMinutes } = require('./lib/division-tool/schedule');
 
 const requirePrincipleUser = createRequirePrincipleUser(lookupUserFlags);
 const requirePrincipleUserAdvanced = createRequirePrincipleUserAdvanced(lookupUserFlags);
@@ -1684,6 +1691,263 @@ registerLiveScheduleRoutes(app, db, {
   requirePrincipleUserAdvanced,
   liveScheduleLimiter,
   lookupUserFlags
+});
+
+function parseScheduleRingCount(stateJson) {
+  let state = stateJson;
+  if (typeof state === 'string') {
+    try {
+      state = JSON.parse(state);
+    } catch (err) {
+      return 0;
+    }
+  }
+  if (!state || typeof state !== 'object') return 0;
+  const n = Number(state.ring_count);
+  if (!Number.isFinite(n) || n < 1) return 0;
+  return Math.max(1, Math.min(32, Math.floor(n)));
+}
+
+function buildUmpireScheduleOverlay(stateJson) {
+  const state = parseJsonObject(stateJson);
+  if (!state || typeof state !== 'object') return null;
+  const ringCount = parseScheduleRingCount(state);
+  if (ringCount < 1) return null;
+  const catalogById = {};
+  (Array.isArray(state.catalog) ? state.catalog : []).forEach((entry) => {
+    if (entry && entry.id != null) catalogById[String(entry.id)] = entry;
+  });
+  const days = Array.isArray(state.days) && state.days.length
+    ? state.days
+    : [{ name: 'Day 1', start_time: '08:00', end_time: '18:00' }];
+  const rings = {};
+  for (let ring = 1; ring <= ringCount; ring += 1) rings[String(ring)] = [];
+  Object.entries(state.placements || {}).forEach(([id, placement]) => {
+    if (!placement || typeof placement !== 'object') return;
+    const entry = catalogById[String(id)];
+    if (!entry) return;
+    const ring = (Number(placement.ring_index) || 0) + 1;
+    if (!rings[String(ring)]) return;
+    const start = Math.max(0, Number(placement.start_offset_minutes) || 0);
+    const duration = displayDurationMinutes(entry, state.match_durations || {}, state.buffer_durations || {});
+    rings[String(ring)].push({
+      name: String(entry.division_name || entry.id || 'Division'),
+      start,
+      end: start + Math.max(0, duration),
+      dayIndex: Math.max(0, Number(placement.day_index) || 0)
+    });
+  });
+  Object.keys(rings).forEach((key) => {
+    rings[key].sort((a, b) => {
+      if (a.dayIndex !== b.dayIndex) return a.dayIndex - b.dayIndex;
+      return a.start - b.start;
+    });
+  });
+  return {
+    timezone: typeof state.timezone === 'string' ? state.timezone : null,
+    activeDayIndex: Math.max(0, Number(state.active_day_index) || 0),
+    days: days.map((day, index) => ({
+      name: String((day && day.name) || ('Day ' + (index + 1))),
+      start_time: String((day && day.start_time) || '08:00'),
+      end_time: String((day && day.end_time) || '18:00')
+    })),
+    rings
+  };
+}
+
+const UMPIRE_SLOT_KEYS = [
+  'jury_president',
+  'jury_member',
+  'it_umpire',
+  'umpire_1',
+  'umpire_2',
+  'umpire_3',
+  'umpire_4',
+  'umpire_5',
+  'equipment_verifier_1',
+  'equipment_verifier_2'
+];
+
+function queryAsync(sql, params) {
+  return new Promise((resolve, reject) => {
+    db.query(sql, params || [], (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows);
+    });
+  });
+}
+
+let umpireAssignmentsTablePromise = null;
+function ensureUmpireAssignmentsTable() {
+  if (!umpireAssignmentsTablePromise) {
+    umpireAssignmentsTablePromise = queryAsync(`
+      CREATE TABLE IF NOT EXISTS umpire_assignments (
+        client_id VARCHAR(64) NOT NULL,
+        event_id VARCHAR(64) NOT NULL,
+        format_version INT NOT NULL DEFAULT 1,
+        state_json JSON NOT NULL,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (client_id, event_id)
+      )
+    `).catch((err) => {
+      umpireAssignmentsTablePromise = null;
+      throw err;
+    });
+  }
+  return umpireAssignmentsTablePromise;
+}
+
+function emptyUmpireRingAssignments() {
+  const row = {};
+  UMPIRE_SLOT_KEYS.forEach((key) => {
+    row[key] = null;
+  });
+  return row;
+}
+
+function sanitizeUmpireAssignments(raw, ringCount, validUmpireIds) {
+  const next = {};
+  const used = new Set();
+  const src = raw && typeof raw === 'object' ? raw : {};
+  const n = Math.max(0, Number(ringCount) || 0);
+  for (let ring = 1; ring <= n; ring += 1) {
+    const key = String(ring);
+    const rowSrc = src[key] && typeof src[key] === 'object' ? src[key] : {};
+    const row = emptyUmpireRingAssignments();
+    UMPIRE_SLOT_KEYS.forEach((slotKey) => {
+      const id = rowSrc[slotKey] == null || rowSrc[slotKey] === '' ? '' : String(rowSrc[slotKey]);
+      if (id && validUmpireIds.has(id) && !used.has(id)) {
+        row[slotKey] = id;
+        used.add(id);
+      }
+    });
+    next[key] = row;
+  }
+  return next;
+}
+
+function parseJsonObject(value) {
+  if (value == null || value === '') return {};
+  if (typeof Buffer !== 'undefined' && Buffer.isBuffer(value)) {
+    value = value.toString('utf8');
+  }
+  if (typeof value === 'string') {
+    try {
+      value = JSON.parse(value);
+    } catch (err) {
+      return {};
+    }
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return value;
+}
+
+app.get('/api/umpire-management/events/:eventId', requireLogin, requirePrincipleUserAdvanced, async (req, res) => {
+  const clientId = req.session.clientId;
+  const eventId = req.params.eventId;
+  try {
+    const eventResults = await queryAsync(
+      'SELECT id, event_name, event_date_start FROM events WHERE id = ? AND client_id = ?',
+      [eventId, clientId]
+    );
+    if (!eventResults || eventResults.length === 0) {
+      return res.status(403).json({ error: 'You do not have permission to manage umpires for this event.' });
+    }
+
+    const eventRow = eventResults[0];
+    const umpireRows = await queryAsync(
+      `SELECT id, first_name, last_name, contact_email, \`rank\`, gender, team_name_or_country
+       FROM registration
+       WHERE event_id = ? AND LOWER(role) = 'umpire'
+       ORDER BY last_name, first_name`,
+      [eventId]
+    );
+
+    const schedRows = await queryAsync(
+      'SELECT state_json FROM schedules WHERE client_id = ? AND event_id = ? LIMIT 1',
+      [clientId, eventId]
+    );
+    const scheduleState = schedRows && schedRows[0] ? schedRows[0].state_json : null;
+    const ringCount = parseScheduleRingCount(scheduleState);
+    const scheduleOverlay = buildUmpireScheduleOverlay(scheduleState);
+
+    const validIds = new Set((umpireRows || []).map((row) => String(row.id)));
+    let assignments = sanitizeUmpireAssignments({}, ringCount, validIds);
+    try {
+      await ensureUmpireAssignmentsTable();
+      const assignmentRows = await queryAsync(
+        'SELECT state_json FROM umpire_assignments WHERE client_id = ? AND event_id = ? LIMIT 1',
+        [clientId, eventId]
+      );
+      const stored = assignmentRows && assignmentRows[0]
+        ? parseJsonObject(assignmentRows[0].state_json)
+        : {};
+      const rawAssignments = stored.assignments && typeof stored.assignments === 'object' && !Array.isArray(stored.assignments)
+        ? stored.assignments
+        : stored;
+      assignments = sanitizeUmpireAssignments(rawAssignments, ringCount, validIds);
+    } catch (assignErr) {
+      console.error(assignErr);
+    }
+
+    res.json({
+      event: {
+        id: String(eventRow.id),
+        name: eventRow.event_name || '',
+        dateStart: eventRow.event_date_start || null
+      },
+      umpires: umpireRows || [],
+      ringCount,
+      assignments,
+      scheduleOverlay
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Unable to load umpire management data. Please try again shortly.' });
+  }
+});
+
+app.put('/api/umpire-management/events/:eventId/assignments', requireLogin, requirePrincipleUserAdvanced, async (req, res) => {
+  const clientId = req.session.clientId;
+  const eventId = req.params.eventId;
+  try {
+    const eventResults = await queryAsync(
+      'SELECT id FROM events WHERE id = ? AND client_id = ?',
+      [eventId, clientId]
+    );
+    if (!eventResults || eventResults.length === 0) {
+      return res.status(403).json({ error: 'You do not have permission to manage umpires for this event.' });
+    }
+
+    const umpireRows = await queryAsync(
+      `SELECT id FROM registration WHERE event_id = ? AND LOWER(role) = 'umpire'`,
+      [eventId]
+    );
+    const schedRows = await queryAsync(
+      'SELECT state_json FROM schedules WHERE client_id = ? AND event_id = ? LIMIT 1',
+      [clientId, eventId]
+    );
+    const ringCount = schedRows && schedRows[0]
+      ? parseScheduleRingCount(schedRows[0].state_json)
+      : 0;
+    const validIds = new Set((umpireRows || []).map((row) => String(row.id)));
+    const assignments = sanitizeUmpireAssignments(req.body && req.body.assignments, ringCount, validIds);
+
+    await ensureUmpireAssignmentsTable();
+    const json = JSON.stringify({ format_version: 1, assignments });
+    await queryAsync(
+      `INSERT INTO umpire_assignments (client_id, event_id, state_json)
+       VALUES (?, ?, CAST(? AS JSON))
+       ON DUPLICATE KEY UPDATE
+         state_json = VALUES(state_json),
+         updated_at = CURRENT_TIMESTAMP`,
+      [String(clientId), String(eventId), json]
+    );
+    res.json({ ok: true, assignments });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Unable to save umpire assignments. Please try again shortly.' });
+  }
 });
 
 // Global Express error handler — returns JSON instead of crashing
