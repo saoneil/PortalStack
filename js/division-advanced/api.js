@@ -33,3 +33,28 @@ export function logInteraction(action, details) {
     body: JSON.stringify({ interaction: { action, page: 'division-advanced', ...(details || {}) } })
   }).catch(() => {});
 }
+
+const PORTAL_LAST_EVENT_KEY = 'portal-last-event-id';
+
+export function rememberPortalEventId(eventId) {
+  const id = String(eventId || '').trim();
+  if (!id) return;
+  try {
+    sessionStorage.setItem(PORTAL_LAST_EVENT_KEY, id);
+  } catch (_) { /* ignore */ }
+}
+
+/** Tell landing (and other tool iframes) that draws/schedule data changed. */
+export function notifyPortalDataUpdated({ eventId = '', deleted = false } = {}) {
+  if (eventId) rememberPortalEventId(eventId);
+  const payload = {
+    type: 'portal-data-updated',
+    eventId: String(eventId || ''),
+    deleted: Boolean(deleted)
+  };
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(payload, window.location.origin);
+    }
+  } catch (_) { /* ignore */ }
+}

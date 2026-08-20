@@ -1,13 +1,14 @@
-import { apiFetch, logInteraction } from './api.js';
+import { apiFetch, logInteraction, notifyPortalDataUpdated, rememberPortalEventId } from './api.js';
 import { state, requireEvent, selectedDrawEntry } from './state.js';
 import {
   showToast, showConfirmModal, showPromptModal, setBusy, renderDivisionsTable, renderDraws,
   loadEvents, loadTemplates, loadSavedForEvent, loadCreationStatus,
   saveDivisionsForEvent, saveNamedDivisionTemplate, switchDrawSubtab, eventNickname, loadEventTemplateLeaves,
-  moveSelectedAthletesLocally, combineSoloDivisionsLocally, countSoloDivisions,
+  moveSelectedAthletesLocally, combineSoloDivisionsLocally, countSoloDivisions, setDivisionNameQuery,
   renderDrawPreviewPanels, closeTemplatePicker, toggleTemplatePicker, deleteDivisionTemplate
 } from './ui.js';
 import { initPatternForm, bindPatternForm, collectPatternFormPayload } from './pattern-form.js';
+import { initCustomDivisionFeature } from './custom-division.js';
 
 function setPrompt(message, { hidden = false } = {}) {
   const prompt = document.getElementById('workflowProgressText');
@@ -162,6 +163,13 @@ function writeSoloCombinedFlag(value, eventId = state.eventId) {
   } catch (_) { /* ignore */ }
 }
 
+function setChoiceBtnLabel(btn, label) {
+  if (!btn) return;
+  const labelEl = btn.querySelector('.da-btn-label');
+  if (labelEl) labelEl.textContent = label;
+  else btn.textContent = label;
+}
+
 function syncCombineSoloButton() {
   const btn = document.getElementById('combineSoloDrawsBtn');
   if (!btn) return;
@@ -171,11 +179,11 @@ function syncCombineSoloButton() {
   if (clicked || soloCount === 0) {
     btn.disabled = true;
     btn.classList.add('da-choice-btn-done');
-    btn.textContent = clicked ? 'Solo Divisions Combined' : 'No Solo Divisions';
+    setChoiceBtnLabel(btn, clicked ? 'Solo Divisions Combined' : 'No Solo Divisions');
       } else {
     btn.disabled = false;
     btn.classList.remove('da-choice-btn-done');
-    btn.textContent = 'Combine Solo Divisions';
+    setChoiceBtnLabel(btn, 'Solo Divisions');
   }
 }
 
@@ -218,12 +226,12 @@ function syncSaveDivisionTemplateButton() {
   if (savedName) {
     btn.disabled = true;
     btn.classList.add('da-choice-btn-done');
-    btn.textContent = `Template Saved as "${savedName}"`;
+    setChoiceBtnLabel(btn, `Template Saved as "${savedName}"`);
     btn.title = `division template already saved as "${savedName}"`;
   } else {
     btn.disabled = false;
     btn.classList.remove('da-choice-btn-done');
-    btn.textContent = 'Save Division Template';
+    setChoiceBtnLabel(btn, 'Save Template');
     btn.removeAttribute('title');
   }
 }
@@ -310,14 +318,37 @@ function resetSessionData() {
   syncSaveDivisionTemplateButton();
 }
 
+function isEventLiveToday() {
+  const event = state.events.find((e) => String(e.id) === String(state.eventId));
+  if (!event) return false;
+  const start = event.event_date_start ? new Date(event.event_date_start) : null;
+  const end = event.event_date_end ? new Date(event.event_date_end) : start;
+  if (!start) return false;
+  const today = new Date();
+  const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const startDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const endDate = end ? new Date(end.getFullYear(), end.getMonth(), end.getDate()) : startDate;
+  return todayDate >= startDate && todayDate <= endDate;
+}
+
 async function confirmStartOver() {
   const eventName = eventNickname() || 'this event';
-  return showConfirmModal({
+  const first = await showConfirmModal({
     title: 'start over',
-    message: `Delete all saved divisions, draws, draw results, and live schedules for “${eventName}”? This cannot be undone and may undo a lot of work. Registration will not be changed.`,
+    message: `Delete all saved divisions, draws, draw results, and live schedules for "${eventName}"? This cannot be undone and may undo a lot of work. Registration will not be changed.`,
     confirmLabel: 'delete everything',
     cancelLabel: 'cancel',
     danger: true
+  });
+  if (!first) return false;
+  if (!isEventLiveToday()) return true;
+  return showConfirmModal({
+    title: 'LIVE EVENT \u2014 FINAL WARNING',
+    message: `This event is happening TODAY. Deleting draws and results while scoring is live cannot be undone. All scoring data for "${eventName}" will be permanently lost.`,
+    confirmLabel: 'I understand \u2014 delete everything',
+    cancelLabel: 'cancel',
+    danger: true,
+    liveWarning: true
   });
 }
 
@@ -339,6 +370,7 @@ async function startOver() {
     renderDraws();
     await loadTemplates();
     showToast('divisions, draws, results, and schedules removed. start from the beginning.');
+    notifyPortalDataUpdated({ eventId: state.eventId, deleted: true });
     await refreshWheelFromStatus();
   } catch (err) {
     showToast(err.message || 'unable to start over.', true);
@@ -362,7 +394,16 @@ async function regenerateDrawsSession({ silent = false } = {}) {
   state.drawDirty = false;
   state.selectedAthleteIndices = new Set();
   renderDraws();
+  notifyPortalDataUpdated({ eventId });
   if (!silent) showToast('draws saved.');
+}
+
+async function ensureDrawsLoadedForEvent() {
+  if (state.drawsState) return;
+  await loadSavedForEvent();
+  if (!state.drawsState) {
+    state.drawsState = { format_version: 1, catalog: [] };
+  }
 }
 
 async function downloadEventDrawPdfs() {
@@ -407,6 +448,7 @@ function bindEventSelect() {
   const select = document.getElementById('eventSelect');
   select?.addEventListener('change', async (e) => {
     state.eventId = e.target.value;
+    if (state.eventId) rememberPortalEventId(state.eventId);
     resetSessionData();
     renderDivisionsTable();
     renderDraws();
@@ -567,6 +609,7 @@ function bindWheelActions() {
           writeSoloCombinedFlag(false);
           renderDraws();
           showToast('draws created and saved.');
+          notifyPortalDataUpdated({ eventId: state.eventId });
           await refreshWheelFromStatus();
         },
         { from: 64, ceiling: 96, prompt: 'creating draws…' }
@@ -714,6 +757,10 @@ function bindWheelActions() {
 }
 
 function bindDivisions() {
+  document.getElementById('divisionNameSearch')?.addEventListener('input', (e) => {
+    setDivisionNameQuery(e.target.value || '');
+  });
+
   document.getElementById('generatePatternBtn')?.addEventListener('click', async () => {
     const btn = document.getElementById('generatePatternBtn');
     setBusy(btn, true);
@@ -960,6 +1007,13 @@ async function init() {
     }
   bindEventSelect();
     bindWheelActions();
+    initCustomDivisionFeature({
+      ensureDrawsLoaded: ensureDrawsLoadedForEvent,
+      regenerateDraws: async () => {
+        await regenerateDrawsSession({ silent: true });
+        renderDraws();
+      }
+    });
   bindPatternForm();
   bindDivisions();
   bindDraws();

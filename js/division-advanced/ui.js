@@ -8,6 +8,7 @@ import {
 } from './move-targets.js';
 
 let toastTimer = null;
+let divisionNameQuery = '';
 
 export function showToast(message, isError = false) {
   const el = document.getElementById('daToast');
@@ -24,7 +25,8 @@ export function showConfirmModal({
   message = '',
   confirmLabel = 'confirm',
   cancelLabel = 'cancel',
-  danger = false
+  danger = false,
+  liveWarning = false
 } = {}) {
   return new Promise((resolve) => {
     const overlay = document.getElementById('daConfirmModal');
@@ -42,11 +44,13 @@ export function showConfirmModal({
     okBtn.textContent = confirmLabel;
     cancelBtn.textContent = cancelLabel;
     okBtn.classList.toggle('confirm-dialog-btn-danger', Boolean(danger));
+    messageEl.classList.toggle('confirm-dialog-live-warning', Boolean(liveWarning));
     overlay.hidden = false;
 
     const cleanup = (result) => {
       overlay.hidden = true;
       okBtn.classList.remove('confirm-dialog-btn-danger');
+      messageEl.classList.remove('confirm-dialog-live-warning');
       okBtn.removeEventListener('click', onOk);
       cancelBtn.removeEventListener('click', onCancel);
       overlay.removeEventListener('click', onOverlay);
@@ -171,13 +175,61 @@ export function eventNickname(eventId = state.eventId) {
   return String(event?.event_name || '').trim() || (eventId ? `event_${eventId}` : '');
 }
 
+function normalizeSearch(value) {
+  return String(value || '').toLowerCase().trim();
+}
+
+function leafNameHaystack(leaf) {
+  const bits = [];
+  const push = (v) => {
+    const text = String(v || '').trim();
+    if (text) bits.push(text.toLowerCase());
+  };
+  push(leaf?.division_name);
+  push(leaf?.event_key);
+  push(leaf?.gender);
+  push(leaf?.rank_min);
+  push(leaf?.rank_max);
+  push(leaf?.name);
+  push(leaf?.first_name);
+  push(leaf?.last_name);
+  if (Array.isArray(leaf?.athletes)) {
+    leaf.athletes.forEach((athlete) => {
+      push(athlete?.name);
+      push(athlete?.first_name);
+      push(athlete?.last_name);
+    });
+  }
+  return bits.join(' ');
+}
+
+function leavesMatchingQuery(leaves, query) {
+  const q = normalizeSearch(query);
+  if (!q) return leaves;
+  return leaves.filter((leaf) => leafNameHaystack(leaf).includes(q));
+}
+
+export function setDivisionNameQuery(query) {
+  divisionNameQuery = String(query || '');
+  renderDivisionsTable();
+}
+
 export function renderDivisionsTable() {
   const tbody = document.querySelector('#divisionsTable tbody');
   const summary = document.getElementById('divisionsSummary');
   if (!tbody) return;
-  if (summary) summary.textContent = `${state.leaves.length} division leaves`;
-  tbody.innerHTML = state.leaves.slice(0, 500).map((leaf, i) => `
-    <tr data-index="${i}">
+  const matches = leavesMatchingQuery(state.leaves, divisionNameQuery);
+  if (summary) {
+    summary.textContent = divisionNameQuery.trim()
+      ? `${matches.length} of ${state.leaves.length} division leaves`
+      : `${state.leaves.length} division leaves`;
+  }
+  if (!matches.length) {
+    tbody.innerHTML = '<tr><td colspan="7">no matching divisions found</td></tr>';
+    return;
+  }
+  tbody.innerHTML = matches.slice(0, 500).map((leaf) => `
+    <tr>
       <td>${leaf.enabled !== false ? '✓' : ''}</td>
       <td>${escapeHtml(leaf.division_name)}</td>
       <td>${escapeHtml(leaf.event_key)}</td>
@@ -187,8 +239,8 @@ export function renderDivisionsTable() {
       <td>${escapeHtml(leaf.rank_min)}${leaf.rank_max ? '–' + escapeHtml(leaf.rank_max) : ''}</td>
     </tr>
   `).join('');
-  if (state.leaves.length > 500) {
-    tbody.innerHTML += `<tr><td colspan="7">… ${state.leaves.length - 500} more not shown</td></tr>`;
+  if (matches.length > 500) {
+    tbody.innerHTML += `<tr><td colspan="7">… ${matches.length - 500} more matches not shown</td></tr>`;
   }
 }
 
@@ -209,8 +261,22 @@ function updateMoveArrowEnabled() {
   );
 }
 
-function renderDrawAthletes(entry) {
-  const host = document.getElementById('drawAthletesList');
+function drawTargets(overrides = {}) {
+  return {
+    subtabSelector: '#tab-draws .da-subtab',
+    subpanelSelector: '#tab-draws .da-subpanel',
+    rightSelector: '#tab-draws .da-draws-right',
+    selectedNameId: 'selectedDrawName',
+    athletesListId: 'drawAthletesList',
+    matchesTargets: null,
+    editTargets: null,
+    drawSubtabKey: 'drawSubtab',
+    ...overrides
+  };
+}
+
+function renderDrawAthletes(entry, targets = drawTargets()) {
+  const host = document.getElementById(targets.athletesListId);
   if (!host) return;
   const athletes = entry?.athletes || [];
   if (!entry) {
@@ -221,9 +287,22 @@ function renderDrawAthletes(entry) {
     host.innerHTML = '<p class="da-hint">no athletes in this draw.</p>';
     return;
   }
+  if (targets.athletesReadOnly) {
+    host.innerHTML = athletes.map((a) => {
+      const idx = a.index == null || a.index === '' ? NaN : Number(a.index);
+      const attr = Number.isFinite(idx) ? ` data-athlete-index="${idx}"` : '';
+      return `
+      <div class="da-athlete-chip da-athlete-chip-readonly"${attr}>
+        ${escapeHtml(athleteLine(a))}
+      </div>
+    `;
+    }).join('');
+    return;
+  }
+  const selectedSet = targets.selectedSet || state.selectedAthleteIndices;
   host.innerHTML = athletes.map((a) => {
     const idx = a.index == null || a.index === '' ? null : Number(a.index);
-    const selected = idx != null && state.selectedAthleteIndices.has(idx);
+    const selected = idx != null && selectedSet.has(idx);
     return `
       <div class="da-athlete-chip ${selected ? 'selected' : ''}" data-index="${idx == null ? '' : idx}" role="button" tabindex="0">
         ${escapeHtml(athleteLine(a))}
@@ -319,60 +398,74 @@ function updateSelectedDrawName(entry) {
   el.hidden = false;
 }
 
-export function switchDrawSubtab(subtab) {
+export function switchDrawSubtab(subtab, targets = null) {
+  const t = drawTargets(targets || {});
   if (subtab === 'edit' && typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches) {
     subtab = 'pool';
   }
-  state.drawSubtab = subtab;
-  document.querySelectorAll('#tab-draws .da-subtab').forEach((btn) => {
+  state[t.drawSubtabKey] = subtab;
+  document.querySelectorAll(t.subtabSelector).forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.subtab === subtab);
   });
-  document.querySelectorAll('#tab-draws .da-subpanel').forEach((panel) => {
+  document.querySelectorAll(t.subpanelSelector).forEach((panel) => {
     const active = panel.dataset.subpanel === subtab;
     panel.hidden = !active;
     panel.classList.toggle('active', active);
   });
-  const right = document.querySelector('#tab-draws .da-draws-right');
+  const right = document.querySelector(t.rightSelector);
   right?.classList.toggle('da-draws-edit-mode', subtab === 'edit' || subtab === 'matches');
 }
 
-export async function renderDrawPreviewPanels(entry) {
+export async function renderDrawPreviewPanels(entry, targets = null) {
+  const t = drawTargets(targets || {});
   const { renderMatchesViewer } = await import('./matches-viewer.js');
   const dirtyHint = document.getElementById('drawDirtyHint');
   if (dirtyHint) dirtyHint.hidden = !state.drawDirty;
 
-  if (state.drawSubtab === 'pdf') {
-    state.drawSubtab = 'pool';
-    switchDrawSubtab('pool');
+  if (state[t.drawSubtabKey] === 'pdf') {
+    state[t.drawSubtabKey] = 'pool';
+    switchDrawSubtab('pool', t);
   }
 
-  updateSelectedDrawName(entry);
-  renderDrawAthletes(entry);
-  populateDrawMoveTargets(entry);
-  updateMoveArrowEnabled();
+  if (t.selectedNameId === 'selectedDrawName') {
+    updateSelectedDrawName(entry);
+    populateDrawMoveTargets(entry);
+    updateMoveArrowEnabled();
+  }
+  renderDrawAthletes(entry, t);
 
   if (!entry) {
-    renderMatchesViewer(null);
+    renderMatchesViewer(null, t.matchesTargets || null);
     try {
-      const { renderInteractiveEditor } = await import('./draw-editor.js');
+      const { renderInteractiveEditor, setDrawEditorTargets } = await import('./draw-editor.js');
+      setDrawEditorTargets(t.editTargets || null);
       renderInteractiveEditor(null);
     } catch (_) { /* ignore */ }
     return;
   }
 
-  if (state.drawSubtab === 'matches') {
-    renderMatchesViewer(entry);
+  if (state[t.drawSubtabKey] === 'matches') {
+    renderMatchesViewer(entry, t.matchesTargets || null);
   }
-  if (state.drawSubtab === 'edit') {
+  if (state[t.drawSubtabKey] === 'edit') {
     const {
       renderInteractiveEditor,
       loadSlotsForEntry,
       setDrawEditorCallback,
-      applyEditedEntryToState
+      applyEditedEntryToState,
+      setDrawEditorTargets,
+      setDrawEditorEntryResolver
     } = await import('./draw-editor.js');
+    setDrawEditorTargets(t.editTargets || null);
+    if (t.selectedNameId === 'selectedDrawName') {
+      setDrawEditorEntryResolver(() => {
+        const catalog = state.drawsState?.catalog || [];
+        return catalog.find((e) => e.id === state.selectedDrawId) || null;
+      });
+    }
     setDrawEditorCallback((updatedEntry, slots) => {
-      const next = applyEditedEntryToState(updatedEntry, slots);
-      if (dirtyHint) dirtyHint.hidden = !state.drawDirty;
+      const next = t.onEdited ? t.onEdited(updatedEntry, slots) : applyEditedEntryToState(updatedEntry, slots);
+      if (dirtyHint && t.selectedNameId === 'selectedDrawName') dirtyHint.hidden = !state.drawDirty;
       renderInteractiveEditor(next || updatedEntry, slots);
     });
     try {

@@ -8,6 +8,16 @@ let selectedSlotId = null;
 let onEdited = null;
 let typeSelectBound = false;
 let suppressTypeChange = false;
+let resolveCurrentEntry = () => {
+  const catalog = state.drawsState?.catalog || [];
+  return catalog.find((e) => e.id === state.selectedDrawId) || null;
+};
+let editorTargets = {
+  typeBarId: 'drawEditTypeBar',
+  typeSelectId: 'drawEditTypeSelect',
+  editorId: 'drawInteractiveEditor',
+  hintId: 'drawEditHint'
+};
 
 function escapeHtml(text) {
   return String(text || '')
@@ -40,8 +50,8 @@ function drawTypeOptions() {
 }
 
 function syncDrawTypeSelect(entry) {
-  const bar = document.getElementById('drawEditTypeBar');
-  const select = document.getElementById('drawEditTypeSelect');
+  const bar = document.getElementById(editorTargets.typeBarId);
+  const select = document.getElementById(editorTargets.typeSelectId);
   if (!bar || !select) return;
 
   if (!entry) {
@@ -111,13 +121,12 @@ async function applyDrawTypeChange(entry, nextType) {
 
 function ensureTypeSelectBound() {
   if (typeSelectBound) return;
-  const select = document.getElementById('drawEditTypeSelect');
+  const select = document.getElementById(editorTargets.typeSelectId);
   if (!select) return;
   typeSelectBound = true;
   select.addEventListener('change', async () => {
     if (suppressTypeChange) return;
-    const catalog = state.drawsState?.catalog || [];
-    const entry = catalog.find((e) => e.id === state.selectedDrawId);
+    const entry = resolveCurrentEntry();
     if (!entry) {
       syncDrawTypeSelect(null);
       return;
@@ -147,6 +156,20 @@ function ensureTypeSelectBound() {
 
 export function setDrawEditorCallback(cb) {
   onEdited = cb;
+}
+
+export function setDrawEditorEntryResolver(fn) {
+  resolveCurrentEntry = typeof fn === 'function' ? fn : resolveCurrentEntry;
+}
+
+export function setDrawEditorTargets(targets = null) {
+  editorTargets = targets ? { ...editorTargets, ...targets } : {
+    typeBarId: 'drawEditTypeBar',
+    typeSelectId: 'drawEditTypeSelect',
+    editorId: 'drawInteractiveEditor',
+    hintId: 'drawEditHint'
+  };
+  typeSelectBound = false;
 }
 
 function clearSlotSelection(root) {
@@ -330,8 +353,8 @@ function renderPremierLeague(editor, entry, slots) {
 }
 
 export function renderInteractiveEditor(entry, slots) {
-  const editor = document.getElementById('drawInteractiveEditor');
-  const hint = document.getElementById('drawEditHint');
+  const editor = document.getElementById(editorTargets.editorId);
+  const hint = document.getElementById(editorTargets.hintId);
   clearSlotSelection(editor);
   syncDrawTypeSelect(entry);
   if (!editor) return;

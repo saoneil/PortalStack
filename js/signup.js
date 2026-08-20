@@ -9,12 +9,35 @@ function logInteraction(action, details) {
 
 logInteraction('page_view', { description: 'Signup page loaded' });
 
+var RESERVED_USERNAMES = ['admin', 'administrator'];
+
+function isReservedUsername(val) {
+  return RESERVED_USERNAMES.indexOf(val.trim().toLowerCase()) !== -1;
+}
+
+(function () {
+  var input = document.getElementById('signup-username');
+  var error = document.getElementById('username-error');
+  if (!input || !error) return;
+  input.addEventListener('input', function () {
+    var reserved = isReservedUsername(input.value);
+    error.hidden = !reserved;
+  });
+}());
+
 document.getElementById('registerForm').addEventListener('submit', function(e) {
   e.preventDefault();
   var form = this;
   var client = form.querySelector('[name="client"]').value;
   var username = form.querySelector('[name="username"]').value;
   var password = form.querySelector('[name="password"]').value;
+
+  if (isReservedUsername(username)) {
+    var error = document.getElementById('username-error');
+    if (error) error.hidden = false;
+    return;
+  }
+
   logInteraction('register_attempt', { client: client, username: username });
 
   fetch('/signup', {

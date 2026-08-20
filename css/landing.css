@@ -869,6 +869,13 @@ table button:hover {
   box-shadow: 0 0 16px rgba(255, 80, 80, 0.35);
 }
 
+.confirm-dialog-live-warning {
+  color: #ff4444;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
 /* Event select container */
 .event-select-container {
   display: flex;

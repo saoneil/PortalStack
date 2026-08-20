@@ -2,6 +2,7 @@ const DEFAULT_MATCH = 3;
 const DEFAULT_BUFFER = 0.5;
 const SLOT = 5;
 const GAP = 5;
+const SCHEDULE_BLOCK_TEXT_SCALE = 1.5;
 const DEFAULT_BREAK_MINUTES = 30;
 const POLL_MS = 15000;
 const NOW_SCROLL_MS = 30000;
@@ -46,8 +47,54 @@ const ctx = {
   eventFilters: new Set(),
   beltFilters: new Set(),
   pendingBreak: null,
-  editSeq: 0
+  editSeq: 0,
+  completedDivisionIds: new Set(),
+  resultsUpdatedAt: null,
+  savedItems: []
 };
+
+const PORTAL_LAST_EVENT_KEY = 'portal-last-event-id';
+
+function readLastEventId() {
+  try {
+    return String(sessionStorage.getItem(PORTAL_LAST_EVENT_KEY) || '').trim();
+  } catch (_) {
+    return '';
+  }
+}
+
+function rememberLastEventId(eventId) {
+  const id = String(eventId || '').trim();
+  if (!id) return;
+  try {
+    sessionStorage.setItem(PORTAL_LAST_EVENT_KEY, id);
+  } catch (_) { /* ignore */ }
+}
+
+function preferredSavedEventId(items) {
+  const list = Array.isArray(items) ? items : [];
+  const lastId = readLastEventId();
+  if (lastId && list.some((item) => String(item.eventId) === lastId)) return lastId;
+  if (list.length === 1) return String(list[0].eventId || '');
+  return '';
+}
+
+function isDivisionCompleted(id) {
+  return ctx.completedDivisionIds.has(String(id));
+}
+
+function divisionCompleteMark(id, { inline = false } = {}) {
+  if (!isDivisionCompleted(id)) return '';
+  const cls = inline
+    ? 'live-division-complete live-division-complete-inline'
+    : 'live-division-complete';
+  return `<span class="${cls}" title="Division completed" aria-label="Completed">✓</span>`;
+}
+
+function applyCompletionMeta(data) {
+  ctx.completedDivisionIds = new Set((data.completedDivisionIds || []).map(String));
+  ctx.resultsUpdatedAt = data.resultsUpdatedAt || null;
+}
 
 function liveMode() {
   return new URLSearchParams(window.location.search).has('embed') ? 'tool' : 'viewer';
@@ -200,6 +247,55 @@ function eventFilterLabel(eventKey) {
 
 function entryAthletes(entry) {
   return Array.isArray(entry?.athletes) ? entry.athletes : [];
+}
+
+function divisionAthleteRows(entry) {
+  return entryAthletes(entry)
+    .map((athlete) => {
+      const first = String(athlete?.first_name || '').trim();
+      const last = String(athlete?.last_name || '').trim();
+      const name = String(athlete?.name || '').trim() || [first, last].filter(Boolean).join(' ');
+      const club = String(
+        athlete?.club || athlete?.team || athlete?.team_name_or_country || ''
+      ).trim();
+      return { name: name || 'Unnamed athlete', club };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+}
+
+function closeDivisionModal() {
+  const modal = document.getElementById('liveDivisionModal');
+  if (!modal) return;
+  modal.hidden = true;
+}
+
+function openDivisionModal(divisionId) {
+  const modal = document.getElementById('liveDivisionModal');
+  const titleEl = document.getElementById('liveDivisionModalTitle');
+  const listEl = document.getElementById('liveDivisionModalList');
+  const emptyEl = document.getElementById('liveDivisionModalEmpty');
+  if (!modal || !titleEl || !listEl || !emptyEl) return;
+
+  const entry = catalogEntry(divisionId);
+  const divisionName = entry?.division_name || `Division ${divisionId}`;
+  const athletes = entry ? divisionAthleteRows(entry) : [];
+
+  titleEl.textContent = divisionName;
+  if (!athletes.length) {
+    listEl.innerHTML = '';
+    listEl.hidden = true;
+    emptyEl.hidden = false;
+  } else {
+    listEl.innerHTML = athletes.map((athlete) => `
+      <li class="live-division-modal-row">
+        <span class="live-division-modal-name">${escapeHtml(athlete.name)}</span>
+        <span class="live-division-modal-club">${escapeHtml(athlete.club || '—')}</span>
+      </li>
+    `).join('');
+    listEl.hidden = false;
+    emptyEl.hidden = true;
+  }
+  modal.hidden = false;
 }
 
 function divisionBelt(entry) {
@@ -651,7 +747,7 @@ function placePendingBreakAt(dayIndex, ringIndex, startOffset) {
     start_offset_minutes: Number(startOffset) || 0,
     duration_minutes: Math.max(SLOT, snapMinutes(pending.duration))
   };
-  const ok = placeBlockAt(id, dayIndex, allRings ? 0 : ringIndex, startOffset, { from: 'new' });
+  const ok = placeBlockAt(id, dayIndex, allRings ? 0 : ringIndex, startOffset);
   if (!ok) {
     delete sched.breaks[id];
     return false;
@@ -698,37 +794,12 @@ function sendToScratch(ids) {
   ids.forEach((rawId) => {
     const id = String(rawId);
     if (sched.breaks?.[id]) {
-      if (!isScratched(id)) {
-        const br = sched.breaks[id];
-        const start = Number(br.start_offset_minutes || 0);
-        const end = start + breakDuration(br);
-        const dayIndex = Number(br.day_index || 0);
-        ringsForBreak(br).forEach((ringIndex) => {
-          closeGapOnRing(dayIndex, ringIndex, start, end, id);
-        });
-      }
       if (!sched.scratch_ids.includes(id)) sched.scratch_ids.push(id);
       return;
     }
-    const placement = sched.placements?.[id];
-    const entry = catalogEntry(id);
-    let vacated = null;
-    if (placement && entry) {
-      const start = Number(placement.start_offset_minutes || 0);
-      vacated = {
-        dayIndex: Number(placement.day_index || 0),
-        ringIndex: Number(placement.ring_index || 0),
-        start,
-        end: start + displayDuration(entry, sched)
-      };
-    }
     if (sched.placements) delete sched.placements[id];
     if (!sched.scratch_ids.includes(id)) sched.scratch_ids.push(id);
-    if (vacated) {
-      closeGapOnRing(vacated.dayIndex, vacated.ringIndex, vacated.start, vacated.end, id);
-    }
   });
-  normalizeAllOverlaps();
   markDirty();
 }
 
@@ -835,38 +906,7 @@ function closeGapOnRing(dayIndex, ringIndex, vacatedStart, vacatedEnd, excludeId
   }
 }
 
-function snapshotBlockLocation(id) {
-  const sched = ctx.state;
-  const br = sched?.breaks?.[String(id)];
-  if (br) {
-    const start = Number(br.start_offset_minutes || 0);
-    const duration = breakDuration(br);
-    return {
-      dayIndex: Number(br.day_index || 0),
-      ringIndex: Number(br.ring_index || 0),
-      start,
-      end: start + duration,
-      allRings: Boolean(br.all_rings),
-      rings: ringsForBreak(br)
-    };
-  }
-  const placement = sched?.placements?.[String(id)];
-  const entry = catalogEntry(id);
-  if (!placement || !entry) return null;
-  const start = Number(placement.start_offset_minutes || 0);
-  const duration = displayDuration(entry, sched);
-  const ringIndex = Number(placement.ring_index || 0);
-  return {
-    dayIndex: Number(placement.day_index || 0),
-    ringIndex,
-    start,
-    end: start + duration,
-    allRings: false,
-    rings: [ringIndex]
-  };
-}
-
-function placeBlockAt(id, dayIndex, ringIndex, startOffsetMinutes, { from = 'scratch' } = {}) {
+function placeBlockAt(id, dayIndex, ringIndex, startOffsetMinutes) {
   const sched = ctx.state;
   if (!sched) return false;
   const breakBlock = sched.breaks?.[String(id)] || null;
@@ -897,8 +937,6 @@ function placeBlockAt(id, dayIndex, ringIndex, startOffsetMinutes, { from = 'scr
     start = Math.max(0, Math.floor((windowMins - duration) / SLOT) * SLOT);
   }
 
-  const old = from === 'board' ? snapshotBlockLocation(id) : null;
-
   if (breakBlock) {
     breakBlock.day_index = Number(dayIndex);
     breakBlock.ring_index = destRing;
@@ -916,26 +954,13 @@ function placeBlockAt(id, dayIndex, ringIndex, startOffsetMinutes, { from = 'scr
     sched.scratch_ids = (sched.scratch_ids || []).filter((x) => String(x) !== String(id));
   }
 
-  const destRings = allRings
-    ? Array.from({ length: ringCount }, (_, r) => r)
-    : [destRing];
-  destRings.forEach((r) => normalizeOverlapsOnRing(dayIndex, r));
-  normalizeAllOverlaps();
-
-  if (old) {
-    old.rings.forEach((r) => {
-      closeGapOnRing(old.dayIndex, r, old.start, old.end, String(id));
-    });
-    normalizeAllOverlaps();
-  }
-
   markDirty();
   renderViewer();
   return true;
 }
 
 function placeFromScratchAt(id, dayIndex, ringIndex, startOffsetMinutes) {
-  const ok = placeBlockAt(id, dayIndex, ringIndex, startOffsetMinutes, { from: 'scratch' });
+  const ok = placeBlockAt(id, dayIndex, ringIndex, startOffsetMinutes);
   if (ok) showToast('Placed from scratch.');
   return ok;
 }
@@ -1109,10 +1134,12 @@ function dayTimelineHtml(sched, dayIndex) {
             const heightSlots = Math.max(1, block.duration / SLOT);
             const selected = ctx.canEdit && ctx.selectedId === String(block.id) ? 'is-selected' : '';
             const breakClass = block.kind === 'break' ? 'is-break' : '';
-            return `<div class="da-schedule-block ${selected} ${breakClass}" data-id="${escapeHtml(block.id)}" data-kind="${escapeHtml(block.kind || 'division')}" data-slots="${heightSlots}" draggable="${draggable}"
+            const completedClass = block.kind !== 'break' && isDivisionCompleted(block.id) ? 'is-completed' : '';
+            return `<div class="da-schedule-block ${selected} ${breakClass} ${completedClass}" data-id="${escapeHtml(block.id)}" data-kind="${escapeHtml(block.kind || 'division')}" data-slots="${heightSlots}" draggable="${draggable}"
               style="top:calc(${topSlots} * var(--da-sched-slot-h)); height:calc(${heightSlots} * var(--da-sched-slot-h) - 2px);">
-              <strong title="${escapeHtml(block.name)}">${escapeHtml(block.name)}</strong>
-              <span>${fmtClock(startAbs, block.start)}–${fmtClock(startAbs, block.end)}</span>
+              ${divisionCompleteMark(block.id)}
+              <strong class="da-schedule-block-name" title="${escapeHtml(block.name)}">${escapeHtml(block.name)}</strong>
+              <span class="da-schedule-block-time">${fmtClock(startAbs, block.start)}–${fmtClock(startAbs, block.end)}</span>
             </div>`;
           }).join('')}
         </div>
@@ -1141,6 +1168,15 @@ function renderBoard() {
   }
 
   fitDivisionBlockText(board);
+  requestAnimationFrame(function () {
+    fitDivisionBlockText(board);
+  });
+  if (typeof ResizeObserver !== 'undefined' && !board._liveSchedFitObs) {
+    board._liveSchedFitObs = new ResizeObserver(function () {
+      fitDivisionBlockText(board);
+    });
+    board._liveSchedFitObs.observe(board);
+  }
 }
 
 function fitDivisionBlockText(root) {
@@ -1150,99 +1186,77 @@ function fitDivisionBlockText(root) {
   const toolMode = isToolMode();
 
   blocks.forEach((block) => {
-    const nameEl = block.querySelector('strong');
-    const timeEl = block.querySelector('span');
+    const nameEl = block.querySelector('.da-schedule-block-name') || block.querySelector('strong');
+    const timeEl = block.querySelector('.da-schedule-block-time') || block.querySelector('span');
     if (!nameEl || !timeEl) return;
 
     const slots = Math.max(1, Number(block.getAttribute('data-slots')) || 1);
     const isBreak = block.classList.contains('is-break');
-    // Tool 5-min (1-slot) blocks are only ~22px tall — start much smaller.
-    // Breaks keep a smaller clock so the "Break" label stays dominant.
-    let preferredName;
-    let preferredTime;
-    let minSize;
-    if (isBreak) {
-      if (!toolMode) {
-        preferredName = 28;
-        preferredTime = 13;
-        minSize = 8;
-      } else if (slots <= 1) {
-        preferredName = 11;
-        preferredTime = 6;
-        minSize = 5;
-      } else if (slots <= 2) {
-        preferredName = 14;
-        preferredTime = 8;
-        minSize = 6;
-      } else {
-        preferredName = 20;
-        preferredTime = 8;
-        minSize = 7;
-      }
-    } else if (!toolMode) {
-      preferredName = 59;
-      preferredTime = 50;
-      minSize = 8;
-    } else if (slots <= 1) {
-      preferredName = 9;
-      preferredTime = 7;
-      minSize = 5;
-    } else if (slots <= 2) {
-      preferredName = 12;
-      preferredTime = 10;
-      minSize = 6;
-    } else {
-      preferredName = 117;
-      preferredTime = 99;
-      minSize = 8;
-    }
+    const blockH = Math.max(1, block.clientHeight);
+    const blockW = Math.max(1, block.clientWidth);
+    const allowWrap = slots >= 2;
+    const minName = toolMode && slots <= 1 ? 6 : (toolMode && slots <= 2 ? 7 : 8);
+    const minTime = Math.max(6, minName - 1);
+    const timeReserve = Math.min(blockH * 0.34, (toolMode ? 16 : 20) * SCHEDULE_BLOCK_TEXT_SCALE);
+    const nameAreaH = Math.max(8, blockH - timeReserve - 4);
+    let maxName = Math.min(
+      (toolMode ? 22 : 28) * SCHEDULE_BLOCK_TEXT_SCALE,
+      nameAreaH / (allowWrap ? 2.1 : 1.08),
+      blockW / (allowWrap ? 3.8 : 2.4)
+    );
+    maxName = Math.max(minName, maxName);
+    const maxTime = Math.max(
+      minTime,
+      Math.min(maxName * (isBreak ? 0.85 : 0.95), blockW / 6.2, timeReserve)
+    );
 
-    const apply = (size) => {
-      nameEl.style.fontSize = `${size}px`;
-      timeEl.style.fontSize = `${Math.max(minSize, size * (preferredTime / preferredName))}px`;
-    };
-
-    // Measure as single-line so we detect width overflow (line-clamp hides it).
-    const prev = {
-      whiteSpace: nameEl.style.whiteSpace,
-      display: nameEl.style.display,
-      webkitLineClamp: nameEl.style.webkitLineClamp,
-      webkitBoxOrient: nameEl.style.webkitBoxOrient,
-      overflow: nameEl.style.overflow,
-      timeOverflow: timeEl.style.overflow
-    };
-    nameEl.style.whiteSpace = 'nowrap';
+    nameEl.style.flex = '0 1 auto';
+    nameEl.style.minHeight = '0';
     nameEl.style.display = 'block';
+    nameEl.style.overflow = 'visible';
+    nameEl.style.textOverflow = 'clip';
+    nameEl.style.overflowWrap = allowWrap ? 'break-word' : 'normal';
+    nameEl.style.wordBreak = 'normal';
+    nameEl.style.whiteSpace = allowWrap ? 'normal' : 'nowrap';
     nameEl.style.webkitLineClamp = 'unset';
     nameEl.style.webkitBoxOrient = '';
-    nameEl.style.overflow = 'hidden';
-    timeEl.style.overflow = 'hidden';
+    timeEl.style.flexShrink = '0';
+    timeEl.style.marginTop = 'auto';
+    timeEl.style.overflow = 'visible';
+    timeEl.style.textOverflow = 'clip';
+    timeEl.style.whiteSpace = 'nowrap';
+
+    const apply = (namePx, timePx) => {
+      nameEl.style.fontSize = `${Math.max(minName, namePx)}px`;
+      timeEl.style.fontSize = `${Math.max(minTime, timePx)}px`;
+    };
 
     const overflows = () => (
       block.scrollHeight > block.clientHeight + 1
-      || nameEl.scrollWidth > nameEl.clientWidth + 1
+      || nameEl.scrollHeight > nameEl.clientHeight + 1
+      || (!allowWrap && nameEl.scrollWidth > nameEl.clientWidth + 1)
       || timeEl.scrollWidth > timeEl.clientWidth + 1
     );
 
-    apply(preferredName);
-    if (overflows()) {
-      let lo = minSize;
-      let hi = preferredName;
-      while (hi - lo > 0.75) {
+    const fitSize = (lo, hi, test) => {
+      let best = lo;
+      test(hi);
+      if (!overflows()) return hi;
+      while (hi - lo > 0.25) {
         const mid = (lo + hi) / 2;
-        apply(mid);
+        test(mid);
         if (overflows()) hi = mid;
-        else lo = mid;
+        else {
+          best = mid;
+          lo = mid;
+        }
       }
-      apply(lo);
-    }
+      return best;
+    };
 
-    nameEl.style.whiteSpace = prev.whiteSpace;
-    nameEl.style.display = prev.display;
-    nameEl.style.webkitLineClamp = prev.webkitLineClamp;
-    nameEl.style.webkitBoxOrient = prev.webkitBoxOrient;
-    nameEl.style.overflow = prev.overflow;
-    timeEl.style.overflow = prev.timeOverflow;
+    const bestName = fitSize(minName, maxName, (size) => apply(size, minTime));
+    const bestTime = fitSize(minTime, maxTime, (size) => apply(bestName, size));
+    apply(bestName, bestTime);
   });
 }
 
@@ -1286,8 +1300,10 @@ function renderScratch() {
     const selected = ctx.selectedId === String(id) ? 'selected' : '';
     const minsLabel = duration > 0 ? `${duration} min` : '';
     const kind = isBreak ? 'break' : 'division';
-    return `<li class="live-scratch-item ${selected} ${isBreak ? 'is-break' : ''}" data-id="${escapeHtml(id)}" data-kind="${kind}" data-slots="${heightSlots}"
+    const completedClass = !isBreak && isDivisionCompleted(id) ? 'is-completed' : '';
+    return `<li class="live-scratch-item ${selected} ${isBreak ? 'is-break' : ''} ${completedClass}" data-id="${escapeHtml(id)}" data-kind="${kind}" data-slots="${heightSlots}"
       draggable="true" style="height:${heightPx}px; min-height:${heightPx}px;">
+      ${divisionCompleteMark(id)}
       <strong title="${escapeHtml(name)}">${escapeHtml(name)}</strong>
       ${minsLabel ? `<span>${escapeHtml(minsLabel)}</span>` : ''}
     </li>`;
@@ -1494,7 +1510,7 @@ function renderTimesTable() {
         <td class="live-times-check-col">
           <input type="checkbox" class="live-times-row-check" ${selected ? 'checked' : ''} ${disabled} aria-label="Select ${escapeHtml(entry.division_name || id)}">
         </td>
-        <td>${escapeHtml(entry.division_name || id)}</td>
+        <td>${divisionCompleteMark(id, { inline: true })}${escapeHtml(entry.division_name || id)}</td>
         <td>${escapeHtml(eventDisplayName(entry.event_key))}</td>
         <td>${escapeHtml(entry.division_type || '—')}</td>
         <td>${Number(entry.athlete_count || 0) || 0}</td>
@@ -1736,13 +1752,13 @@ function renderViewer() {
 
   const saveBtn = document.getElementById('liveSaveBtn');
   const qrBtn = document.getElementById('liveDownloadQrBtn');
-  const eventWrap = document.getElementById('liveEventSelectWrap');
   if (saveBtn) saveBtn.hidden = !ctx.canEdit;
   if (qrBtn) {
     const onScheduleSettings = isToolMode() && ctx.canEdit && ctx.toolTab === 'times';
     qrBtn.hidden = !(ctx.canEdit && ctx.clientId && ctx.eventId) || onScheduleSettings;
   }
-  if (eventWrap) eventWrap.hidden = !isToolMode();
+  const eventRow = document.getElementById('liveEventSelectRow');
+  if (eventRow) eventRow.hidden = !isToolMode();
   updateSaveButtonAppearance();
 
   if (isToolMode()) {
@@ -1828,25 +1844,30 @@ function downloadQrCode() {
   }, 100);
 }
 
-async function refreshSchedule({ silent = false } = {}) {
+async function refreshSchedule({ silent = false, force = false } = {}) {
   if (!ctx.clientId || !ctx.eventId) return;
   if (silent && ctx.dirty) return;
   const data = await apiFetch(
     `/api/live-schedule/${encodeURIComponent(ctx.clientId)}/${encodeURIComponent(ctx.eventId)}`
   );
-  if (silent && ctx.updatedAt && String(data.updated_at) === String(ctx.updatedAt) && !ctx.dirty) {
+  const scheduleUnchanged = ctx.updatedAt && String(data.updated_at) === String(ctx.updatedAt);
+  const resultsUnchanged = String(data.resultsUpdatedAt || '') === String(ctx.resultsUpdatedAt || '');
+  if (!force && silent && scheduleUnchanged && resultsUnchanged && !ctx.dirty) {
     return;
   }
   ctx.event = data.event;
-  ctx.state = data.state;
   ctx.canEdit = isToolMode() && Boolean(data.canEdit);
   ctx.updatedAt = data.updated_at;
-  if (data.timezone && isValidTimeZone(data.timezone)) {
-    ctx.timezone = data.timezone;
-  } else if (data.state && isValidTimeZone(data.state.timezone)) {
-    ctx.timezone = data.state.timezone;
+  applyCompletionMeta(data);
+  if (force || !ctx.dirty || !scheduleUnchanged) {
+    ctx.state = data.state;
+    if (data.timezone && isValidTimeZone(data.timezone)) {
+      ctx.timezone = data.timezone;
+    } else if (data.state && isValidTimeZone(data.state.timezone)) {
+      ctx.timezone = data.state.timezone;
+    }
+    clearDirty();
   }
-  clearDirty();
   setPanels({ viewer: true });
   updateHeader();
   renderViewer();
@@ -1854,7 +1875,9 @@ async function refreshSchedule({ silent = false } = {}) {
     await loadEventOptions({ selectedEventId: ctx.eventId });
   }
   startPolling();
-  if (!silent && isToolMode()) showToast('Schedule loaded.');
+  if (!silent && isToolMode()) {
+    showToast(force ? 'Refreshed from database.' : 'Schedule loaded.');
+  }
 }
 
 async function saveSchedule({ silent = false } = {}) {
@@ -2031,6 +2054,10 @@ function bindDragDrop() {
     clearDropTargets();
     removeDragGhost();
     removeDragImage();
+    ctx.suppressBlockClick = true;
+    window.setTimeout(() => {
+      ctx.suppressBlockClick = false;
+    }, 0);
   });
 
   document.getElementById('liveScratchList')?.addEventListener('dragstart', (e) => {
@@ -2134,7 +2161,7 @@ function bindDragDrop() {
     if (!payload || (payload.from !== 'scratch' && payload.from !== 'board')) return;
 
     if (payload.from === 'board') {
-      const ok = placeBlockAt(payload.id, target.dayIndex, target.ringIndex, target.startOffset, { from: 'board' });
+      const ok = placeBlockAt(payload.id, target.dayIndex, target.ringIndex, target.startOffset);
       if (ok) showToast(isBreakId(payload.id) ? 'Break moved.' : 'Moved.');
       return;
     }
@@ -2288,7 +2315,6 @@ function bindViewerEvents() {
   });
 
   document.getElementById('liveBoard')?.addEventListener('click', (e) => {
-    if (!isToolMode()) return;
     if (ctx.pendingBreak && ctx.canEdit) {
       const target = timelineDropTargetFromPoint(e.clientX, e.clientY);
       if (!target) return;
@@ -2297,9 +2323,25 @@ function bindViewerEvents() {
       return;
     }
     const block = e.target.closest('.da-schedule-block[data-id]');
-    if (!block) return;
-    ctx.selectedId = block.getAttribute('data-id');
-    renderBoard();
+    if (!block || ctx.suppressBlockClick) return;
+    if ((block.getAttribute('data-kind') || 'division') === 'break') return;
+
+    const divisionId = block.getAttribute('data-id');
+    if (isToolMode() && ctx.canEdit) {
+      ctx.selectedId = divisionId;
+      renderBoard();
+    }
+    openDivisionModal(divisionId);
+  });
+
+  document.getElementById('liveDivisionModalClose')?.addEventListener('click', closeDivisionModal);
+  document.getElementById('liveDivisionModal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'liveDivisionModal') closeDivisionModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    const modal = document.getElementById('liveDivisionModal');
+    if (modal && !modal.hidden) closeDivisionModal();
   });
 
   document.getElementById('liveScratchDrop')?.addEventListener('click', (e) => {
@@ -2445,6 +2487,7 @@ function formatOptionLabel(item) {
 
 async function loadEventOptions({ selectedEventId = '' } = {}) {
   const wrap = document.getElementById('liveEventSelectWrap');
+  const row = document.getElementById('liveEventSelectRow');
   const select = document.getElementById('liveScheduleSelect');
   const empty = document.getElementById('livePickerEmpty');
   const error = document.getElementById('livePickerError');
@@ -2459,7 +2502,8 @@ async function loadEventOptions({ selectedEventId = '' } = {}) {
     const data = await apiFetch('/api/live-schedule/saved');
     ctx.clientId = data.clientId || ctx.clientId || '';
     const items = data.items || [];
-    wrap.hidden = !isToolMode();
+    ctx.savedItems = items;
+    if (row) row.hidden = !isToolMode();
 
     if (!items.length) {
       select.innerHTML = '<option value="">— no saved schedules —</option>';
@@ -2477,7 +2521,8 @@ async function loadEventOptions({ selectedEventId = '' } = {}) {
     }
     return true;
   } catch (err) {
-    wrap.hidden = true;
+    ctx.savedItems = [];
+    if (row) row.hidden = true;
     if (error) {
       error.hidden = false;
       error.textContent = err.message || 'Unable to load saved schedules. Sign in as an organizer and try again.';
@@ -2492,8 +2537,60 @@ async function showPicker() {
   stopNowScroll();
   setPanels({ viewer: true });
   updateHeader();
-  const loaded = await loadEventOptions({ selectedEventId: ctx.eventId || '' });
+  const loaded = await loadEventOptions({
+    selectedEventId: ctx.eventId || readLastEventId()
+  });
   if (!loaded) return;
+  if (isToolMode() && !ctx.eventId && ctx.clientId) {
+    const preferred = preferredSavedEventId(ctx.savedItems);
+    if (preferred) {
+      window.location.replace(scheduleHref(ctx.clientId, preferred));
+    }
+  }
+}
+
+async function applyPortalDataUpdate(payload = {}) {
+  if (!isToolMode()) return;
+  const eventId = String(payload.eventId || '').trim();
+  const deleted = Boolean(payload.deleted);
+  if (eventId) rememberLastEventId(eventId);
+
+  const sameEvent = !ctx.eventId || !eventId || String(ctx.eventId) === eventId;
+  if (sameEvent) {
+    cancelAutoSave();
+    ctx.dirty = false;
+  }
+
+  const loaded = await loadEventOptions({
+    selectedEventId: ctx.eventId || eventId || readLastEventId()
+  });
+  if (!loaded) return;
+
+  if (deleted && eventId && String(ctx.eventId) === eventId) {
+    ctx.state = null;
+    ctx.eventId = '';
+    ctx.event = null;
+    ctx.updatedAt = null;
+    stopPolling();
+    await showPicker();
+    return;
+  }
+
+  if (ctx.clientId && ctx.eventId && sameEvent) {
+    try {
+      await refreshSchedule({ silent: true, force: true });
+    } catch (err) {
+      await showPicker();
+    }
+    return;
+  }
+
+  if (ctx.eventId) return;
+
+  const preferred = preferredSavedEventId(ctx.savedItems);
+  if (preferred && ctx.clientId) {
+    window.location.replace(scheduleHref(ctx.clientId, preferred));
+  }
 }
 
 function showMissing(message) {
@@ -2531,7 +2628,40 @@ function bindPicker() {
       select.value = String(ctx.eventId || '');
       return;
     }
+    rememberLastEventId(eventId);
     window.location.href = scheduleHref(ctx.clientId, eventId);
+  });
+
+  const refreshBtn = document.getElementById('liveScheduleRefreshBtn');
+  refreshBtn?.addEventListener('click', async () => {
+    refreshBtn.disabled = true;
+    refreshBtn.classList.add('is-busy');
+    try {
+      if (ctx.clientId && ctx.eventId) {
+        await refreshSchedule({ silent: false, force: true });
+      } else {
+        await loadEventOptions({ selectedEventId: readLastEventId() });
+        const preferred = preferredSavedEventId(ctx.savedItems);
+        if (preferred && ctx.clientId) {
+          window.location.replace(scheduleHref(ctx.clientId, preferred));
+          return;
+        }
+        showToast('Refreshed from database.');
+      }
+    } catch (err) {
+      showToast(err.message || 'Unable to refresh schedule.', true);
+    } finally {
+      refreshBtn.disabled = false;
+      refreshBtn.classList.remove('is-busy');
+    }
+  });
+
+  window.addEventListener('message', (event) => {
+    if (event.origin !== window.location.origin) return;
+    if (!event.data || event.data.type !== 'portal-data-updated') return;
+    applyPortalDataUpdate(event.data).catch((err) => {
+      showToast(err.message || 'Unable to refresh schedule.', true);
+    });
   });
 }
 
@@ -2548,6 +2678,7 @@ async function init() {
   if (route.clientId && route.eventId) {
     ctx.clientId = route.clientId;
     ctx.eventId = route.eventId;
+    rememberLastEventId(route.eventId);
     updateHeader();
     try {
       await refreshSchedule();

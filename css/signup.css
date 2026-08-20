@@ -153,6 +153,19 @@ p {
   text-align: center;
 }
 
+.field-error {
+  margin: -12px 0 16px 2px;
+  padding: 6px 10px;
+  background: rgba(220, 38, 38, 0.18);
+  border-left: 3px solid #dc2626;
+  border-radius: 4px;
+  color: #fca5a5;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-align: left;
+  line-height: 1.45;
+}
+
 .trust-footer {
   width: 100%;
   max-width: 380px;

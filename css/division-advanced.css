@@ -223,6 +223,16 @@ html.da-embed .division-advanced-top {
   margin-left: auto;
 }
 
+.da-division-search-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+.da-division-search-input {
+  min-width: 320px;
+  width: min(38vw, 420px);
+}
+
 .da-dropdown {
   position: relative;
   display: inline-flex;
@@ -1738,6 +1748,22 @@ html.da-embed .division-advanced-top {
   border: 0;
 }
 
+.da-complete-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+}
+
+.da-btn-icon {
+  display: inline-block;
+  width: 1.1em;
+  height: 1.1em;
+  vertical-align: middle;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
 .da-choice-btn {
   background: transparent;
   border: 2px solid;
@@ -1749,6 +1775,258 @@ html.da-embed .division-advanced-top {
   cursor: pointer;
   width: 100%;
   line-height: 1.2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.da-custom-division-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: rgba(0, 0, 0, 0.68);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+}
+
+.da-custom-division-overlay[hidden] {
+  display: none !important;
+}
+
+.da-custom-division-card {
+  width: min(1300px, 98vw);
+  height: min(900px, 94vh);
+  border: 2px solid rgba(0, 212, 255, 0.35);
+  border-radius: 10px;
+  background: rgba(9, 9, 12, 0.98);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.da-custom-division-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 8px 10px 0;
+  flex: 0 0 auto;
+}
+
+.da-custom-division-close {
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(0, 212, 255, 0.9);
+  cursor: pointer;
+  font-size: 16px;
+  width: 34px;
+  height: 34px;
+}
+
+.da-custom-division-close:hover {
+  background: rgba(0, 212, 255, 0.1);
+  border-color: #00d4ff;
+}
+
+.da-custom-division-layout {
+  flex: 1;
+  min-height: 0;
+  padding: 12px;
+}
+
+.da-custom-division-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  border: 1px solid rgba(0, 212, 255, 0.15);
+  border-radius: 8px;
+  padding: 8px;
+  background: rgba(10, 10, 10, 0.35);
+}
+
+.da-custom-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.da-custom-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.da-custom-filter-label,
+.da-custom-filter-unit {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.55);
+  text-transform: lowercase;
+}
+
+.da-custom-filter-label {
+  width: 32px;
+}
+
+.da-custom-filter-btn {
+  flex: 1 1 0;
+  background: rgba(30, 30, 30, 0.9);
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  color: rgba(255, 255, 255, 0.8);
+  padding: 5px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.da-custom-filter-btn.is-active {
+  background: rgba(0, 212, 255, 0.16);
+  border-color: #00d4ff;
+  color: #00d4ff;
+}
+
+.da-custom-filter-select,
+.da-custom-filter-num {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+}
+
+.da-custom-source-list {
+  flex: 1;
+  min-height: 0;
+}
+
+.da-custom-source-list .da-athlete-chip {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.da-custom-source-list .da-athlete-chip:hover {
+  color: #00d4ff;
+  border-color: #00d4ff;
+  background: rgba(0, 212, 255, 0.08);
+}
+
+.da-custom-division-right .da-athlete-chip-readonly {
+  color: rgba(0, 212, 255, 0.92);
+  border-color: rgba(0, 212, 255, 0.28);
+}
+
+.da-athlete-details-pop {
+  position: fixed;
+  z-index: 10002;
+  min-width: 240px;
+  max-width: min(360px, calc(100vw - 16px));
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #1a1a1a;
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+}
+
+.da-athlete-details-pop[hidden] {
+  display: none !important;
+}
+
+.da-athlete-details-name {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #00d4ff;
+}
+
+.da-athlete-details-pop dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+}
+
+.da-athlete-details-pop dt {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.da-athlete-details-pop dd {
+  margin: 0;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.da-custom-division-right {
+  min-height: 0;
+}
+
+.da-custom-division-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.da-custom-meta-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.da-custom-control {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  flex: none;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  font-size: 14px;
+  line-height: 1.25;
+  border-radius: 8px;
+  min-height: 38px;
+}
+
+.da-custom-meta-field .da-input,
+.da-custom-meta-field .da-select {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.da-custom-warning {
+  margin: 0;
+  color: #ffb15c;
+}
+
+.da-custom-subpanel-wrap {
+  flex: 1;
+  min-height: 0;
+}
+
+.da-custom-division-actions {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 10px 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 900px) {
+  .da-custom-division-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(180px, 35%) minmax(0, 1fr);
+  }
 }
 
 .da-choice-btn-default {
@@ -1821,6 +2099,13 @@ html.da-embed .division-advanced-top {
 
 html.da-embed #tab-divisions .da-actions-row-end {
   margin-right: 52px;
+}
+
+@media (max-width: 1100px) {
+  .da-division-search-input {
+    min-width: 220px;
+    width: min(56vw, 320px);
+  }
 }
 
 .da-draw-athletes {

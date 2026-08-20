@@ -266,7 +266,9 @@ function isTruthyFlag(value) {
 function eventRequiresWaiver(eventId) {
   var eventRow = eventsById[eventId];
   if (!eventRow) return false;
-  return isTruthyFlag(eventRow.waiver_required) && isTruthyFlag(eventRow.has_waiver);
+  // Waiver is required for every role whenever waiver text is present, regardless of the
+  // waiver_required organizer checkbox (server enforces the same rule).
+  return isTruthyFlag(eventRow.has_waiver);
 }
 
 function hasAcceptedWaiverForEvent(eventId) {

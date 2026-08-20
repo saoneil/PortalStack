@@ -54,6 +54,10 @@
                 Customize
               </button>
             </div>
+            <button type="button" id="buildCustomDivisionsBtn" class="da-choice-btn da-choice-btn-default">
+              <svg class="da-btn-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 5h12M4 10h12M4 15h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M13.5 13.5l3 3M16.5 13.5l-3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+              <span class="da-btn-label">create manual divisions</span>
+            </button>
           </div>
 
           <div id="daCreateDrawsChoice" class="da-division-choice" hidden>
@@ -64,24 +68,32 @@
               Back
             </button>
             <button type="button" id="startOverReadyBtn" class="da-choice-btn da-choice-btn-custom">
+              <svg class="da-btn-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.5" stroke="#ff4d4d" stroke-width="1.6"/><path d="M7 10a3 3 0 1 0 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M10 5.5V8l2-1.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
               Start Over
             </button>
           </div>
 
           <div id="daCompleteChoice" class="da-division-choice" hidden>
-            <button type="button" id="modifyDrawsBtn" class="da-choice-btn da-choice-btn-default">
-              Modify Draws
-            </button>
-            <button type="button" id="combineSoloDrawsBtn" class="da-choice-btn da-choice-btn-neutral">
-              Combine Solo Divisions
-            </button>
-            <button type="button" id="downloadDrawPdfsBtn" class="da-choice-btn da-choice-btn-neutral">
-              Download PDFs
-            </button>
-            <button type="button" id="saveDivisionTemplateBtn" class="da-choice-btn da-choice-btn-neutral">
-              Save Division Template
-            </button>
+            <div class="da-complete-grid">
+              <button type="button" id="modifyDrawsBtn" class="da-choice-btn da-choice-btn-default">
+                <svg class="da-btn-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M13.586 3.586a2 2 0 1 1 2.828 2.828l-9.9 9.9-3.414.586.586-3.414 9.9-9.9z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+                Modify Draws
+              </button>
+              <button type="button" id="combineSoloDrawsBtn" class="da-choice-btn da-choice-btn-neutral">
+                <svg class="da-btn-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="2.5" stroke="currentColor" stroke-width="1.6"/><circle cx="13" cy="7" r="2.5" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 15c0-2.4 1.9-4 4.2-4h4.6c2.3 0 4.2 1.6 4.2 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                <span class="da-btn-label">Solo Divisions</span>
+              </button>
+              <button type="button" id="downloadDrawPdfsBtn" class="da-choice-btn da-choice-btn-neutral">
+                <svg class="da-btn-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="3" y="2" width="14" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M7 7h6M7 10h6M7 13h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M13 15l1.5 1.5L17 14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Download PDFs
+              </button>
+              <button type="button" id="saveDivisionTemplateBtn" class="da-choice-btn da-choice-btn-neutral">
+                <svg class="da-btn-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="4" y="3" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M7 3h6v4H7z" stroke="currentColor" stroke-width="1.6"/><path d="M7 12h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                <span class="da-btn-label">Save Template</span>
+              </button>
+            </div>
             <button type="button" id="startOverCompleteBtn" class="da-choice-btn da-choice-btn-custom">
+              <svg class="da-btn-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.5" stroke="#ff4d4d" stroke-width="1.6"/><path d="M7 10a3 3 0 1 0 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M10 5.5V8l2-1.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
               Start Over
             </button>
           </div>
@@ -221,6 +233,16 @@
         <div class="da-actions-row-end">
           <button type="button" id="saveDivisionsContinueBtn" class="da-btn da-btn-primary">save &amp; continue</button>
           <button type="button" id="startOverDivisionsBtn" class="da-btn da-btn-danger">start over</button>
+          <div class="da-division-search-wrap">
+            <label class="da-sr-only" for="divisionNameSearch">search divisions by name</label>
+            <input
+              type="text"
+              id="divisionNameSearch"
+              class="da-input da-input-sm da-division-search-input"
+              placeholder="search divisions by name..."
+              autocomplete="off"
+            >
+          </div>
         </div>
       </div>
       <div class="da-table-wrap">
@@ -307,6 +329,111 @@
       </div>
     </section>
   </main>
+
+  <div id="daCustomDivisionModal" class="da-custom-division-overlay" hidden>
+    <div class="da-custom-division-card da-edit-panel" role="dialog" aria-modal="true" aria-label="create manual divisions">
+      <header class="da-custom-division-header">
+        <button type="button" id="daCustomDivisionCloseBtn" class="da-custom-division-close" aria-label="Close">✕</button>
+      </header>
+      <div class="da-split da-draws-layout da-custom-division-layout">
+        <section class="da-table-wrap da-split-list da-custom-division-left">
+          <div class="da-custom-filters" id="customAthleteFilters">
+            <div class="da-custom-filter-row">
+              <button type="button" class="da-custom-filter-btn" id="customFilterMaleBtn" aria-pressed="false">male</button>
+              <button type="button" class="da-custom-filter-btn" id="customFilterFemaleBtn" aria-pressed="false">female</button>
+            </div>
+            <div class="da-custom-filter-row">
+              <span class="da-custom-filter-label">rank</span>
+              <select id="customFilterRankMin" class="da-select da-select-sm da-custom-filter-select" aria-label="Rank min">
+                <option value="">any</option>
+              </select>
+              <span class="da-band-sep">–</span>
+              <select id="customFilterRankMax" class="da-select da-select-sm da-custom-filter-select" aria-label="Rank max">
+                <option value="">any</option>
+              </select>
+            </div>
+            <div class="da-custom-filter-row">
+              <span class="da-custom-filter-label">age</span>
+              <input id="customFilterAgeMin" class="da-input da-input-sm da-custom-filter-num" type="number" min="0" step="1" inputmode="decimal" placeholder="min" aria-label="Age min">
+              <span class="da-band-sep">–</span>
+              <input id="customFilterAgeMax" class="da-input da-input-sm da-custom-filter-num" type="number" min="0" step="1" inputmode="decimal" placeholder="max" aria-label="Age max">
+            </div>
+            <div class="da-custom-filter-row">
+              <span class="da-custom-filter-label">ht</span>
+              <input id="customFilterHeightMin" class="da-input da-input-sm da-custom-filter-num" type="number" min="0" step="0.1" inputmode="decimal" placeholder="min" aria-label="Height min cm">
+              <span class="da-band-sep">–</span>
+              <input id="customFilterHeightMax" class="da-input da-input-sm da-custom-filter-num" type="number" min="0" step="0.1" inputmode="decimal" placeholder="max" aria-label="Height max cm">
+              <span class="da-custom-filter-unit">cm</span>
+            </div>
+            <div class="da-custom-filter-row">
+              <span class="da-custom-filter-label">wt</span>
+              <input id="customFilterWeightMin" class="da-input da-input-sm da-custom-filter-num" type="number" min="0" step="0.1" inputmode="decimal" placeholder="min" aria-label="Weight min kg">
+              <span class="da-band-sep">–</span>
+              <input id="customFilterWeightMax" class="da-input da-input-sm da-custom-filter-num" type="number" min="0" step="0.1" inputmode="decimal" placeholder="max" aria-label="Weight max kg">
+              <span class="da-custom-filter-unit">kg</span>
+            </div>
+          </div>
+          <label class="da-inline-label" for="customAthleteSearch">athlete search</label>
+          <input id="customAthleteSearch" class="da-input da-custom-control" type="search" autocomplete="off" placeholder="search athletes by name or club...">
+          <div id="customAthleteSourceList" class="da-draw-athletes da-custom-source-list" aria-label="all athletes"></div>
+        </section>
+        <section class="da-draws-right da-custom-division-right">
+          <div class="da-custom-division-meta">
+            <div class="da-custom-meta-field">
+              <label class="da-inline-label" for="customDivisionName">division name</label>
+              <input id="customDivisionName" class="da-input da-custom-control" type="text" autocomplete="off" maxlength="255" placeholder="type new division name">
+            </div>
+            <div class="da-custom-meta-field">
+              <label class="da-inline-label" for="customDivisionEventKey">event / mode</label>
+              <select id="customDivisionEventKey" class="da-select da-custom-control"></select>
+            </div>
+            <div class="da-custom-meta-field">
+              <label class="da-inline-label" for="customDivisionDrawType">draw type</label>
+              <select id="customDivisionDrawType" class="da-select da-custom-control"></select>
+            </div>
+            <p id="customDivisionWarning" class="da-hint da-custom-warning" hidden></p>
+          </div>
+          <nav class="da-subtabs da-draws-view-tabs" role="tablist" aria-label="custom draw view">
+            <button type="button" class="da-subtab active" data-subtab="pool">athletes</button>
+            <button type="button" class="da-subtab" data-subtab="matches">draw</button>
+            <button type="button" class="da-subtab" data-subtab="edit">edit</button>
+          </nav>
+          <div class="da-draws-upper da-custom-subpanel-wrap">
+            <div class="da-subpanel active" data-subpanel="pool">
+              <div id="customDrawAthletesList" class="da-draw-athletes da-draw-pool"></div>
+            </div>
+            <div class="da-subpanel" data-subpanel="matches" hidden>
+              <div id="customDrawMatchesViewport" class="da-matches-viewport">
+                <div class="da-matches-zoom" aria-label="draw zoom">
+                  <button type="button" id="customMatchesZoomOut" class="da-btn da-btn-sm" title="zoom out">−</button>
+                  <button type="button" id="customMatchesZoomIn" class="da-btn da-btn-sm" title="zoom in">+</button>
+                  <button type="button" id="customMatchesZoomFit" class="da-btn da-btn-sm" title="fit">fit</button>
+                </div>
+                <div id="customDrawMatchesContent" class="da-matches-content"></div>
+              </div>
+              <p id="customDrawMatchesHint" class="da-hint">select athletes to preview.</p>
+            </div>
+            <div class="da-subpanel" data-subpanel="edit" hidden>
+              <div id="customDrawEditTypeBar" class="da-edit-type-bar" hidden>
+                <label class="da-inline-label" for="customDrawEditTypeSelect">draw type</label>
+                <select id="customDrawEditTypeSelect" class="da-select" disabled></select>
+              </div>
+              <p id="customDrawEditHint" class="da-hint da-edit-hint">select athletes to edit this new draw.</p>
+              <div id="customInteractiveEditor" class="da-interactive-editor"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+      <footer class="da-custom-division-actions">
+        <button type="button" id="customDivisionSaveBtn" class="da-btn da-btn-primary">save division</button>
+      </footer>
+    </div>
+  </div>
+
+  <div id="daAthleteDetailsPop" class="da-athlete-details-pop" hidden>
+    <p class="da-athlete-details-name" id="daAthleteDetailsName"></p>
+    <dl id="daAthleteDetailsList"></dl>
+  </div>
 
   <div id="daConfirmModal" class="confirm-dialog-overlay" hidden>
     <div class="confirm-dialog-card" role="dialog" aria-labelledby="daConfirmTitle" aria-modal="true">

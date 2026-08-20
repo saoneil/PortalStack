@@ -19,6 +19,14 @@ let dragStartY = 0;
 let panStartX = 0;
 let panStartY = 0;
 let bound = false;
+let viewerTargets = {
+  viewportId: 'drawMatchesViewport',
+  contentId: 'drawMatchesContent',
+  hintId: 'drawMatchesHint',
+  zoomInId: 'matchesZoomIn',
+  zoomOutId: 'matchesZoomOut',
+  zoomFitId: 'matchesZoomFit'
+};
 
 function escapeHtml(text) {
   return String(text || '')
@@ -90,14 +98,14 @@ function matchBoxHtml(label, aka, ao) {
 }
 
 function applyTransform() {
-  const content = document.getElementById('drawMatchesContent');
+  const content = document.getElementById(viewerTargets.contentId);
   if (!content) return;
   content.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
 }
 
 function setHint(text, show) {
-  const hint = document.getElementById('drawMatchesHint');
-  const viewport = document.getElementById('drawMatchesViewport');
+  const hint = document.getElementById(viewerTargets.hintId);
+  const viewport = document.getElementById(viewerTargets.viewportId);
   if (hint) {
     hint.textContent = text || '';
     hint.hidden = !show;
@@ -106,7 +114,7 @@ function setHint(text, show) {
 }
 
 function fitToViewport(width, height) {
-  const viewport = document.getElementById('drawMatchesViewport');
+  const viewport = document.getElementById(viewerTargets.viewportId);
   if (!viewport || !width || !height) return;
   const vw = Math.max(120, viewport.clientWidth - 24);
   const vh = Math.max(120, viewport.clientHeight - 24);
@@ -373,7 +381,7 @@ function renderPremierLeague(content, json) {
 function bindPanZoom() {
   if (bound) return;
   bound = true;
-  const viewport = document.getElementById('drawMatchesViewport');
+  const viewport = document.getElementById(viewerTargets.viewportId);
   if (!viewport) return;
 
   viewport.addEventListener('wheel', (e) => {
@@ -406,25 +414,31 @@ function bindPanZoom() {
   viewport.addEventListener('pointerup', endDrag);
   viewport.addEventListener('pointercancel', endDrag);
 
-  document.getElementById('matchesZoomIn')?.addEventListener('click', () => {
+  document.getElementById(viewerTargets.zoomInId)?.addEventListener('click', () => {
     zoom = Math.min(2.5, zoom * 1.15);
     applyTransform();
   });
-  document.getElementById('matchesZoomOut')?.addEventListener('click', () => {
+  document.getElementById(viewerTargets.zoomOutId)?.addEventListener('click', () => {
     zoom = Math.max(0.2, zoom / 1.15);
     applyTransform();
   });
-  document.getElementById('matchesZoomFit')?.addEventListener('click', () => {
-    const bracket = document.querySelector('#drawMatchesContent .mv-bracket, #drawMatchesContent .mv-list-wrap');
+  document.getElementById(viewerTargets.zoomFitId)?.addEventListener('click', () => {
+    const bracket = document.querySelector(
+      `#${viewerTargets.contentId} .mv-bracket, #${viewerTargets.contentId} .mv-list-wrap`
+    );
     if (bracket) {
       fitToViewport(bracket.offsetWidth || 400, bracket.offsetHeight || 300);
     }
   });
 }
 
-export function renderMatchesViewer(entry) {
+export function renderMatchesViewer(entry, targets = null) {
+  if (targets && typeof targets === 'object') {
+    viewerTargets = { ...viewerTargets, ...targets };
+    bound = false;
+  }
   bindPanZoom();
-  const content = document.getElementById('drawMatchesContent');
+  const content = document.getElementById(viewerTargets.contentId);
   if (!content) return;
   panX = 0;
   panY = 0;
@@ -451,8 +465,11 @@ export function renderMatchesViewer(entry) {
   else setHint('unsupported draw type for this view.', true);
 }
 
-export function clearMatchesViewer() {
-  const content = document.getElementById('drawMatchesContent');
+export function clearMatchesViewer(targets = null) {
+  if (targets && typeof targets === 'object') {
+    viewerTargets = { ...viewerTargets, ...targets };
+  }
+  const content = document.getElementById(viewerTargets.contentId);
   if (content) content.innerHTML = '';
   setHint('select a draw to view.', true);
 }

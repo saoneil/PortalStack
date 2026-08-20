@@ -78,6 +78,23 @@
   }
 
   const RING_GRID_LAYOUT_KEY = 'umpireRingGridLayout';
+  const PORTAL_LAST_EVENT_KEY = 'portal-last-event-id';
+
+  function readLastEventId() {
+    try {
+      return String(sessionStorage.getItem(PORTAL_LAST_EVENT_KEY) || '').trim();
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function rememberLastEventId(eventId) {
+    const id = String(eventId || '').trim();
+    if (!id) return;
+    try {
+      sessionStorage.setItem(PORTAL_LAST_EVENT_KEY, id);
+    } catch (_) { /* ignore */ }
+  }
   const RING_GRID_LAYOUTS = {
     '1x': { rows: 1, cols: 0 },
     '2x2': { rows: 2, cols: 2 },
@@ -942,6 +959,11 @@
       )).join('');
       if (keepId && state.events.some((event) => String(event.id) === keepId)) {
         select.value = keepId;
+      } else {
+        const lastId = readLastEventId();
+        if (lastId && state.events.some((event) => String(event.id) === lastId)) {
+          select.value = lastId;
+        }
       }
       setStatus('');
     } catch (err) {
@@ -955,6 +977,7 @@
     const preserveView = Boolean(options && options.preserveView);
     const keepOpenRing = preserveView ? Number(state.openRing) || 0 : 0;
     state.eventId = String(eventId || '');
+    if (state.eventId) rememberLastEventId(state.eventId);
     if (!state.eventId) {
       state.umpires = [];
       state.umpiresById = {};
@@ -1005,7 +1028,6 @@
   async function refreshFromServer() {
     const btn = document.getElementById('umpireRefreshBtn');
     const select = document.getElementById('umpireEventSelect');
-    const eventId = String((select && select.value) || state.eventId || '');
     if (btn) {
       btn.disabled = true;
       btn.classList.add('is-busy');
@@ -1013,13 +1035,17 @@
     try {
       await persistAssignmentsNow();
       await loadEvents();
-      if (eventId) {
-        if (select && state.events.some((event) => String(event.id) === eventId)) {
-          select.value = eventId;
-          await loadEvent(eventId, { preserveView: true });
-        } else {
-          await loadEvent('');
-        }
+      const preferred = String(
+        (select && select.value)
+        || state.eventId
+        || readLastEventId()
+        || ''
+      );
+      if (preferred && state.events.some((event) => String(event.id) === preferred)) {
+        if (select) select.value = preferred;
+        await loadEvent(preferred, { preserveView: true });
+      } else {
+        await loadEvent('');
       }
     } finally {
       if (btn) {
@@ -1222,7 +1248,9 @@
   });
 
   document.getElementById('umpireEventSelect')?.addEventListener('change', function (e) {
-    loadEvent(e.target.value);
+    const eventId = e.target.value;
+    if (eventId) rememberLastEventId(eventId);
+    loadEvent(eventId);
   });
 
   document.getElementById('umpireRefreshBtn')?.addEventListener('click', function () {
@@ -1250,5 +1278,19 @@
   });
 
   applyGridLayout(readStoredGridLayout(), { skipStore: true });
-  loadEvents();
+  window.addEventListener('message', (event) => {
+    if (event.origin !== window.location.origin) return;
+    if (!event.data || event.data.type !== 'portal-data-updated') return;
+    if (event.data.eventId) rememberLastEventId(event.data.eventId);
+    refreshFromServer();
+  });
+  loadEvents().then(() => {
+    const select = document.getElementById('umpireEventSelect');
+    const eventId = String((select && select.value) || readLastEventId() || '');
+    if (eventId && state.events.some((event) => String(event.id) === eventId)) {
+      if (select) select.value = eventId;
+      return loadEvent(eventId);
+    }
+    return null;
+  });
 }());

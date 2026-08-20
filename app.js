@@ -1,4 +1,10 @@
 require('dotenv').config();
+
+if (!process.env.SESSION_SECRET || !process.env.SESSION_SECRET.trim()) {
+  console.error('FATAL: SESSION_SECRET environment variable is not set. Refusing to start.');
+  process.exit(1);
+}
+
 const dns = require('dns');
 const express = require('express');
 const session = require('express-session');
@@ -98,7 +104,7 @@ function buildDbPoolConfig() {
 
   const port = Number(process.env.DB_PORT) || 3306;
   const connectTimeout = Number(process.env.DB_CONNECT_TIMEOUT_MS) || 10000;
-  const connectionLimit = Number(process.env.DB_CONNECTION_LIMIT) || 10;
+  const connectionLimit = Number(process.env.DB_CONNECTION_LIMIT) || 50;
   const isLocalHost = host === '127.0.0.1';
   const sslEnv = String(process.env.DB_SSL || '').trim().toLowerCase();
   const sslEnabled = sslEnv
@@ -187,6 +193,32 @@ app.use(session({
     maxAge: 1000 * 60 * 60 * 24 // 1 day
   }
 }));
+
+// CSRF: for authenticated mutating requests, require Origin or Referer to match the request host.
+// Public routes (registration, login, signup) are excluded since they don't require a session.
+const CSRF_SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+const CSRF_PUBLIC_PREFIXES = ['/register', '/submit-registration', '/index', '/signup', '/public'];
+app.use((req, res, next) => {
+  if (CSRF_SAFE_METHODS.has(req.method)) return next();
+  if (!req.session || !req.session.loggedIn) return next();
+  const isPublic = CSRF_PUBLIC_PREFIXES.some((prefix) => req.path.startsWith(prefix));
+  if (isPublic) return next();
+
+  const origin = req.headers['origin'];
+  const referer = req.headers['referer'];
+  const host = req.headers['host'];
+
+  let sourceHost = null;
+  try {
+    if (origin && origin !== 'null') sourceHost = new URL(origin).host;
+    else if (referer) sourceHost = new URL(referer).host;
+  } catch (_) { /* malformed header */ }
+
+  if (!sourceHost || sourceHost !== host) {
+    return res.status(403).json({ error: 'Request origin not permitted.' });
+  }
+  next();
+});
 
 // login rate limiter
 const loginLimiter = rateLimit({
@@ -593,22 +625,34 @@ app.post('/index', loginLimiter, (req, res) => {
 
     const user = results[0][0];
 
-    const match = await bcrypt.compare(password, user.password_hash);
+    const match = await bcrypt.compare(password, user.password_hash || user.password);
     if (!match) {
       return res.status(401).json({ error: 'Invalid credentials for this client' });
     }
 
     const finishLogin = (flags) => {
-      req.session.loggedIn = true;
-      req.session.clientId = user.client_id;
-      // Store the client name provided during login for display purposes
-      req.session.clientName = client;
-      req.session.username = username;
-      req.session.principleUser = flags.principleUser;
-      req.session.principleUserAdvanced = flags.principleUserAdvanced;
+      req.session.regenerate((regenErr) => {
+        if (regenErr) {
+          console.error('session regenerate failed:', regenErr);
+          return res.status(500).json({ error: 'Login failed. Please try again.' });
+        }
+        req.session.loggedIn = true;
+        req.session.clientId = user.client_id;
+        // Store the client name provided during login for display purposes
+        req.session.clientName = client;
+        req.session.username = username;
+        req.session.principleUser = flags.principleUser;
+        req.session.principleUserAdvanced = flags.principleUserAdvanced;
 
-      insertLog(username, { action: 'login', client: client, username: username }, req.ip);
-      res.json({ success: true, redirect: '/landing' });
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error('session save failed:', saveErr);
+            return res.status(500).json({ error: 'Login failed. Please try again.' });
+          }
+          insertLog(username, { action: 'login', client: client, username: username }, req.ip);
+          res.json({ success: true, redirect: '/landing' });
+        });
+      });
     };
 
     // Always resolve user flags from the users table so admin accounts
@@ -628,8 +672,18 @@ app.get('/signup', (req, res) => {
   res.sendFile(path.join(__dirname, 'html', 'signup.html'));
 });
 
+const RESERVED_USERNAMES = new Set(['admin', 'administrator']);
+
 app.post('/signup', signupLimiter, async (req, res) => {
   const { client, username, password } = req.body;
+
+  if (RESERVED_USERNAMES.has(String(username || '').trim().toLowerCase())) {
+    return res.status(400).json({ error: 'That username is invalid. Please choose a different one.' });
+  }
+
+  if (!password || String(password).length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+  }
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -649,6 +703,42 @@ app.post('/signup', signupLimiter, async (req, res) => {
   }
 });
 
+// One-time admin password reset. Disabled unless ADMIN_RESET_TOKEN is set in .env.
+// Usage: POST /admin-reset with JSON { "token": "<ADMIN_RESET_TOKEN>", "password": "<new password>" }
+// Remove ADMIN_RESET_TOKEN from .env after use.
+app.post('/admin-reset', async (req, res) => {
+  const resetToken = process.env.ADMIN_RESET_TOKEN;
+  if (!resetToken || !resetToken.trim()) {
+    return res.status(404).json({ error: 'Not found.' });
+  }
+  const { token, password } = req.body;
+  if (!token || token !== resetToken) {
+    return res.status(403).json({ error: 'Forbidden.' });
+  }
+  if (!password) {
+    return res.status(400).json({ error: 'Password required.' });
+  }
+  try {
+    const hash = await bcrypt.hash(String(password), 10);
+    db.query(
+      `INSERT INTO users (username, password, client_id, admin_flag, principle_user, principle_user_advanced, date_added)
+       VALUES (?, ?, '1', 1, 1, 1, NOW())`,
+      ['admin', hash],
+      (err, result) => {
+        if (err) {
+          console.error('admin-reset db error:', err);
+          return res.status(500).json({ error: 'Database error.' });
+        }
+        insertLog('admin', { action: 'admin-reset', note: 'admin user created via reset endpoint', insertId: result.insertId }, req.ip);
+        res.json({ success: true, insertId: result.insertId, message: 'Admin user created. Update the id if needed, then remove ADMIN_RESET_TOKEN from .env.' });
+      }
+    );
+  } catch (err) {
+    console.error('admin-reset error:', err);
+    res.status(500).json({ error: 'Server error.' });
+  }
+});
+
 app.get('/landing', requireLogin, (req, res) => {
   res.set({
     'Cache-Control': 'no-store, no-cache, must-revalidate, private',
@@ -658,7 +748,7 @@ app.get('/landing', requireLogin, (req, res) => {
   res.sendFile(path.join(__dirname, 'html', 'landing.html'));
 });
 
-app.get('/division-advanced', requireLogin, (req, res) => {
+app.get('/division-advanced', requireLogin, requireAdvancedPage, (req, res) => {
   res.set({
     'Cache-Control': 'no-store, no-cache, must-revalidate, private',
     Pragma: 'no-cache',
@@ -718,7 +808,7 @@ app.get('/live-schedule/:clientId/:eventId', (req, res) => {
   res.sendFile(path.join(__dirname, 'html', 'live-schedule.html'));
 });
 
-app.get('/umpire-management', requireLogin, (req, res) => {
+app.get('/umpire-management', requireLogin, requireAdvancedPage, (req, res) => {
   res.set({
     'Cache-Control': 'no-store, no-cache, must-revalidate, private',
     Pragma: 'no-cache',
@@ -1313,7 +1403,7 @@ app.post('/api/registration/submit', registrationSubmitLimiter, (req, res) => {
       SELECT
         waiver_text,
         CASE
-          WHEN waiver_required = 1 AND LENGTH(TRIM(COALESCE(waiver_text, ''))) > 0 THEN 1
+          WHEN LENGTH(TRIM(COALESCE(waiver_text, ''))) > 0 THEN 1
           ELSE 0
         END AS waiver_required
       FROM events
@@ -1677,6 +1767,17 @@ const { displayDurationMinutes } = require('./lib/division-tool/schedule');
 
 const requirePrincipleUser = createRequirePrincipleUser(lookupUserFlags);
 const requirePrincipleUserAdvanced = createRequirePrincipleUserAdvanced(lookupUserFlags);
+
+// Page-level Advanced gate: redirects to /landing instead of returning JSON 403.
+function requireAdvancedPage(req, res, next) {
+  if (Number(req.session.principleUserAdvanced) === 1) return next();
+  lookupUserFlags(req.session.username, req.session.clientId, (flags) => {
+    req.session.principleUser = flags.principleUser;
+    req.session.principleUserAdvanced = flags.principleUserAdvanced;
+    if (Number(flags.principleUserAdvanced) === 1) return next();
+    res.redirect('/landing');
+  });
+}
 
 registerDivisionAdvancedRoutes(app, db, {
   requireLogin,
