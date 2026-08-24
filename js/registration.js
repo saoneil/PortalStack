@@ -964,6 +964,7 @@ function collectRegistrationPayload() {
     });
     payload.otherEvents = getSelectedOtherEventKeys().join(':');
   } else if (isStaffRole()) {
+    payload.contactEmail = scrubFieldValue(document.getElementById('reg-staff-email').value);
     payload.firstName = scrubFieldValue(document.getElementById('reg-staff-first-name').value);
     payload.lastName = scrubFieldValue(document.getElementById('reg-staff-last-name').value);
     payload.dob = getDobSubmitValue();
@@ -971,6 +972,7 @@ function collectRegistrationPayload() {
     payload.gender = scrubFieldValue(staffGenderSelect && staffGenderSelect.value);
     payload.teamNameOrCountry = scrubFieldValue(document.getElementById('reg-staff-team').value);
   } else {
+    payload.contactEmail = scrubFieldValue(document.getElementById('reg-simple-email').value);
     payload.firstName = scrubFieldValue(entryForm.simpleFirstName.value);
     payload.lastName = scrubFieldValue(entryForm.simpleLastName.value);
   }
@@ -1023,6 +1025,9 @@ function validateRegistration() {
   }
 
   if (isStaffRole()) {
+    var staffEmail = scrubFieldValue(document.getElementById('reg-staff-email').value);
+    if (!staffEmail) return 'please enter your email.';
+    if (!isValidEmail(staffEmail)) return 'please enter a valid email address.';
     if (!scrubFieldValue(document.getElementById('reg-staff-first-name').value)) return 'please enter your first name.';
     if (!scrubFieldValue(document.getElementById('reg-staff-last-name').value)) return 'please enter your last name.';
     if (!isDobComplete()) return 'please enter your complete date of birth.';
@@ -1035,6 +1040,9 @@ function validateRegistration() {
     return '';
   }
 
+  var simpleEmail = scrubFieldValue(document.getElementById('reg-simple-email').value);
+  if (!simpleEmail) return 'please enter your email.';
+  if (!isValidEmail(simpleEmail)) return 'please enter a valid email address.';
   if (!scrubFieldValue(entryForm.simpleFirstName.value)) return 'please enter your first name.';
   if (!scrubFieldValue(entryForm.simpleLastName.value)) return 'please enter your last name.';
   return '';
@@ -1110,12 +1118,14 @@ function buildConfirmSummary(payload) {
     lines.push('events: ' + getSelectedEventLabels().join(', '));
   } else if (payload.role === 'coach' || payload.role === 'umpire') {
     lines.push('name: ' + payload.firstName + ' ' + payload.lastName);
+    lines.push('email: ' + payload.contactEmail);
     lines.push('dob: ' + payload.dob);
     lines.push('rank: ' + payload.rank);
     lines.push('gender: ' + payload.gender);
     lines.push('team/country: ' + payload.teamNameOrCountry);
   } else {
     lines.push('name: ' + payload.firstName + ' ' + payload.lastName);
+    lines.push('email: ' + payload.contactEmail);
   }
 
   return '<p class="confirm-line">event: ' + escapeHtml(eventLabel) + '</p>' +

@@ -1235,7 +1235,10 @@ app.post('/api/registration/submit', registrationSubmitLimiter, (req, res) => {
   const roleKey = role.toLowerCase();
   const isAthlete = roleKey === 'athlete';
   const isTeam = roleKey === 'team';
-  let contactEmail = null;
+  const contactEmail = toNullableString(body.contactEmail, 100);
+  if (!contactEmail || !isValidEmail(contactEmail)) {
+    return res.status(400).json({ error: 'A valid email address is required.' });
+  }
   let dob = null;
   let rank = null;
   let gender = null;
@@ -1255,11 +1258,6 @@ app.post('/api/registration/submit', registrationSubmitLimiter, (req, res) => {
   }
 
   if (isAthlete) {
-    contactEmail = toNullableString(body.contactEmail, 100);
-    if (!contactEmail || !isValidEmail(contactEmail)) {
-      return res.status(400).json({ error: 'A valid email address is required.' });
-    }
-
     dob = toNullableDate(body.dob);
     if (!dob) {
       return res.status(400).json({ error: 'Please enter a valid date of birth. The day, month, or year is not correct.' });
@@ -1306,11 +1304,6 @@ app.post('/api/registration/submit', registrationSubmitLimiter, (req, res) => {
       return res.status(400).json({ error: 'Please select at least one event.' });
     }
   } else if (isTeam) {
-    contactEmail = toNullableString(body.contactEmail, 100);
-    if (!contactEmail || !isValidEmail(contactEmail)) {
-      return res.status(400).json({ error: 'A valid email address is required.' });
-    }
-
     gender = toNullableString(body.gender, 1);
     if (!gender || !['M', 'F', 'X', 'm', 'f', 'x'].includes(gender)) {
       return res.status(400).json({ error: 'Gender is required (m, f, or mixed).' });

@@ -54,9 +54,9 @@
                 Customize
               </button>
             </div>
-            <button type="button" id="buildCustomDivisionsBtn" class="da-choice-btn da-choice-btn-default">
+            <button type="button" id="buildCustomDivisionsBtn" class="da-choice-btn da-choice-btn-default js-open-custom-divisions">
               <svg class="da-btn-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 5h12M4 10h12M4 15h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M13.5 13.5l3 3M16.5 13.5l-3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-              <span class="da-btn-label">create manual divisions</span>
+              <span class="da-btn-label">Create Manual Draws</span>
             </button>
           </div>
 
@@ -92,6 +92,10 @@
                 <span class="da-btn-label">Save Template</span>
               </button>
             </div>
+            <button type="button" id="buildCustomDivisionsCompleteBtn" class="da-choice-btn da-choice-btn-default js-open-custom-divisions">
+              <svg class="da-btn-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 5h12M4 10h12M4 15h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M13.5 13.5l3 3M16.5 13.5l-3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+              <span class="da-btn-label">Create Manual Draws</span>
+            </button>
             <button type="button" id="startOverCompleteBtn" class="da-choice-btn da-choice-btn-custom">
               <svg class="da-btn-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.5" stroke="#ff4d4d" stroke-width="1.6"/><path d="M7 10a3 3 0 1 0 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M10 5.5V8l2-1.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
               Start Over
@@ -331,7 +335,7 @@
   </main>
 
   <div id="daCustomDivisionModal" class="da-custom-division-overlay" hidden>
-    <div class="da-custom-division-card da-edit-panel" role="dialog" aria-modal="true" aria-label="create manual divisions">
+    <div class="da-custom-division-card da-edit-panel" role="dialog" aria-modal="true" aria-label="create manual draws">
       <header class="da-custom-division-header">
         <button type="button" id="daCustomDivisionCloseBtn" class="da-custom-division-close" aria-label="Close">✕</button>
       </header>
@@ -393,11 +397,14 @@
             </div>
             <p id="customDivisionWarning" class="da-hint da-custom-warning" hidden></p>
           </div>
-          <nav class="da-subtabs da-draws-view-tabs" role="tablist" aria-label="custom draw view">
-            <button type="button" class="da-subtab active" data-subtab="pool">athletes</button>
-            <button type="button" class="da-subtab" data-subtab="matches">draw</button>
-            <button type="button" class="da-subtab" data-subtab="edit">edit</button>
-          </nav>
+          <div class="da-custom-view-bar">
+            <nav class="da-subtabs da-draws-view-tabs" role="tablist" aria-label="custom draw view">
+              <button type="button" class="da-subtab active" data-subtab="pool">athletes</button>
+              <button type="button" class="da-subtab" data-subtab="matches">draw</button>
+              <button type="button" class="da-subtab" data-subtab="edit">edit</button>
+            </nav>
+            <button type="button" id="customDivisionClearBtn" class="da-btn da-btn-sm da-custom-clear-btn" disabled>clear</button>
+          </div>
           <div class="da-draws-upper da-custom-subpanel-wrap">
             <div class="da-subpanel active" data-subpanel="pool">
               <div id="customDrawAthletesList" class="da-draw-athletes da-draw-pool"></div>

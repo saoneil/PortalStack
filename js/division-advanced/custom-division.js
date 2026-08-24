@@ -167,6 +167,18 @@ function updateWarning() {
   warning.textContent = lines.length ? lines.slice(0, 3).join(' ') : '';
 }
 
+function syncClearButton() {
+  const btn = document.getElementById('customDivisionClearBtn');
+  if (btn) btn.disabled = selectedSet.size === 0;
+}
+
+async function clearSelectedAthletes() {
+  if (!selectedSet.size) return;
+  selectedSet = new Set();
+  renderSourceList();
+  await rebuildDraftPreview();
+}
+
 function fillEventOptions() {
   const select = document.getElementById('customDivisionEventKey');
   if (!select) return;
@@ -339,6 +351,7 @@ async function rebuildDraftPreview() {
       }
     });
     updateWarning();
+    syncClearButton();
     return;
   }
   const eventId = state.eventId;
@@ -371,6 +384,7 @@ async function rebuildDraftPreview() {
     }
   });
   updateWarning();
+  syncClearButton();
 }
 
 function closeModal() {
@@ -465,7 +479,7 @@ async function saveDraft() {
   const savedName = draft.division_name;
   state.drawsState.catalog = [...(state.drawsState.catalog || []), { ...draft }];
   await deps.regenerateDraws();
-  showToast(`"${savedName}" created — add another or click done when finished.`);
+  showToast(`success - ${savedName} created`);
   await resetDraftForNext();
 }
 
@@ -519,6 +533,11 @@ function bindModalEvents() {
   });
   document.getElementById('customDivisionDrawType')?.addEventListener('change', rebuildDraftPreview);
   document.getElementById('customDivisionName')?.addEventListener('input', syncDraftName);
+  document.getElementById('customDivisionClearBtn')?.addEventListener('click', () => {
+    clearSelectedAthletes().catch((err) => {
+      showToast(err.message || 'unable to clear selected athletes.', true);
+    });
+  });
   document.querySelectorAll('#daCustomDivisionModal .da-subtab').forEach((btn) => {
     btn.addEventListener('click', async () => {
       switchDrawSubtab(btn.dataset.subtab, modalTargets);
@@ -550,7 +569,9 @@ export function initCustomDivisionFeature(options = {}) {
     ...options
   };
   bindModalEvents();
-  document.getElementById('buildCustomDivisionsBtn')?.addEventListener('click', () => {
-    openModal().catch((err) => showToast(err.message || 'unable to open custom divisions.', true));
+  document.querySelectorAll('.js-open-custom-divisions').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      openModal().catch((err) => showToast(err.message || 'unable to open custom divisions.', true));
+    });
   });
 }

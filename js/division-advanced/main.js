@@ -118,9 +118,11 @@ function setWheelPhase(phase) {
   const choice = document.getElementById('daDivisionChoice');
   const ready = document.getElementById('daCreateDrawsChoice');
   const complete = document.getElementById('daCompleteChoice');
+  const ring = document.getElementById('workflowStatusRing');
   if (choice) choice.hidden = phase !== 'choose';
   if (ready) ready.hidden = phase !== 'ready';
   if (complete) complete.hidden = phase !== 'complete';
+  ring?.classList.toggle('da-ring-complete', phase === 'complete');
 
   if (phase === 'pick') {
     setPrompt('select an event', { hidden: false });

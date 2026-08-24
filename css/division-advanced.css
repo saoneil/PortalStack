@@ -1971,6 +1971,25 @@ html.da-embed .division-advanced-top {
   min-height: 0;
 }
 
+.da-custom-view-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  margin-bottom: 6px;
+}
+
+.da-custom-view-bar .da-subtabs {
+  margin-bottom: 0;
+}
+
+.da-custom-clear-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 6px;
+  flex: 0 0 auto;
+}
+
 .da-custom-division-meta {
   display: flex;
   flex-direction: column;
@@ -2263,6 +2282,24 @@ html.da-start-screen .da-status-ring-content {
   max-height: none;
   overflow: visible;
   gap: 16px;
+}
+
+html.da-start-screen .da-status-ring.da-ring-complete .da-status-ring-content {
+  width: min(76%, 30rem);
+  gap: 10px;
+}
+
+html.da-start-screen .da-ring-complete .da-complete-grid {
+  gap: 8px;
+}
+
+html.da-start-screen .da-ring-complete .da-choice-btn {
+  font-size: 14px;
+  padding: 10px 12px;
+}
+
+html.da-start-screen .da-ring-complete .da-status-ring-msg {
+  font-size: clamp(14px, 2vh, 22px);
 }
 
 html.da-start-screen .da-event-gate,
