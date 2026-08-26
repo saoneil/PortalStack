@@ -1,3 +1,7 @@
+/**
+ * PMA Score Portal — Copyright (c) 2025–2026 Performance Martial Arts. All rights reserved.
+ * Sole author: Sean O'Neil. Proprietary; see NOTICE and PROVENANCE.md.
+ */
 require('dotenv').config();
 
 if (!process.env.SESSION_SECRET || !process.env.SESSION_SECRET.trim()) {

@@ -722,6 +722,24 @@ h2 {
   gap: 12px;
 }
 
+.registration-legal-notice {
+  margin: 0;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.registration-legal-notice a {
+  color: #00d4ff;
+  text-decoration: none;
+}
+
+.registration-legal-notice a:hover,
+.registration-legal-notice a:focus {
+  text-decoration: underline;
+}
+
 .submit-row .btn {
   width: 100%;
   display: block;

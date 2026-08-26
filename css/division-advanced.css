@@ -223,6 +223,22 @@ html.da-embed .division-advanced-top {
   margin-left: auto;
 }
 
+.da-division-name-cell {
+  min-width: 220px;
+  width: 32%;
+  padding: 4px 6px;
+}
+
+#divisionsTable .da-division-name-input.da-input,
+#divisionsTable .da-division-name-input.da-input-sm {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  flex: none;
+  box-sizing: border-box;
+}
+
 .da-division-search-wrap {
   display: inline-flex;
   align-items: center;

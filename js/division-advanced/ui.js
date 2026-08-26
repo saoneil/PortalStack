@@ -1,6 +1,6 @@
 import { apiFetch } from './api.js';
 import { state } from './state.js';
-import { applyCombineToTarget } from './merge-division.js';
+import { applyCombineToTarget, divisionTitleFromSpec } from './merge-division.js';
 import {
   buildMoveTargetOptions,
   findLeafByDivisionId,
@@ -214,6 +214,58 @@ export function setDivisionNameQuery(query) {
   renderDivisionsTable();
 }
 
+const SIMPLIFIED_DIVISION_PREFIXES = {
+  individual_patterns: 'P',
+  individual_sparring: 'S',
+  individual_special_technique: 'ST',
+  individual_power_test: 'PT',
+  team_patterns: 'TP',
+  team_sparring: 'TS',
+  team_special_technique: 'TST',
+  team_power_test: 'TPT',
+  pre_arranged_sparring: 'PAS'
+};
+
+export function setLeafDivisionName(leafIndex, name) {
+  const leaf = state.leaves?.[leafIndex];
+  if (!leaf) return false;
+  const trimmed = String(name || '').trim();
+  if (!trimmed) return false;
+  leaf.division_name = trimmed;
+  return true;
+}
+
+export function applyDescriptiveDivisionNames(leaves = state.leaves) {
+  if (!Array.isArray(leaves) || !leaves.length) return 0;
+  leaves.forEach((leaf) => {
+    leaf.division_name = divisionTitleFromSpec(leaf);
+  });
+  return leaves.length;
+}
+
+function normalizeLeafDivisionNames(leaves) {
+  return (leaves || []).map((leaf) => {
+    if (String(leaf.division_name || '').trim()) return leaf;
+    return { ...leaf, division_name: divisionTitleFromSpec(leaf) };
+  });
+}
+
+export function fillMissingDescriptiveDivisionNames(leaves) {
+  return normalizeLeafDivisionNames(leaves);
+}
+
+export function applySimplifiedDivisionNames(leaves = state.leaves) {
+  if (!Array.isArray(leaves) || !leaves.length) return 0;
+  const counters = {};
+  leaves.forEach((leaf) => {
+    const eventKey = String(leaf.event_key || '').trim();
+    const prefix = SIMPLIFIED_DIVISION_PREFIXES[eventKey] || 'D';
+    counters[eventKey] = (counters[eventKey] || 0) + 1;
+    leaf.division_name = `${prefix}${counters[eventKey]}`;
+  });
+  return leaves.length;
+}
+
 export function renderDivisionsTable() {
   const tbody = document.querySelector('#divisionsTable tbody');
   const summary = document.getElementById('divisionsSummary');
@@ -228,17 +280,29 @@ export function renderDivisionsTable() {
     tbody.innerHTML = '<tr><td colspan="7">no matching divisions found</td></tr>';
     return;
   }
-  tbody.innerHTML = matches.slice(0, 500).map((leaf) => `
-    <tr>
+  tbody.innerHTML = matches.slice(0, 500).map((leaf) => {
+    const leafIndex = state.leaves.indexOf(leaf);
+    return `
+    <tr data-leaf-index="${leafIndex}">
       <td>${leaf.enabled !== false ? '✓' : ''}</td>
-      <td>${escapeHtml(leaf.division_name)}</td>
+      <td class="da-division-name-cell">
+        <input
+          type="text"
+          class="da-input da-input-sm da-division-name-input"
+          data-leaf-index="${leafIndex}"
+          value="${escapeHtml(leaf.division_name)}"
+          maxlength="500"
+          aria-label="division name"
+        >
+      </td>
       <td>${escapeHtml(leaf.event_key)}</td>
       <td>${escapeHtml(leaf.draw_type)}</td>
       <td>${escapeHtml(leaf.gender)}</td>
       <td>${leaf.age_min ?? ''}${leaf.age_max != null ? '–' + leaf.age_max : ''}</td>
       <td>${escapeHtml(leaf.rank_min)}${leaf.rank_max ? '–' + escapeHtml(leaf.rank_max) : ''}</td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
   if (matches.length > 500) {
     tbody.innerHTML += `<tr><td colspan="7">… ${matches.length - 500} more matches not shown</td></tr>`;
   }
@@ -769,7 +833,7 @@ export async function loadCreationStatus() {
 export async function loadEventTemplateLeaves() {
   if (!state.eventId) return [];
   const data = await apiFetch(`/api/division-advanced/events/${state.eventId}/divisions`);
-  state.leaves = data.leaves || [];
+  state.leaves = normalizeLeafDivisionNames(data.leaves || []);
   return state.leaves;
 }
 

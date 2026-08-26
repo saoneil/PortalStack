@@ -263,6 +263,55 @@ function divisionAthleteRows(entry) {
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 }
 
+function divisionPlacementInfo(divisionId) {
+  const sched = ctx.state;
+  if (!sched) return null;
+  const id = String(divisionId);
+  const placement = sched.placements?.[id];
+  if (!placement) return null;
+
+  const entry = catalogEntry(id);
+  if (!entry) return null;
+
+  const days = scheduleDays(sched);
+  const dayIndex = Number(placement.day_index || 0);
+  const day = days[dayIndex];
+  if (!day) return null;
+
+  const startAbs = parseHhmm(day.start_time) ?? 8 * 60;
+  const start = Number(placement.start_offset_minutes || 0);
+  const duration = displayDuration(entry, sched);
+  if (duration <= 0) return null;
+
+  const end = start + duration;
+  const ringIndex = Number(placement.ring_index || 0);
+
+  return {
+    dayIndex,
+    dayName: String(day.name || `Day ${dayIndex + 1}`),
+    ringIndex,
+    ringLabel: `Ring ${ringIndex + 1}`,
+    start,
+    end,
+    duration,
+    startClock: fmtClock(startAbs, start),
+    endClock: fmtClock(startAbs, end),
+    windowLabel: `${fmtClock(startAbs, start)}–${fmtClock(startAbs, end)}`
+  };
+}
+
+function divisionScheduleSummary(divisionId) {
+  const sched = ctx.state;
+  const info = divisionPlacementInfo(divisionId);
+  if (!info) {
+    if (sched && isScratched(divisionId)) return 'On scratch pad (not scheduled)';
+    return 'Not scheduled';
+  }
+  const days = scheduleDays(sched);
+  const dayPart = days.length > 1 ? `${info.dayName} · ` : '';
+  return `${dayPart}${info.ringLabel} · ${info.windowLabel} (${formatDurationMinutes(info.duration)} min)`;
+}
+
 function closeDivisionModal() {
   const modal = document.getElementById('liveDivisionModal');
   if (!modal) return;
@@ -272,6 +321,7 @@ function closeDivisionModal() {
 function openDivisionModal(divisionId) {
   const modal = document.getElementById('liveDivisionModal');
   const titleEl = document.getElementById('liveDivisionModalTitle');
+  const scheduleEl = document.getElementById('liveDivisionModalSchedule');
   const listEl = document.getElementById('liveDivisionModalList');
   const emptyEl = document.getElementById('liveDivisionModalEmpty');
   if (!modal || !titleEl || !listEl || !emptyEl) return;
@@ -281,6 +331,9 @@ function openDivisionModal(divisionId) {
   const athletes = entry ? divisionAthleteRows(entry) : [];
 
   titleEl.textContent = divisionName;
+  if (scheduleEl) {
+    scheduleEl.textContent = divisionScheduleSummary(divisionId);
+  }
   if (!athletes.length) {
     listEl.innerHTML = '';
     listEl.hidden = true;
@@ -979,6 +1032,13 @@ function setMatchDurationForTargetTotal(id, targetMinutes) {
   sched.match_durations[id] = Math.round(matchNeeded * 1000) / 1000;
 }
 
+function durationAdjustToast(slotDelta, kind) {
+  const mins = Math.abs(slotDelta) * SLOT;
+  const label = kind === 'break' ? 'break' : 'division';
+  if (slotDelta > 0) return `Lengthened ${label} by ${mins} min.`;
+  return `Shortened ${label} by ${mins} min.`;
+}
+
 function adjustDurationSlots(id, slotDelta) {
   const sched = ctx.state;
   if (!sched) return;
@@ -1001,7 +1061,7 @@ function adjustDurationSlots(id, slotDelta) {
     normalizeAllOverlaps();
     markDirty();
     renderViewer();
-    showToast(slotDelta > 0 ? 'Lengthened break.' : 'Shortened break.');
+    showToast(durationAdjustToast(slotDelta, 'break'));
     return;
   }
 
@@ -1026,9 +1086,9 @@ function adjustDurationSlots(id, slotDelta) {
   }
   normalizeAllOverlaps();
 
-  markDurationsDirty();
+  markDirty();
   renderViewer();
-  showToast(slotDelta > 0 ? 'Lengthened division.' : 'Shortened division.');
+  showToast(durationAdjustToast(slotDelta, 'division'));
 }
 
 function hideContextMenu() {
@@ -1135,11 +1195,12 @@ function dayTimelineHtml(sched, dayIndex) {
             const selected = ctx.canEdit && ctx.selectedId === String(block.id) ? 'is-selected' : '';
             const breakClass = block.kind === 'break' ? 'is-break' : '';
             const completedClass = block.kind !== 'break' && isDivisionCompleted(block.id) ? 'is-completed' : '';
-            return `<div class="da-schedule-block ${selected} ${breakClass} ${completedClass}" data-id="${escapeHtml(block.id)}" data-kind="${escapeHtml(block.kind || 'division')}" data-slots="${heightSlots}" draggable="${draggable}"
+            const compactClass = block.kind !== 'break' && heightSlots === 1 ? 'is-compact' : '';
+            return `<div class="da-schedule-block ${selected} ${breakClass} ${completedClass} ${compactClass}" data-id="${escapeHtml(block.id)}" data-kind="${escapeHtml(block.kind || 'division')}" data-slots="${heightSlots}" draggable="${draggable}"
               style="top:calc(${topSlots} * var(--da-sched-slot-h)); height:calc(${heightSlots} * var(--da-sched-slot-h) - 2px);">
               ${divisionCompleteMark(block.id)}
               <strong class="da-schedule-block-name" title="${escapeHtml(block.name)}">${escapeHtml(block.name)}</strong>
-              <span class="da-schedule-block-time">${fmtClock(startAbs, block.start)}–${fmtClock(startAbs, block.end)}</span>
+              ${compactClass ? '' : `<span class="da-schedule-block-time">${fmtClock(startAbs, block.start)}–${fmtClock(startAbs, block.end)}</span>`}
             </div>`;
           }).join('')}
         </div>
@@ -1185,18 +1246,77 @@ function fitDivisionBlockText(root) {
 
   const toolMode = isToolMode();
 
+  const fitSize = (lo, hi, test, overflows) => {
+    let best = lo;
+    test(hi);
+    if (!overflows()) return hi;
+    while (hi - lo > 0.25) {
+      const mid = (lo + hi) / 2;
+      test(mid);
+      if (overflows()) hi = mid;
+      else {
+        best = mid;
+        lo = mid;
+      }
+    }
+    return best;
+  };
+
   blocks.forEach((block) => {
     const nameEl = block.querySelector('.da-schedule-block-name') || block.querySelector('strong');
-    const timeEl = block.querySelector('.da-schedule-block-time') || block.querySelector('span');
-    if (!nameEl || !timeEl) return;
+    const timeEl = block.querySelector('.da-schedule-block-time');
+    if (!nameEl) return;
 
     const slots = Math.max(1, Number(block.getAttribute('data-slots')) || 1);
     const isBreak = block.classList.contains('is-break');
+    const hideTime = !isBreak && slots === 1;
     const blockH = Math.max(1, block.clientHeight);
     const blockW = Math.max(1, block.clientWidth);
+    const blockStyle = getComputedStyle(block);
+    const padX = (parseFloat(blockStyle.paddingLeft) || 0) + (parseFloat(blockStyle.paddingRight) || 0);
+    const padY = (parseFloat(blockStyle.paddingTop) || 0) + (parseFloat(blockStyle.paddingBottom) || 0);
+    const availW = Math.max(1, blockW - padX);
+    const availH = Math.max(1, blockH - padY);
     const allowWrap = slots >= 2;
-    const minName = toolMode && slots <= 1 ? 6 : (toolMode && slots <= 2 ? 7 : 8);
+    const minName = hideTime ? 5 : (toolMode && slots <= 1 ? 6 : (toolMode && slots <= 2 ? 7 : 8));
     const minTime = Math.max(6, minName - 1);
+
+    if (hideTime || !timeEl) {
+      const maxName = Math.max(
+        minName,
+        Math.min(availH * 0.95, availW * 0.45, toolMode ? 12 : 16)
+      );
+
+      nameEl.style.flex = '0 1 auto';
+      nameEl.style.width = '100%';
+      nameEl.style.maxWidth = '100%';
+      nameEl.style.minWidth = '0';
+      nameEl.style.minHeight = '0';
+      nameEl.style.display = 'block';
+      nameEl.style.lineHeight = '1';
+      nameEl.style.overflow = 'hidden';
+      nameEl.style.overflowWrap = 'normal';
+      nameEl.style.wordBreak = 'normal';
+      nameEl.style.whiteSpace = 'nowrap';
+      nameEl.style.textAlign = 'center';
+      nameEl.style.textOverflow = 'clip';
+
+      const applyName = (size) => {
+        nameEl.style.fontSize = `${Math.max(minName, size)}px`;
+      };
+
+      const compactOverflows = () => (
+        nameEl.scrollWidth > nameEl.clientWidth + 1
+        || nameEl.scrollHeight > availH + 1
+        || block.scrollHeight > block.clientHeight + 1
+      );
+
+      const bestName = fitSize(minName, maxName, applyName, compactOverflows);
+      applyName(bestName);
+      nameEl.style.textOverflow = compactOverflows() ? 'ellipsis' : 'clip';
+      return;
+    }
+
     const timeReserve = Math.min(blockH * 0.34, (toolMode ? 16 : 20) * SCHEDULE_BLOCK_TEXT_SCALE);
     const nameAreaH = Math.max(8, blockH - timeReserve - 4);
     let maxName = Math.min(
@@ -1226,11 +1346,6 @@ function fitDivisionBlockText(root) {
     timeEl.style.textOverflow = 'clip';
     timeEl.style.whiteSpace = 'nowrap';
 
-    const apply = (namePx, timePx) => {
-      nameEl.style.fontSize = `${Math.max(minName, namePx)}px`;
-      timeEl.style.fontSize = `${Math.max(minTime, timePx)}px`;
-    };
-
     const overflows = () => (
       block.scrollHeight > block.clientHeight + 1
       || nameEl.scrollHeight > nameEl.clientHeight + 1
@@ -1238,24 +1353,13 @@ function fitDivisionBlockText(root) {
       || timeEl.scrollWidth > timeEl.clientWidth + 1
     );
 
-    const fitSize = (lo, hi, test) => {
-      let best = lo;
-      test(hi);
-      if (!overflows()) return hi;
-      while (hi - lo > 0.25) {
-        const mid = (lo + hi) / 2;
-        test(mid);
-        if (overflows()) hi = mid;
-        else {
-          best = mid;
-          lo = mid;
-        }
-      }
-      return best;
+    const apply = (namePx, timePx) => {
+      nameEl.style.fontSize = `${Math.max(minName, namePx)}px`;
+      timeEl.style.fontSize = `${Math.max(minTime, timePx)}px`;
     };
 
-    const bestName = fitSize(minName, maxName, (size) => apply(size, minTime));
-    const bestTime = fitSize(minTime, maxTime, (size) => apply(bestName, size));
+    const bestName = fitSize(minName, maxName, (size) => apply(size, minTime), overflows);
+    const bestTime = fitSize(minTime, maxTime, (size) => apply(bestName, size), overflows);
     apply(bestName, bestTime);
   });
 }
@@ -1298,7 +1402,7 @@ function renderScratch() {
     const heightSlots = Math.max(1, (duration || SLOT) / SLOT);
     const heightPx = Math.max(slotH - 2, heightSlots * slotH - 2);
     const selected = ctx.selectedId === String(id) ? 'selected' : '';
-    const minsLabel = duration > 0 ? `${duration} min` : '';
+    const minsLabel = isBreak && duration > 0 ? `${duration} min` : '';
     const kind = isBreak ? 'break' : 'division';
     const completedClass = !isBreak && isDivisionCompleted(id) ? 'is-completed' : '';
     return `<li class="live-scratch-item ${selected} ${isBreak ? 'is-break' : ''} ${completedClass}" data-id="${escapeHtml(id)}" data-kind="${kind}" data-slots="${heightSlots}"
@@ -2090,6 +2194,10 @@ function bindDragDrop() {
     clearDropTargets();
     removeDragGhost();
     removeDragImage();
+    ctx.suppressScratchClick = true;
+    window.setTimeout(() => {
+      ctx.suppressScratchClick = false;
+    }, 0);
   });
 
   const scratchDrop = document.getElementById('liveScratchDrop');
@@ -2193,8 +2301,10 @@ function bindContextMenu() {
     e.stopPropagation();
     const id = ctx.contextId;
     const action = btn.getAttribute('data-action');
-    if (action === 'longer') adjustDurationSlots(id, 1);
-    else if (action === 'shorter') adjustDurationSlots(id, -1);
+    if (action === 'longer' || action === 'shorter') {
+      const slots = Math.max(1, Number(btn.getAttribute('data-slots') || 1));
+      adjustDurationSlots(id, action === 'longer' ? slots : -slots);
+    }
     else if (action === 'delete-break' && isBreakId(id)) {
       removeBreak(id);
       markDirty();
@@ -2351,11 +2461,14 @@ function bindViewerEvents() {
   });
 
   document.getElementById('liveScratchList')?.addEventListener('click', (e) => {
-    if (ctx.pendingBreak) return;
+    if (ctx.pendingBreak || ctx.suppressScratchClick) return;
     const item = e.target.closest('.live-scratch-item[data-id]');
     if (!item) return;
-    ctx.selectedId = item.getAttribute('data-id');
+    const id = item.getAttribute('data-id');
+    const kind = item.getAttribute('data-kind') || 'division';
+    ctx.selectedId = id;
     renderViewer();
+    if (kind !== 'break') openDivisionModal(id);
   });
 
   document.getElementById('liveSaveBtn')?.addEventListener('click', async () => {

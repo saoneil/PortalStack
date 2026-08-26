@@ -1,14 +1,15 @@
 {
   "name": "zz_portal",
   "version": "1.0.0",
-  "description": "",
+  "description": "PMA Score competition portal — registration, divisions, draws, and live schedule",
   "main": "index.js",
+  "private": true,
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Performance Martial Arts",
+  "license": "UNLICENSED",
   "type": "commonjs",
   "dependencies": {
     "archiver": "^8.0.0",

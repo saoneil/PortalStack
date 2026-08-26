@@ -273,6 +273,12 @@ h1 {
   text-decoration: underline;
 }
 
+.trust-footer .legal-owner {
+  margin-top: 10px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
 .pricing-overlay {
   position: fixed;
   inset: 0;

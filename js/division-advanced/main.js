@@ -5,8 +5,11 @@ import {
   loadEvents, loadTemplates, loadSavedForEvent, loadCreationStatus,
   saveDivisionsForEvent, saveNamedDivisionTemplate, switchDrawSubtab, eventNickname, loadEventTemplateLeaves,
   moveSelectedAthletesLocally, combineSoloDivisionsLocally, countSoloDivisions, setDivisionNameQuery,
-  renderDrawPreviewPanels, closeTemplatePicker, toggleTemplatePicker, deleteDivisionTemplate
+  renderDrawPreviewPanels, closeTemplatePicker, toggleTemplatePicker, deleteDivisionTemplate,
+  setLeafDivisionName, applySimplifiedDivisionNames, applyDescriptiveDivisionNames,
+  fillMissingDescriptiveDivisionNames
 } from './ui.js';
+import { divisionTitleFromSpec } from './merge-division.js';
 import { initPatternForm, bindPatternForm, collectPatternFormPayload } from './pattern-form.js';
 import { initCustomDivisionFeature } from './custom-division.js';
 
@@ -491,6 +494,7 @@ function bindWheelActions() {
             method: 'POST'
           });
           state.leaves = data.leaves || [];
+          applyDescriptiveDivisionNames(state.leaves);
           if (data.failures?.length) showToast(`skipped: ${data.failures.join(', ')}`, true);
           const count = await saveDivisionsForEvent(state.leaves);
           showToast(`saved ${count} default divisions for this event.`);
@@ -541,7 +545,7 @@ function bindWheelActions() {
       await withRingWorking(
         async () => {
           const data = await apiFetch(`/api/division-advanced/divisions/templates/${id}`);
-          state.leaves = data.leaves || [];
+          state.leaves = fillMissingDescriptiveDivisionNames(data.leaves || []);
           if (!state.leaves.length) throw new Error('that template has no divisions.');
           await saveDivisionsForEvent(state.leaves);
           renderDivisionsTable();
@@ -772,7 +776,10 @@ function bindDivisions() {
         method: 'POST',
         body: JSON.stringify(payload)
       });
-      const added = data.leaves || [];
+      const added = (data.leaves || []).map((leaf) => ({
+        ...leaf,
+        division_name: divisionTitleFromSpec(leaf)
+      }));
       state.leaves = [...state.leaves, ...added];
       renderDivisionsTable();
       showToast(`added ${added.length} division leaves.`);
@@ -781,6 +788,43 @@ function bindDivisions() {
     } finally {
       setBusy(btn, false);
     }
+  });
+
+  document.getElementById('simplifyDivisionNamesBtn')?.addEventListener('click', async () => {
+    if (!state.leaves.length) {
+      showToast('no divisions to rename.', true);
+      return;
+    }
+    const ok = await showConfirmModal({
+      title: 'simplified division names',
+      message: 'rename all divisions to short codes by event (P1, S2, TS3, etc.)? this replaces current division names.',
+      confirmLabel: 'rename'
+    });
+    if (!ok) return;
+    const count = applySimplifiedDivisionNames();
+    renderDivisionsTable();
+    showToast(`renamed ${count} division${count === 1 ? '' : 's'}.`);
+  });
+
+  document.querySelector('#divisionsTable tbody')?.addEventListener('change', (e) => {
+    const input = e.target.closest('.da-division-name-input');
+    if (!input) return;
+    const leafIndex = Number(input.getAttribute('data-leaf-index'));
+    const previous = state.leaves[leafIndex]?.division_name || '';
+    if (!setLeafDivisionName(leafIndex, input.value)) {
+      input.value = previous;
+      showToast('division name cannot be empty.', true);
+      return;
+    }
+    input.value = state.leaves[leafIndex].division_name;
+  });
+
+  document.querySelector('#divisionsTable tbody')?.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    const input = e.target.closest('.da-division-name-input');
+    if (!input) return;
+    e.preventDefault();
+    input.blur();
   });
 
   document.getElementById('clearDivisionsBtn')?.addEventListener('click', async () => {

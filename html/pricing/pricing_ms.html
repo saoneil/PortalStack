@@ -18,16 +18,49 @@
     b { color: #00d4ff; }
     .paypal-link {
       display: inline-flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 6px 10px;
-      border: 1px solid #00d4ff;
-      border-radius: 6px;
+      gap: 4px;
+      padding: 8px 10px;
+      border: 1px solid #0070ba;
+      border-radius: 8px;
       text-decoration: none;
       background: #ffd140;
+      cursor: pointer;
+      box-shadow: 0 2px 0 rgba(0, 28, 100, 0.35);
+      min-width: 88px;
+      transition: filter 0.12s ease, transform 0.12s ease, box-shadow 0.12s ease;
     }
-    .paypal-link:hover { filter: brightness(0.95); }
-    .paypal-logo { height: 16px; width: auto; display: block; }
+    .paypal-link:hover,
+    .paypal-link:focus {
+      filter: brightness(1.03);
+      transform: translateY(-1px);
+      box-shadow: 0 3px 0 rgba(0, 28, 100, 0.4);
+      outline: 2px solid #00d4ff;
+      outline-offset: 2px;
+    }
+    .paypal-link:active {
+      transform: translateY(1px);
+      box-shadow: 0 1px 0 rgba(0, 28, 100, 0.35);
+    }
+    .paypal-logo {
+      height: 18px;
+      width: auto;
+      display: block;
+      pointer-events: none;
+    }
+    .paypal-cta {
+      font-size: 10px;
+      font-weight: bold;
+      line-height: 1.2;
+      color: #001c64;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      white-space: normal;
+      text-align: center;
+      max-width: 7.5em;
+    }
     .email-link {
       color: #00d4ff;
       text-decoration: underline;
@@ -71,11 +104,11 @@
 <body>
   <h1><center>Harga ($USD)</center></h1>
   <table>
-    <tr><th>Pilihan</th><th>Harga</th><th>Penerangan</th><th>PayPal</th></tr>
-    <tr><td><strong>Pelanggan</strong></td><td>$25<br>per<br>bulan</td><td>Akses 24/7 kepada 1 aplikasi pemarkahan</td><td><a class="paypal-link" href="https://www.paypal.com/webapps/billing/plans/subscribe?plan_id=P-3SX09611CF132153YNDNVW5Y" target="_blank" rel="noopener noreferrer" title="subscriber"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
-    <tr><td><strong>Acara Kecil</strong></td><td>$150</td><td>Akses kepada 2 aplikasi pemarkahan untuk satu acara.</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/N73R9PNA4ZUSU" target="_blank" rel="noopener noreferrer" title="small-event"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
-    <tr><td><strong>Acara Besar</strong></td><td>$300</td><td>Aplikasi pemarkahan tanpa had untuk satu acara, serta penciptaan bahagian asas dan pengurusan acara.</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/KAZVAY7VT6Y9N" target="_blank" rel="noopener noreferrer" title="large-event"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
-    <tr><td><strong>Acara Besar<br>+<br>Alat Penganjur</strong></td><td>$450</td><td>Aplikasi pemarkahan tanpa had untuk satu acara, serta penciptaan bahagian lanjutan, jadual acara langsung, dan simpan/guna semula bahagian, kumpulan, cabutan & jadual setiap acara.</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/6FGYWDMSQSEZ8" target="_blank" rel="noopener noreferrer" title="large-event-organizer"><img src="/images/paypal_logo.png" alt="PayPal" class="paypal-logo"></a></td></tr>
+    <tr><th>Pilihan</th><th>Harga</th><th>Penerangan</th><th>Bayar</th></tr>
+    <tr><td><strong>Pelanggan</strong></td><td>$25<br>per<br>bulan</td><td>Akses 24/7 kepada 1 aplikasi pemarkahan</td><td><a class="paypal-link" href="https://www.paypal.com/webapps/billing/plans/subscribe?plan_id=P-3SX09611CF132153YNDNVW5Y" target="_blank" rel="noopener noreferrer" title="Bayar dengan PayPal (subscriber)" aria-label="Bayar dengan PayPal"><img src="/images/paypal_logo.png" alt="" class="paypal-logo"><span class="paypal-cta">Bayar dengan PayPal</span></a></td></tr>
+    <tr><td><strong>Acara Kecil</strong></td><td>$150</td><td>Akses kepada 2 aplikasi pemarkahan untuk satu acara.</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/N73R9PNA4ZUSU" target="_blank" rel="noopener noreferrer" title="Bayar dengan PayPal (small-event)" aria-label="Bayar dengan PayPal"><img src="/images/paypal_logo.png" alt="" class="paypal-logo"><span class="paypal-cta">Bayar dengan PayPal</span></a></td></tr>
+    <tr><td><strong>Acara Besar</strong></td><td>$300</td><td>Aplikasi pemarkahan tanpa had untuk satu acara, serta pengurusan acara.</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/KAZVAY7VT6Y9N" target="_blank" rel="noopener noreferrer" title="Bayar dengan PayPal (large-event)" aria-label="Bayar dengan PayPal"><img src="/images/paypal_logo.png" alt="" class="paypal-logo"><span class="paypal-cta">Bayar dengan PayPal</span></a></td></tr>
+    <tr><td><strong>Acara Besar<br>+<br>Alat Penganjur</strong></td><td>$450</td><td>Aplikasi pemarkahan tanpa had untuk satu acara, serta penciptaan bahagian lanjutan, jadual acara langsung, dan simpan/guna semula bahagian, kumpulan, cabutan & jadual setiap acara.</td><td><a class="paypal-link" href="https://www.paypal.com/ncp/payment/6FGYWDMSQSEZ8" target="_blank" rel="noopener noreferrer" title="Bayar dengan PayPal (large-event-organizer)" aria-label="Bayar dengan PayPal"><img src="/images/paypal_logo.png" alt="" class="paypal-logo"><span class="paypal-cta">Bayar dengan PayPal</span></a></td></tr>
     <tr class="pricing-custom-row"><td colspan="4" class="pricing-custom-cell">Untuk ciri dan harga tersuai, sila <a class="email-link" href="mailto:performance.ma.can@gmail.com?subject=PMA%20Score%20custom%20pricing%20inquiry">hubungi kami</a></td></tr>
   </table>
 </body>

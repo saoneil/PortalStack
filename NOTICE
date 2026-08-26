@@ -1,0 +1,13 @@
+PMA Score — Competition Portal and Scoring System
+Copyright (c) 2025–2026 Performance Martial Arts. All rights reserved.
+
+Proprietary and confidential. Unauthorized copying, distribution, or
+derivative works are prohibited.
+
+Authorship: Developed solely by Sean O'Neil for Performance Martial Arts.
+Earlier personal prototypes informed the design; all production code in
+this repository was written for this system. AI-assisted coding tools were
+used under the author's direction.
+
+Third-party open-source components are listed in package.json dependencies
+and remain subject to their respective licenses.

@@ -43,8 +43,22 @@
     <div id="liveToast" class="live-toast" hidden></div>
 
     <div id="liveContextMenu" class="live-context-menu" hidden>
-      <button type="button" data-action="longer">Lengthen (+5 min)</button>
-      <button type="button" data-action="shorter">Shorten (−5 min)</button>
+      <div class="live-context-menu-group">
+        <span class="live-context-menu-label">Lengthen</span>
+        <button type="button" data-action="longer" data-slots="1">+5 min</button>
+        <button type="button" data-action="longer" data-slots="3">+15 min</button>
+        <button type="button" data-action="longer" data-slots="6">+30 min</button>
+        <button type="button" data-action="longer" data-slots="9">+45 min</button>
+        <button type="button" data-action="longer" data-slots="12">+1 hour</button>
+      </div>
+      <div class="live-context-menu-group">
+        <span class="live-context-menu-label">Shorten</span>
+        <button type="button" data-action="shorter" data-slots="1">−5 min</button>
+        <button type="button" data-action="shorter" data-slots="3">−15 min</button>
+        <button type="button" data-action="shorter" data-slots="6">−30 min</button>
+        <button type="button" data-action="shorter" data-slots="9">−45 min</button>
+        <button type="button" data-action="shorter" data-slots="12">−1 hour</button>
+      </div>
       <button type="button" data-action="delete-break" id="liveContextDeleteBreak" hidden>Delete break</button>
     </div>
 
@@ -177,7 +191,10 @@
   <div id="liveDivisionModal" class="live-division-modal" hidden>
     <div class="live-division-modal-card" role="dialog" aria-modal="true" aria-labelledby="liveDivisionModalTitle">
       <header class="live-division-modal-head">
-        <h2 id="liveDivisionModalTitle" class="live-division-modal-title"></h2>
+        <div class="live-division-modal-head-text">
+          <h2 id="liveDivisionModalTitle" class="live-division-modal-title"></h2>
+          <p id="liveDivisionModalSchedule" class="live-division-modal-schedule"></p>
+        </div>
         <button type="button" id="liveDivisionModalClose" class="live-division-modal-close" aria-label="Close">✕</button>
       </header>
       <ul id="liveDivisionModalList" class="live-division-modal-list"></ul>

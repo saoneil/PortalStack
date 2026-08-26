@@ -1,6 +1,6 @@
 /**
- * Move-target suggestions — port of Python DivisionToolApp
- * `_groupings_leaf_similarity_score` / `_groupings_build_move_target_combo_values`.
+ * Move-target similarity suggestions for PMA Score — original implementation by
+ * Performance Martial Arts, evolved from the author's earlier division-tool prototypes.
  */
 
 export const MOVE_SIMILAR_SUGGEST_COUNT = 5;
@@ -65,7 +65,7 @@ function rankIndex(rank) {
   return idx >= 0 ? idx : null;
 }
 
-/** rapidfuzz-style indel ratio on token-sorted strings (0–100). */
+/** LCS-based string similarity ratio (local implementation) on token-sorted strings (0–100). */
 function lcsLength(a, b) {
   const m = a.length;
   const n = b.length;

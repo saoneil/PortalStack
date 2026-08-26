@@ -152,6 +152,11 @@ body:has(.live-schedule-page) {
 .live-times.is-active {
   display: grid;
   grid-template-columns: minmax(180px, 20%) minmax(0, 80%);
+  align-items: stretch;
+}
+
+.live-times.is-active > * {
+  min-height: 0;
 }
 
 .live-times-params {
@@ -291,8 +296,10 @@ body:has(.live-schedule-page) {
 .live-times-table-wrap {
   margin: 0;
   max-height: none;
-  height: 100%;
-  overflow: auto;
+  height: auto;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
 }
 
 .live-times-table {
@@ -709,6 +716,27 @@ html.live-tool.is-placing-break .live-scratch {
 
 .live-context-menu[hidden] {
   display: none !important;
+}
+
+.live-context-menu-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.live-context-menu-group + .live-context-menu-group {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.live-context-menu-label {
+  padding: 4px 12px 2px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.65;
 }
 
 .live-context-menu button {
@@ -1214,6 +1242,25 @@ html.live-tool .da-schedule-block[data-slots="1"] {
   gap: 0;
 }
 
+html.live-viewer .da-schedule-block[data-slots="1"]:not(.is-break),
+html.live-tool .da-schedule-block[data-slots="1"]:not(.is-break) {
+  justify-content: center;
+}
+
+html.live-viewer .da-schedule-block.is-compact strong,
+html.live-viewer .da-schedule-block.is-compact .da-schedule-block-name,
+html.live-tool .da-schedule-block.is-compact strong,
+html.live-tool .da-schedule-block.is-compact .da-schedule-block-name {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+
 html.live-tool .da-schedule-block[data-slots="2"] {
   padding: 1px 5px;
   gap: 0;
@@ -1346,7 +1393,18 @@ html.live-tool .live-context-menu button:hover {
   color: #00d4ff;
 }
 
+html.live-tool .live-context-menu-group + .live-context-menu-group {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+html.live-tool .live-context-menu-label {
+  color: rgba(255, 255, 255, 0.55);
+}
+
 html.live-tool .live-context-menu button[data-action="delete-break"] {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   color: #ffb4b4;
 }
 
@@ -1371,7 +1429,7 @@ html.live-tool .live-viewer-event-name {
   .live-times.is-active {
     grid-template-columns: 1fr;
     grid-template-rows: auto minmax(0, 1fr);
-    overflow: auto;
+    overflow: hidden;
   }
 
   .live-times-params {
@@ -1609,6 +1667,24 @@ html.live-tool .live-division-modal-card {
 
 html.live-tool .live-division-modal-head {
   border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.live-division-modal-head-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.live-division-modal-schedule {
+  margin: 6px 0 0;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: rgba(26, 28, 30, 0.68);
+}
+
+html.live-tool .live-division-modal-schedule {
+  color: rgba(243, 245, 247, 0.68);
 }
 
 .live-division-modal-title {
