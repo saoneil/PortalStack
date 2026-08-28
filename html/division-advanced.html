@@ -230,31 +230,33 @@
         </div>
       </div>
 
-      <div class="da-actions-row">
-        <button type="button" id="generatePatternBtn" class="da-btn da-btn-accent">generate divisions</button>
-        <button type="button" id="simplifyDivisionNamesBtn" class="da-btn">simplified division names</button>
-        <button type="button" id="clearDivisionsBtn" class="da-btn da-btn-danger">clear</button>
-        <p id="divisionsSummary" class="da-summary da-summary-inline">0 division leaves</p>
+      <div class="da-actions-row da-divisions-actions-row">
+        <div class="da-divisions-actions-start">
+          <button type="button" id="generatePatternBtn" class="da-btn da-btn-accent">generate divisions</button>
+          <button type="button" id="simplifyDivisionNamesBtn" class="da-btn">simplified division names</button>
+          <button type="button" id="clearDivisionsBtn" class="da-btn da-btn-danger">clear</button>
+          <p id="divisionsSummary" class="da-summary da-summary-inline">0 division leaves</p>
+        </div>
+        <div class="da-division-search-wrap">
+          <label class="da-sr-only" for="divisionNameSearch">search divisions by name</label>
+          <input
+            type="text"
+            id="divisionNameSearch"
+            class="da-input da-division-search-input"
+            placeholder="search divisions by name..."
+            autocomplete="off"
+          >
+        </div>
         <div class="da-actions-row-end">
           <button type="button" id="saveDivisionsContinueBtn" class="da-btn da-btn-primary">save &amp; continue</button>
           <button type="button" id="startOverDivisionsBtn" class="da-btn da-btn-danger">start over</button>
-          <div class="da-division-search-wrap">
-            <label class="da-sr-only" for="divisionNameSearch">search divisions by name</label>
-            <input
-              type="text"
-              id="divisionNameSearch"
-              class="da-input da-input-sm da-division-search-input"
-              placeholder="search divisions by name..."
-              autocomplete="off"
-            >
-          </div>
         </div>
       </div>
       <div class="da-table-wrap">
         <table class="da-table" id="divisionsTable">
           <thead>
             <tr>
-              <th>enabled</th>
+              <th class="da-division-remove-col" aria-label="remove"></th>
               <th>division</th>
               <th>event</th>
               <th>draw type</th>
@@ -303,7 +305,8 @@
               <div id="drawAthletesList" class="da-draw-athletes da-draw-pool"></div>
             </div>
             <div class="da-subpanel" data-subpanel="matches" hidden>
-              <div id="drawMatchesViewport" class="da-matches-viewport">
+              <p id="drawMatchesHint" class="da-hint">select a draw to view.</p>
+              <div id="drawMatchesViewport" class="da-matches-viewport" hidden>
                 <div class="da-matches-zoom" aria-label="draw zoom">
                   <button type="button" id="matchesZoomOut" class="da-btn da-btn-sm" title="zoom out">−</button>
                   <button type="button" id="matchesZoomIn" class="da-btn da-btn-sm" title="zoom in">+</button>
@@ -311,7 +314,6 @@
                 </div>
                 <div id="drawMatchesContent" class="da-matches-content"></div>
               </div>
-              <p id="drawMatchesHint" class="da-hint">select a draw to view.</p>
             </div>
             <div class="da-subpanel" data-subpanel="edit" hidden>
               <div id="drawEditTypeBar" class="da-edit-type-bar" hidden>
@@ -411,7 +413,8 @@
               <div id="customDrawAthletesList" class="da-draw-athletes da-draw-pool"></div>
             </div>
             <div class="da-subpanel" data-subpanel="matches" hidden>
-              <div id="customDrawMatchesViewport" class="da-matches-viewport">
+              <p id="customDrawMatchesHint" class="da-hint">select athletes to preview.</p>
+              <div id="customDrawMatchesViewport" class="da-matches-viewport" hidden>
                 <div class="da-matches-zoom" aria-label="draw zoom">
                   <button type="button" id="customMatchesZoomOut" class="da-btn da-btn-sm" title="zoom out">−</button>
                   <button type="button" id="customMatchesZoomIn" class="da-btn da-btn-sm" title="zoom in">+</button>
@@ -419,7 +422,6 @@
                 </div>
                 <div id="customDrawMatchesContent" class="da-matches-content"></div>
               </div>
-              <p id="customDrawMatchesHint" class="da-hint">select athletes to preview.</p>
             </div>
             <div class="da-subpanel" data-subpanel="edit" hidden>
               <div id="customDrawEditTypeBar" class="da-edit-type-bar" hidden>

@@ -6,7 +6,7 @@ import {
   saveDivisionsForEvent, saveNamedDivisionTemplate, switchDrawSubtab, eventNickname, loadEventTemplateLeaves,
   moveSelectedAthletesLocally, combineSoloDivisionsLocally, countSoloDivisions, setDivisionNameQuery,
   renderDrawPreviewPanels, closeTemplatePicker, toggleTemplatePicker, deleteDivisionTemplate,
-  setLeafDivisionName, applySimplifiedDivisionNames, applyDescriptiveDivisionNames,
+  setLeafDivisionName, removeLeafAtIndex, applySimplifiedDivisionNames, applyDescriptiveDivisionNames,
   fillMissingDescriptiveDivisionNames
 } from './ui.js';
 import { divisionTitleFromSpec } from './merge-division.js';
@@ -806,6 +806,13 @@ function bindDivisions() {
     showToast(`renamed ${count} division${count === 1 ? '' : 's'}.`);
   });
 
+  document.querySelector('#divisionsTable tbody')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.da-division-remove-btn');
+    if (!btn) return;
+    const leafIndex = Number(btn.getAttribute('data-leaf-index'));
+    removeLeafAtIndex(leafIndex);
+  });
+
   document.querySelector('#divisionsTable tbody')?.addEventListener('change', (e) => {
     const input = e.target.closest('.da-division-name-input');
     if (!input) return;
@@ -973,13 +980,7 @@ function bindDraws() {
   document.querySelectorAll('#tab-draws .da-subtab').forEach((btn) => {
     btn.addEventListener('click', async () => {
       switchDrawSubtab(btn.dataset.subtab);
-      const entry = selectedDrawEntry();
-      if (btn.dataset.subtab === 'matches') {
-        const { renderMatchesViewer } = await import('./matches-viewer.js');
-        renderMatchesViewer(entry);
-      } else if (btn.dataset.subtab === 'edit') {
-        await renderDrawPreviewPanels(entry);
-      }
+      await renderDrawPreviewPanels(selectedDrawEntry());
     });
   });
 }

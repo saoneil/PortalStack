@@ -18,15 +18,21 @@ let dragStartX = 0;
 let dragStartY = 0;
 let panStartX = 0;
 let panStartY = 0;
-let bound = false;
-let viewerTargets = {
+const DEFAULT_VIEWER_TARGETS = {
   viewportId: 'drawMatchesViewport',
   contentId: 'drawMatchesContent',
   hintId: 'drawMatchesHint',
   zoomInId: 'matchesZoomIn',
   zoomOutId: 'matchesZoomOut',
-  zoomFitId: 'matchesZoomFit'
+  zoomFitId: 'matchesZoomFit',
+  emptyHint: 'select a draw to view.'
 };
+let viewerTargets = { ...DEFAULT_VIEWER_TARGETS };
+const boundViewports = new Set();
+
+function resolveViewerTargets(targets) {
+  viewerTargets = { ...DEFAULT_VIEWER_TARGETS, ...(targets && typeof targets === 'object' ? targets : {}) };
+}
 
 function escapeHtml(text) {
   return String(text || '')
@@ -37,7 +43,8 @@ function escapeHtml(text) {
 }
 
 function normalizeType(entry) {
-  const raw = String(entry?.division_type || entry?.json_data?.division_type || '').toLowerCase();
+  const json = parseDrawJson(entry);
+  const raw = String(entry?.division_type || json?.division_type || '').toLowerCase();
   if (raw.includes('single')) return 'se';
   if (raw.includes('round')) return 'rr';
   if (raw.includes('premier')) return 'pl';
@@ -115,13 +122,33 @@ function setHint(text, show) {
 
 function fitToViewport(width, height) {
   const viewport = document.getElementById(viewerTargets.viewportId);
-  if (!viewport || !width || !height) return;
+  if (!viewport || viewport.hidden || !width || !height) return;
   const vw = Math.max(120, viewport.clientWidth - 24);
   const vh = Math.max(120, viewport.clientHeight - 24);
   zoom = Math.min(1.2, Math.max(0.25, Math.min(vw / width, vh / height)));
   panX = (vw - width * zoom) / 2 + 8;
   panY = (vh - height * zoom) / 2 + 8;
   applyTransform();
+}
+
+function fitAfterLayout(width, height) {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => fitToViewport(width, height));
+  });
+}
+
+function parseDrawJson(entry) {
+  let json = entry?.json_data;
+  if (typeof json === 'string') {
+    try { json = JSON.parse(json); } catch (_) { return null; }
+  }
+  return json && typeof json === 'object' ? json : null;
+}
+
+function entryHasAthletes(entry) {
+  if (Number(entry?.athlete_count || 0) > 0) return true;
+  if (Array.isArray(entry?.athletes) && entry.athletes.length) return true;
+  return Array.isArray(entry?.athlete_indices) && entry.athlete_indices.length > 0;
 }
 
 function renderList(content, json) {
@@ -140,7 +167,7 @@ function renderList(content, json) {
     </div>
   `;
   const wrap = content.querySelector('.mv-list-wrap');
-  fitToViewport(wrap?.offsetWidth || 400, wrap?.offsetHeight || 200);
+  fitAfterLayout(wrap?.offsetWidth || 400, wrap?.offsetHeight || 200);
 }
 
 function renderRoundRobin(content, json) {
@@ -171,7 +198,7 @@ function renderRoundRobin(content, json) {
   });
   content.innerHTML = '';
   content.appendChild(host);
-  fitToViewport(width, height);
+  fitAfterLayout(width, height);
 }
 
 function renderSingleElim(content, json) {
@@ -279,7 +306,7 @@ function renderSingleElim(content, json) {
 
   content.innerHTML = '';
   content.appendChild(host);
-  fitToViewport(parseFloat(host.style.width), parseFloat(host.style.height));
+  fitAfterLayout(parseFloat(host.style.width), parseFloat(host.style.height));
 }
 
 function buildAthletesById(json) {
@@ -375,14 +402,14 @@ function renderPremierLeague(content, json) {
   host.style.height = `${height}px`;
   content.innerHTML = '';
   content.appendChild(host);
-  fitToViewport(width, height);
+  fitAfterLayout(width, height);
 }
 
 function bindPanZoom() {
-  if (bound) return;
-  bound = true;
-  const viewport = document.getElementById(viewerTargets.viewportId);
-  if (!viewport) return;
+  const viewportId = viewerTargets.viewportId;
+  const viewport = document.getElementById(viewportId);
+  if (!viewport || boundViewports.has(viewportId)) return;
+  boundViewports.add(viewportId);
 
   viewport.addEventListener('wheel', (e) => {
     e.preventDefault();
@@ -433,10 +460,7 @@ function bindPanZoom() {
 }
 
 export function renderMatchesViewer(entry, targets = null) {
-  if (targets && typeof targets === 'object') {
-    viewerTargets = { ...viewerTargets, ...targets };
-    bound = false;
-  }
+  resolveViewerTargets(targets);
   bindPanZoom();
   const content = document.getElementById(viewerTargets.contentId);
   if (!content) return;
@@ -446,11 +470,12 @@ export function renderMatchesViewer(entry, targets = null) {
   content.innerHTML = '';
   applyTransform();
 
-  if (!entry) {
-    setHint('select a draw to view.', true);
+  const emptyHint = viewerTargets.emptyHint || 'select a draw to view.';
+  if (!entry || !entryHasAthletes(entry)) {
+    setHint(emptyHint, true);
     return;
   }
-  const json = entry.json_data;
+  const json = parseDrawJson(entry);
   if (!json) {
     setHint('no draw data yet. save after moving athletes to regenerate.', true);
     return;
@@ -466,10 +491,8 @@ export function renderMatchesViewer(entry, targets = null) {
 }
 
 export function clearMatchesViewer(targets = null) {
-  if (targets && typeof targets === 'object') {
-    viewerTargets = { ...viewerTargets, ...targets };
-  }
+  resolveViewerTargets(targets);
   const content = document.getElementById(viewerTargets.contentId);
   if (content) content.innerHTML = '';
-  setHint('select a draw to view.', true);
+  setHint(viewerTargets.emptyHint || 'select a draw to view.', true);
 }

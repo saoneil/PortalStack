@@ -27,7 +27,9 @@ export function requireEvent() {
 }
 
 export function selectedDrawEntry() {
-  return (state.drawsState?.catalog || []).find((e) => e.id === state.selectedDrawId) || null;
+  return (state.drawsState?.catalog || []).find(
+    (e) => String(e.id) === String(state.selectedDrawId)
+  ) || null;
 }
 
 export function clearSelectedAthletes() {

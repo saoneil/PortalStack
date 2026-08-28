@@ -25,7 +25,8 @@ const modalTargets = {
     hintId: 'customDrawMatchesHint',
     zoomInId: 'customMatchesZoomIn',
     zoomOutId: 'customMatchesZoomOut',
-    zoomFitId: 'customMatchesZoomFit'
+    zoomFitId: 'customMatchesZoomFit',
+    emptyHint: 'select athletes to preview.'
   },
   editTargets: {
     typeBarId: 'customDrawEditTypeBar',

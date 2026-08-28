@@ -10,7 +10,7 @@ let typeSelectBound = false;
 let suppressTypeChange = false;
 let resolveCurrentEntry = () => {
   const catalog = state.drawsState?.catalog || [];
-  return catalog.find((e) => e.id === state.selectedDrawId) || null;
+  return catalog.find((e) => String(e.id) === String(state.selectedDrawId)) || null;
 };
 let editorTargets = {
   typeBarId: 'drawEditTypeBar',

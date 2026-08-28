@@ -235,6 +235,14 @@ export function setLeafDivisionName(leafIndex, name) {
   return true;
 }
 
+export function removeLeafAtIndex(leafIndex) {
+  if (!Array.isArray(state.leaves)) return false;
+  if (leafIndex < 0 || leafIndex >= state.leaves.length) return false;
+  state.leaves.splice(leafIndex, 1);
+  renderDivisionsTable();
+  return true;
+}
+
 export function applyDescriptiveDivisionNames(leaves = state.leaves) {
   if (!Array.isArray(leaves) || !leaves.length) return 0;
   leaves.forEach((leaf) => {
@@ -284,7 +292,20 @@ export function renderDivisionsTable() {
     const leafIndex = state.leaves.indexOf(leaf);
     return `
     <tr data-leaf-index="${leafIndex}">
-      <td>${leaf.enabled !== false ? '✓' : ''}</td>
+      <td class="da-division-remove-col">
+        <button
+          type="button"
+          class="da-division-remove-btn"
+          data-leaf-index="${leafIndex}"
+          aria-label="remove division"
+        >
+          <svg class="da-division-remove-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M6 6h8M8 6V4.5h4V6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M5 6l.8 10h8.4L15 6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M8 9v5M12 9v5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </td>
       <td class="da-division-name-cell">
         <input
           type="text"
@@ -332,7 +353,15 @@ function drawTargets(overrides = {}) {
     rightSelector: '#tab-draws .da-draws-right',
     selectedNameId: 'selectedDrawName',
     athletesListId: 'drawAthletesList',
-    matchesTargets: null,
+    matchesTargets: {
+      viewportId: 'drawMatchesViewport',
+      contentId: 'drawMatchesContent',
+      hintId: 'drawMatchesHint',
+      zoomInId: 'matchesZoomIn',
+      zoomOutId: 'matchesZoomOut',
+      zoomFitId: 'matchesZoomFit',
+      emptyHint: 'select a draw to view.'
+    },
     editTargets: null,
     drawSubtabKey: 'drawSubtab',
     ...overrides
@@ -499,7 +528,7 @@ export async function renderDrawPreviewPanels(entry, targets = null) {
   renderDrawAthletes(entry, t);
 
   if (!entry) {
-    renderMatchesViewer(null, t.matchesTargets || null);
+    renderMatchesViewer(null, t.matchesTargets);
     try {
       const { renderInteractiveEditor, setDrawEditorTargets } = await import('./draw-editor.js');
       setDrawEditorTargets(t.editTargets || null);
@@ -509,7 +538,7 @@ export async function renderDrawPreviewPanels(entry, targets = null) {
   }
 
   if (state[t.drawSubtabKey] === 'matches') {
-    renderMatchesViewer(entry, t.matchesTargets || null);
+    renderMatchesViewer(entry, t.matchesTargets);
   }
   if (state[t.drawSubtabKey] === 'edit') {
     const {
@@ -524,7 +553,7 @@ export async function renderDrawPreviewPanels(entry, targets = null) {
     if (t.selectedNameId === 'selectedDrawName') {
       setDrawEditorEntryResolver(() => {
         const catalog = state.drawsState?.catalog || [];
-        return catalog.find((e) => e.id === state.selectedDrawId) || null;
+        return catalog.find((e) => String(e.id) === String(state.selectedDrawId)) || null;
       });
     }
     setDrawEditorCallback((updatedEntry, slots) => {
@@ -573,7 +602,7 @@ export function renderDraws() {
         ? Number(entry.athlete_count)
         : (entry.athlete_indices || []).length;
       return `
-      <tr data-id="${escapeHtml(entry.id)}" class="${entry.id === state.selectedDrawId ? 'selected' : ''}">
+      <tr data-id="${escapeHtml(entry.id)}" class="${String(entry.id) === String(state.selectedDrawId) ? 'selected' : ''}">
         <td>${escapeHtml(entry.division_name)}</td>
         <td>${escapeHtml(entry.division_type)}</td>
         <td>${athleteCount || 0}</td>
@@ -581,7 +610,7 @@ export function renderDraws() {
     `;
     }).join('');
   }
-  const selected = catalog.find((e) => e.id === state.selectedDrawId);
+  const selected = catalog.find((e) => String(e.id) === String(state.selectedDrawId));
   if (!selected && state.selectedDrawId) {
     state.selectedDrawId = '';
     state.selectedAthleteIndices = new Set();
@@ -593,7 +622,7 @@ export function renderDraws() {
     state.selectedDrawId = '';
     state.selectedAthleteIndices = new Set();
   }
-  const selectedVisible = catalog.find((e) => e.id === state.selectedDrawId) || null;
+  const selectedVisible = catalog.find((e) => String(e.id) === String(state.selectedDrawId)) || null;
   renderDrawPreviewPanels(selectedVisible).catch(() => {});
 }
 
