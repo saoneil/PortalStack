@@ -119,10 +119,13 @@
 
       <div class="live-stage" id="liveStage">
         <div class="live-board-wrap" id="liveBoardDrop">
+          <p class="live-scroll-cue live-scroll-cue--board" id="liveBoardScrollCue" aria-hidden="true">Scroll schedule ↔</p>
           <h1 id="liveViewerEventName" class="live-viewer-event-name" hidden></h1>
           <div id="liveBoard" class="da-schedule-board live-board"></div>
         </div>
         <div class="live-scratch" id="liveScratchDrop" hidden>
+          <h3 class="live-scratch-title">Unscheduled</h3>
+          <p class="live-scroll-cue" id="liveScratchScrollCue" aria-hidden="true">Scroll divisions ↓</p>
           <ul id="liveScratchList" class="live-scratch-list"></ul>
         </div>
       </div>

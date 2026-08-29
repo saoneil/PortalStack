@@ -6,7 +6,9 @@
   <link rel="icon" type="image/png" href="/images/PMA_Score_8.png">
   <title>client view</title>
   <link rel="stylesheet" href="css/landing.css">
+  <link rel="stylesheet" href="/css/pricing-mobile.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="/js/pricing-mobile.js"></script>
   <style>
     /* Larger pricing modal — same layout, bigger type */
     #pricingOverlay table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0; }
@@ -83,8 +85,8 @@
     </form>
   </div>
 
-  <div id="release-notes-section" style="text-align:center; margin-top:16px;">
-    <button id="openReleaseNotesBtn" class="action-btn" style="margin-right:16px; display:none;">release notes/user guide</button>
+  <div id="release-notes-section">
+    <button id="openReleaseNotesBtn" class="action-btn" style="display:none;">release notes/user guide</button>
   </div>
 
   <div class="landing-tables-row">
@@ -154,11 +156,10 @@
     &copy; Performance Martial Arts · PMA Score · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a>
   </p>
 
-  <div id="qrOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:9999;">
-    <div id="qrContainer" style="background:#fff; padding:20px; border-radius:8px; position:relative;">
-      <button id="closeQrOverlayBtn" style="position:absolute; top:10px; right:10px;">✕</button>
-      <!-- <div id="qrCode"></div> -->
-      <div id="qrCode" style="display:flex; flex-wrap:wrap; justify-content:center;"></div>
+  <div id="qrOverlay" class="qr-overlay" style="display:none;">
+    <div id="qrContainer" class="qr-container">
+      <button id="closeQrOverlayBtn" class="qr-close-btn" type="button" aria-label="Close QR codes">✕</button>
+      <div id="qrCode"></div>
     </div>
   </div>
 
@@ -805,23 +806,23 @@
 
                     links.forEach((link, idx) => {
                       const container = document.createElement('div');
-                      container.style.display = 'flex';
-                      container.style.flexDirection = 'column';
-                      container.style.alignItems = 'center';
-                      container.style.margin = '30px';
+                      container.className = 'qr-item';
 
                       const label = document.createElement('div');
+                      label.className = 'qr-label';
                       label.textContent = `Umpire ${idx + 1}`;
-                      label.style.marginBottom = '10px';
-                      label.style.fontWeight = 'bold';
-                      label.style.color = 'black';
-                      label.style.fontSize = '30px';
 
                       const qrDiv = document.createElement('div');
+                      const cols = links.length > 1 ? 2 : 1;
+                      const qrSize = Math.max(120, Math.min(
+                        225,
+                        Math.floor((window.innerWidth - 56) / cols) - 20,
+                        Math.floor((window.innerHeight - 140) / Math.ceil(links.length / cols)) - 50
+                      ));
                       new QRCode(qrDiv, {
                         text: link,
-                        width: 225,
-                        height: 225,
+                        width: qrSize,
+                        height: qrSize,
                         correctLevel: QRCode.CorrectLevel.L
                       });
 
@@ -873,9 +874,6 @@
               a.href = 'html/release_notes/' + file;
               a.textContent = file.replace('.html', '').replace(/_/g, ' ');
               a.target = '_blank';
-              a.style.color = '#00d4ff';
-              a.style.fontSize = '20px';
-              a.style.display = 'inline-block';
               li.appendChild(a);
               list.appendChild(li);
             });
@@ -909,6 +907,7 @@
           // Extract only the <body> content
           const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
           targetDiv.innerHTML = bodyMatch ? bodyMatch[1] : html;
+          enhancePricingForMobile(targetDiv);
         });
     }
 
@@ -996,8 +995,10 @@
 
     window.addEventListener('message', function(event) {
       if (event.origin !== window.location.origin) return;
-      if (!event.data || event.data.type !== 'portal-data-updated') return;
-      forwardPortalDataUpdated(event.data);
+      if (!event.data) return;
+      if (event.data.type === 'portal-data-updated') {
+        forwardPortalDataUpdated(event.data);
+      }
     });
 
     document.getElementById('closeQrOverlayBtn').onclick = function() {
@@ -1622,13 +1623,6 @@
 
     document.getElementById('openLiveScheduleToolBtn').onclick = function(e) {
       e.preventDefault();
-      if (window.matchMedia('(max-width: 768px)').matches) {
-        showAppMessage({
-          title: 'not supported',
-          message: 'not supported on mobile devices, please view on a desktop device'
-        });
-        return;
-      }
       requirePrincipleUserAdvancedAccess(function() {
         logInteraction('open_live_schedule_tool', { description: 'Opened live event schedule tool modal' });
         var overlay = document.getElementById('liveScheduleToolOverlay');
@@ -1644,13 +1638,6 @@
 
     document.getElementById('openUmpireManagementBtn').onclick = function(e) {
       e.preventDefault();
-      if (window.matchMedia('(max-width: 768px)').matches) {
-        showAppMessage({
-          title: 'not supported',
-          message: 'not supported on mobile devices, please view on a desktop device'
-        });
-        return;
-      }
       requirePrincipleUserAdvancedAccess(function() {
         logInteraction('open_umpire_management', { description: 'Opened umpire management tool modal' });
         var overlay = document.getElementById('umpireManagementOverlay');
@@ -1789,6 +1776,13 @@
       return name + ' (' + y + '-' + m + '-' + day + ')';
     }
 
+    function syncEventResultsSelectTitle() {
+      var select = document.getElementById('eventResultsSelect');
+      if (!select || select.selectedIndex < 0) return;
+      var label = select.options[select.selectedIndex].textContent || '';
+      select.title = label;
+    }
+
     function syncEventResultsDownloadBtn() {
       var select = document.getElementById('eventResultsSelect');
       var btn = document.getElementById('downloadEventResultsBtn');
@@ -1886,6 +1880,7 @@
             eventResultsSelectedMeta = null;
           }
           syncEventResultsDownloadBtn();
+          syncEventResultsSelectTitle();
         })
         .catch(function() {
           if (requestId !== eventResultsListRequestId) return;
@@ -1893,6 +1888,7 @@
           select.innerHTML = '<option value="">— unable to load —</option>';
           eventResultsSelectedMeta = null;
           if (btn) btn.disabled = true;
+          syncEventResultsSelectTitle();
         });
     }
 
@@ -2000,6 +1996,7 @@
     }
 
     document.getElementById('eventResultsSelect').onchange = function() {
+      syncEventResultsSelectTitle();
       requerySelectedEventResults(this.value);
     };
 

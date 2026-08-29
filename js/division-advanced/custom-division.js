@@ -14,7 +14,7 @@ let selectedSet = new Set();
 const modalTargets = {
   subtabSelector: '#daCustomDivisionModal .da-subtab',
   subpanelSelector: '#daCustomDivisionModal .da-subpanel',
-  rightSelector: '#daCustomDivisionModal .da-custom-division-right',
+  rightSelector: '#daCustomDivisionModal .da-custom-selected-pane',
   selectedNameId: '',
   athletesListId: 'customDrawAthletesList',
   drawSubtabKey: 'customDrawSubtab',
@@ -396,6 +396,11 @@ function closeModal() {
   selectedSet = new Set();
 }
 
+function isCustomDivisionModalOpen() {
+  const modal = modalEl();
+  return Boolean(modal && !modal.hidden);
+}
+
 async function resetDraftForNext() {
   const eventKey = document.getElementById('customDivisionEventKey')?.value || '';
   const drawType = document.getElementById('customDivisionDrawType')?.value || 'Single Elimination';
@@ -541,6 +546,7 @@ function bindModalEvents() {
   });
   document.querySelectorAll('#daCustomDivisionModal .da-subtab').forEach((btn) => {
     btn.addEventListener('click', async () => {
+      if (window.matchMedia('(max-width: 1024px)').matches && btn.dataset.subtab === 'edit') return;
       switchDrawSubtab(btn.dataset.subtab, modalTargets);
       await renderDrawPreviewPanels(state.customDrawDraft, {
         ...modalTargets,
@@ -576,3 +582,5 @@ export function initCustomDivisionFeature(options = {}) {
     });
   });
 }
+
+export { closeModal as closeCustomDivisionModal, isCustomDivisionModalOpen };

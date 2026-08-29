@@ -1,3 +1,5 @@
+import { bindTouchDnD } from './touch-dnd.js';
+
 (function () {
   const RING_SLOT_GROUPS = [
     {
@@ -59,6 +61,60 @@
   let saveSeq = 0;
   let selectionAnchor = null;
   let overlayTimer = null;
+
+  function isMobileView() {
+    return window.matchMedia('(max-width: 768px)').matches;
+  }
+
+  function syncMobileLayoutClass() {
+    document.documentElement.classList.toggle('umpire-mgmt-mobile', isMobileView());
+  }
+
+  function ringAssignedNameList(ring) {
+    const seenIds = new Set();
+    return RING_SLOTS.map((slot) => {
+      const id = state.assignments[String(ring)] && state.assignments[String(ring)][slot.key];
+      const key = id == null || id === '' ? '' : String(id);
+      if (!key || seenIds.has(key)) return '';
+      seenIds.add(key);
+      const umpire = state.umpiresById[key];
+      return umpire ? umpireDisplayName(umpire) : '';
+    }).filter(Boolean);
+  }
+
+  function ringTileSummary(ring, names) {
+    if (state.overlaySchedule) {
+      const info = ringScheduleOverlay(ring);
+      if (info.current && info.current !== '—') return 'Now: ' + info.current;
+      const next = (info.upcoming && info.upcoming[0]) || '';
+      if (next) return 'Next: ' + next;
+      return 'No upcoming divisions';
+    }
+    if (!names.length) return 'Tap to assign umpires';
+    if (names.length === 1) return names[0];
+    return names.length + ' umpires assigned';
+  }
+
+  function renderMobileRingTile(ring, names) {
+    const summary = ringTileSummary(ring, names);
+    return (
+      '<div class="umpire-ring is-mobile" data-ring="' + ring + '" role="button" tabindex="0">' +
+        '<div class="umpire-ring-tile">' +
+          '<span class="umpire-ring-tile-label">Ring ' + ring + '</span>' +
+          '<span class="umpire-ring-tile-summary">' + escapeHtml(summary) + '</span>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function assignSelectedToSlot(ring, slotKey) {
+    const ids = uniqueIds(state.selectedIds);
+    if (!ids.length) return false;
+    if (ids.length === 1) return placeUmpire(ids[0], ring, slotKey);
+    const group = RING_SLOT_GROUPS.find((item) => item.slots.indexOf(slotKey) !== -1);
+    const slots = group ? group.slots.slice(group.slots.indexOf(slotKey)) : [slotKey];
+    return assignToSlotsTopDown(ids, ring, slots);
+  }
 
   function escapeHtml(text) {
     return String(text ?? '')
@@ -263,14 +319,14 @@
     if (inPlay) {
       return {
         current: inPlay.name,
-        upcoming: items.filter((item) => item.start >= inPlay.end).slice(0, 3).map((item) => item.name)
+        upcoming: items.filter((item) => item.start >= inPlay.end).slice(0, 1).map((item) => item.name)
       };
     }
     const future = items.filter((item) => item.start >= ctx.nowOff);
     if (future.length) {
       return {
         current: future[0].name,
-        upcoming: future.slice(1, 4).map((item) => item.name)
+        upcoming: future.slice(1, 2).map((item) => item.name)
       };
     }
     return { current: '—', upcoming: [] };
@@ -278,15 +334,27 @@
 
   function renderScheduleOverlay(ring) {
     const info = ringScheduleOverlay(ring);
-    const upcoming = info.upcoming.length
-      ? info.upcoming.map((name) => (
-        '<div class="umpire-ring-sched-next">' + escapeHtml(name) + '</div>'
-      )).join('')
-      : '<div class="umpire-ring-sched-next">No upcoming divisions</div>';
+    const nextName = info.upcoming[0] || '';
+    const nextHtml = nextName
+      ? (
+        '<div class="umpire-ring-sched-next">' +
+          '<span class="umpire-ring-sched-label">Next</span>' +
+          '<span class="umpire-ring-sched-text">' + escapeHtml(nextName) + '</span>' +
+        '</div>'
+      )
+      : (
+        '<div class="umpire-ring-sched-next is-empty">' +
+          '<span class="umpire-ring-sched-label">Next</span>' +
+          '<span class="umpire-ring-sched-text">—</span>' +
+        '</div>'
+      );
     return (
       '<div class="umpire-ring-overlay is-schedule">' +
-        '<div class="umpire-ring-sched-current">' + escapeHtml(info.current || '—') + '</div>' +
-        '<div class="umpire-ring-sched-upcoming">' + upcoming + '</div>' +
+        '<div class="umpire-ring-sched-current">' +
+          '<span class="umpire-ring-sched-label">Now</span>' +
+          '<span class="umpire-ring-sched-text">' + escapeHtml(info.current || '—') + '</span>' +
+        '</div>' +
+        nextHtml +
       '</div>'
     );
   }
@@ -584,8 +652,24 @@
     const assignedId = state.assignments[String(ring)] ? state.assignments[String(ring)][slot.key] : null;
     const umpire = assignedId ? state.umpiresById[String(assignedId)] : null;
     const filled = Boolean(umpire);
+    const mobile = isMobileView();
     const rank = filled ? String(umpire.rank || '').trim() : '';
     const club = filled ? String(umpire.team_name_or_country || '').trim() : '';
+    if (mobile && filled) {
+      return (
+        '<div class="umpire-slot is-filled' + (isSelected(umpireId(umpire)) ? ' is-selected' : '') + '"' +
+          ' draggable="true" data-umpire-id="' + escapeHtml(umpireId(umpire)) + '"' +
+          ' data-ring="' + ring + '" data-slot="' + escapeHtml(slot.key) + '"' +
+          ' title="' + escapeHtml(slot.label) + '">' +
+          '<div class="umpire-slot-top umpire-slot-top-mobile">' +
+            '<span class="umpire-slot-person' + (isSelected(umpireId(umpire)) ? ' is-selected' : '') + '">' +
+              escapeHtml(umpireDisplayName(umpire)) +
+            '</span>' +
+            '<button type="button" class="umpire-slot-clear" data-clear="1" aria-label="Remove ' + escapeHtml(umpireDisplayName(umpire)) + ' from ' + escapeHtml(slot.label) + '">×</button>' +
+          '</div>' +
+        '</div>'
+      );
+    }
     const details = filled
       ? (
         '<span class="umpire-slot-person' + (isSelected(umpireId(umpire)) ? ' is-selected' : '') + '">' +
@@ -594,7 +678,7 @@
         (rank ? '<span class="umpire-slot-meta">' + escapeHtml(rank) + '</span>' : '') +
         (club ? '<span class="umpire-slot-meta">' + escapeHtml(club) + '</span>' : '')
       )
-      : '<span class="umpire-slot-placeholder">Drop umpire</span>';
+      : '<span class="umpire-slot-placeholder">' + (isMobileView() ? 'Tap to assign' : 'Drop umpire') + '</span>';
     return (
       '<div class="umpire-slot' + (filled ? ' is-filled' : ' is-empty') + (filled && isSelected(umpireId(umpire)) ? ' is-selected' : '') + '"' +
         (filled ? ' draggable="true" data-umpire-id="' + escapeHtml(umpireId(umpire)) + '"' : '') +
@@ -614,10 +698,13 @@
     const grid = document.getElementById('umpireRingGrid');
     const empty = document.getElementById('umpireRingsEmpty');
     if (!grid || !empty) return;
+    syncMobileLayoutClass();
+    const mobile = isMobileView();
     const n = Math.max(0, Number(state.ringCount) || 0);
     if (n < 1) {
       grid.innerHTML = '';
       grid.hidden = true;
+      grid.classList.remove('is-mobile-list');
       empty.hidden = false;
       state.openRing = 0;
       const modal = document.getElementById('umpireRingModal');
@@ -625,49 +712,50 @@
       syncOverlayTimer();
       return;
     }
-    const dims = ringGridDims(n);
+    grid.classList.toggle('is-mobile-list', mobile);
+    grid.classList.toggle('is-schedule-overlay', Boolean(state.overlaySchedule && !mobile));
     grid.hidden = Boolean(state.openRing);
     empty.hidden = true;
-    grid.style.setProperty('--ring-cols', String(dims.cols));
-    grid.style.setProperty('--ring-rows', String(dims.rows));
-    grid.innerHTML = Array.from({ length: n }, (_, i) => {
-      const ring = i + 1;
-      const seenIds = new Set();
-      const names = RING_SLOTS.map((slot) => {
-        const id = state.assignments[String(ring)] && state.assignments[String(ring)][slot.key];
-        const key = id == null || id === '' ? '' : String(id);
-        if (!key || seenIds.has(key)) return '';
-        seenIds.add(key);
-        const umpire = state.umpiresById[key];
-        return umpire ? umpireDisplayName(umpire) : '';
-      }).filter(Boolean);
-      const nameList = names.length
-        ? names.map((name) => (
-          '<span class="umpire-ring-name"><span class="umpire-ring-name-text">' + escapeHtml(name) + '</span></span>'
-        )).join('')
-        : '<span class="umpire-ring-name is-empty">No umpires assigned</span>';
-      const overlayHtml = state.overlaySchedule
-        ? renderScheduleOverlay(ring)
-        : (
-          '<div class="umpire-ring-overlay">' +
-            '<div class="umpire-ring-names' + (names.length ? '' : ' is-empty') + '">' + nameList + '</div>' +
+    if (mobile) {
+      grid.innerHTML = Array.from({ length: n }, (_, i) => {
+        const ring = i + 1;
+        return renderMobileRingTile(ring, ringAssignedNameList(ring));
+      }).join('');
+    } else {
+      const dims = ringGridDims(n);
+      grid.style.setProperty('--ring-cols', String(dims.cols));
+      grid.style.setProperty('--ring-rows', String(dims.rows));
+      grid.innerHTML = Array.from({ length: n }, (_, i) => {
+        const ring = i + 1;
+        const names = ringAssignedNameList(ring);
+        const nameList = names.length
+          ? names.map((name) => (
+            '<span class="umpire-ring-name"><span class="umpire-ring-name-text">' + escapeHtml(name) + '</span></span>'
+          )).join('')
+          : '<span class="umpire-ring-name is-empty">No umpires assigned</span>';
+        const overlayHtml = state.overlaySchedule
+          ? renderScheduleOverlay(ring)
+          : (
+            '<div class="umpire-ring-overlay">' +
+              '<div class="umpire-ring-names' + (names.length ? '' : ' is-empty') + '">' + nameList + '</div>' +
+            '</div>'
+          );
+        return (
+          '<div class="umpire-ring" data-ring="' + ring + '" role="button" tabindex="0">' +
+            '<div class="umpire-ring-title">Ring ' + ring + '</div>' +
+            '<div class="umpire-ring-body">' +
+              '<div class="umpire-ring-card" data-ring="' + ring + '">' +
+                '<div class="umpire-ring-square"></div>' +
+                overlayHtml +
+              '</div>' +
+            '</div>' +
           '</div>'
         );
-      return (
-        '<div class="umpire-ring" data-ring="' + ring + '" role="button" tabindex="0">' +
-          '<div class="umpire-ring-title">Ring ' + ring + '</div>' +
-          '<div class="umpire-ring-body">' +
-            '<div class="umpire-ring-card" data-ring="' + ring + '">' +
-              '<div class="umpire-ring-square"></div>' +
-              overlayHtml +
-            '</div>' +
-          '</div>' +
-        '</div>'
-      );
-    }).join('');
+      }).join('');
+    }
     renderRingModal();
     syncOverlayTimer();
-    if (!state.overlaySchedule) scheduleFitRingNames();
+    if (!mobile && !state.overlaySchedule) scheduleFitRingNames();
   }
 
   function namesOverflow(texts) {
@@ -770,10 +858,70 @@
     openRingModal(state.openRing + delta);
   }
 
+  function syncMobileHint() {
+    const hint = document.querySelector('.umpire-mgmt-hint');
+    if (!hint) return;
+    hint.textContent = isMobileView()
+      ? 'Long-press an umpire to drag. Tap a ring to assign, or drag onto a role.'
+      : 'Click a ring to assign positions. Select referees, then drag onto a ring or into the ring window.';
+  }
+
   function renderAll() {
     pruneSelection();
+    syncMobileHint();
     renderUmpires();
     renderRings();
+    syncScrollAffordances();
+  }
+
+  function updateScrollAffordance(el, cueId, gradientEl) {
+    if (!el) return;
+    const canScroll = el.scrollHeight > el.clientHeight + 6;
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 6;
+    const gradient = gradientEl || el;
+    gradient.classList.toggle('has-scroll', canScroll);
+    gradient.classList.toggle('at-scroll-end', atBottom);
+    el.classList.toggle('has-scroll', canScroll);
+    el.classList.toggle('at-scroll-end', atBottom);
+    const cue = cueId ? document.getElementById(cueId) : null;
+    if (cue) cue.classList.toggle('is-visible', canScroll && !atBottom);
+  }
+
+  function syncScrollAffordances() {
+    if (!isMobileView()) {
+      document.querySelectorAll('.umpire-scroll-cue').forEach(function(cue) {
+        cue.classList.remove('is-visible');
+      });
+      document.querySelectorAll('.has-scroll, .at-scroll-end').forEach(function(el) {
+        el.classList.remove('has-scroll', 'at-scroll-end');
+      });
+      return;
+    }
+    updateScrollAffordance(document.getElementById('umpirePool'), 'umpirePoolScrollCue');
+    const rings = document.getElementById('umpireRingGrid');
+    const boards = document.querySelector('.umpire-mgmt-boards');
+    updateScrollAffordance(rings, 'umpireRingsScrollCue', boards);
+  }
+
+  function bindScrollAffordances() {
+    const pool = document.getElementById('umpirePool');
+    const rings = document.getElementById('umpireRingGrid');
+    [pool, rings].forEach(function(el) {
+      if (!el || el.dataset.scrollAffordanceBound) return;
+      el.dataset.scrollAffordanceBound = '1';
+      el.addEventListener('scroll', function() {
+        syncScrollAffordances();
+      }, { passive: true });
+    });
+    if (typeof ResizeObserver !== 'undefined') {
+      [pool, rings].forEach(function(el) {
+        if (!el || el.dataset.scrollAffordanceRo) return;
+        el.dataset.scrollAffordanceRo = '1';
+        new ResizeObserver(function() {
+          syncScrollAffordances();
+        }).observe(el);
+      });
+    }
   }
 
   function showStage(show) {
@@ -1055,6 +1203,79 @@
     }
   }
 
+  function executeUmpireDrop(ids, under) {
+    if (!under) return false;
+    const slot = under.closest('#umpireRingModal .umpire-slot');
+    const col = under.closest('.umpire-ring-col');
+    const modalCard = under.closest('#umpireRingModalCard');
+    const ringWrap = under.closest('.umpire-mgmt-rings .umpire-ring');
+    const ringCard = under.closest('.umpire-ring-card') || ringWrap;
+    const pool = under.closest('#umpirePool');
+    const unique = uniqueIds(ids);
+    let changed = false;
+
+    if (slot) {
+      const ring = Number(slot.getAttribute('data-ring'));
+      const slotKey = slot.getAttribute('data-slot');
+      if (unique.length === 1) {
+        changed = placeUmpire(unique[0], ring, slotKey);
+      } else {
+        const group = RING_SLOT_GROUPS.find((item) => item.slots.indexOf(slotKey) !== -1);
+        changed = assignToSlotsTopDown(unique, ring, group ? group.slots : [slotKey]);
+      }
+    } else if (col) {
+      const ring = Number(col.getAttribute('data-ring'));
+      const group = RING_SLOT_GROUPS.find((item) => item.id === col.getAttribute('data-col'));
+      changed = assignToSlotsTopDown(unique, ring, group ? group.slots : []);
+    } else if (modalCard || ringCard) {
+      const ring = Number((modalCard || ringCard).getAttribute('data-ring'));
+      changed = assignToRingTopDown(unique, ring);
+    } else if (pool && dragIdsHasAssigned(unique)) {
+      changed = unassignMany(unique);
+    }
+
+    return changed;
+  }
+
+  function beginUmpireDrag(item) {
+    const id = item.getAttribute('data-umpire-id');
+    if (!id) return false;
+    let ids = isSelected(id) ? state.selectedIds.slice() : [id];
+    ids = uniqueIds(ids);
+    if (!ids.length) return false;
+    if (!isSelected(id)) {
+      setSelection(ids, id, item.closest('#umpirePool') ? 'pool' : Number(item.closest('[data-ring]')?.getAttribute('data-ring') || 0) || 'pool');
+    }
+    dragPayload = { ids };
+    ids.forEach((selectedId) => {
+      document.querySelectorAll('[data-umpire-id="' + CSS.escape(selectedId) + '"]').forEach((el) => {
+        el.classList.add('is-dragging');
+      });
+    });
+    return dragPayload;
+  }
+
+  function clearUmpireDragVisuals() {
+    document.querySelectorAll('.is-dragging').forEach((el) => el.classList.remove('is-dragging'));
+    clearDropHighlights();
+    removeDragGhost();
+    dragPayload = null;
+  }
+
+  function highlightUmpireDropTarget(under) {
+    clearDropHighlights();
+    if (!under || !dragPayload) return;
+    const slot = under.closest('#umpireRingModal .umpire-slot');
+    const col = under.closest('.umpire-ring-col');
+    const modalCard = under.closest('#umpireRingModalCard');
+    const ringWrap = under.closest('.umpire-mgmt-rings .umpire-ring');
+    const ringCard = under.closest('.umpire-ring-card') || (ringWrap ? ringWrap.querySelector('.umpire-ring-card') : null);
+    const pool = under.closest('#umpirePool');
+    const canDropOnPool = Boolean(pool && dragIdsHasAssigned(dragPayload.ids));
+    const target = slot || col || modalCard || ringCard || (canDropOnPool ? pool : null);
+    if (target) target.classList.add('is-drop-target');
+  }
+
   document.addEventListener('dragstart', (e) => {
     const item = e.target.closest('[draggable="true"][data-umpire-id]');
     if (!item || !e.dataTransfer) return;
@@ -1117,47 +1338,54 @@
 
   document.addEventListener('drop', (e) => {
     if (!dragPayload) return;
-    const slot = e.target.closest('#umpireRingModal .umpire-slot');
-    const col = e.target.closest('.umpire-ring-col');
-    const modalCard = e.target.closest('#umpireRingModalCard');
-    const ringWrap = e.target.closest('.umpire-mgmt-rings .umpire-ring');
-    const ringCard = e.target.closest('.umpire-ring-card') || ringWrap;
-    const pool = e.target.closest('#umpirePool');
     const payload = dragPayload;
     dragPayload = null;
     clearDropHighlights();
     document.querySelectorAll('.is-dragging').forEach((el) => el.classList.remove('is-dragging'));
     removeDragGhost();
-    const ids = uniqueIds(payload.ids);
-    let changed = false;
-
-    if (slot) {
-      e.preventDefault();
-      const ring = Number(slot.getAttribute('data-ring'));
-      const slotKey = slot.getAttribute('data-slot');
-      if (ids.length === 1) {
-        changed = placeUmpire(ids[0], ring, slotKey);
-      } else {
-        const group = RING_SLOT_GROUPS.find((item) => item.slots.indexOf(slotKey) !== -1);
-        changed = assignToSlotsTopDown(ids, ring, group ? group.slots : [slotKey]);
-      }
-    } else if (col) {
-      e.preventDefault();
-      const ring = Number(col.getAttribute('data-ring'));
-      const group = RING_SLOT_GROUPS.find((item) => item.id === col.getAttribute('data-col'));
-      changed = assignToSlotsTopDown(ids, ring, group ? group.slots : []);
-    } else if (modalCard || ringCard) {
-      e.preventDefault();
-      const ring = Number((modalCard || ringCard).getAttribute('data-ring'));
-      changed = assignToRingTopDown(ids, ring);
-    } else if (pool && dragIdsHasAssigned(ids)) {
-      e.preventDefault();
-      changed = unassignMany(ids);
-    }
-
-    if (changed) {
+    e.preventDefault();
+    if (executeUmpireDrop(payload.ids, e.target)) {
       renderAll();
       scheduleSave();
+    }
+  });
+
+  bindTouchDnD(document, {
+    selector: '[draggable="true"][data-umpire-id]',
+    onDragStart(item) {
+      return beginUmpireDrag(item) || false;
+    },
+    onDragMove(_touch, payload, under) {
+      if (!payload) return;
+      dragPayload = payload;
+      highlightUmpireDropTarget(under);
+    },
+    onDragEnd(_touch, payload, under) {
+      if (!payload) {
+        clearUmpireDragVisuals();
+        return;
+      }
+      const ids = payload.ids;
+      dragPayload = null;
+      clearDropHighlights();
+      document.querySelectorAll('.is-dragging').forEach((el) => el.classList.remove('is-dragging'));
+      removeDragGhost();
+      if (executeUmpireDrop(ids, under)) {
+        renderAll();
+        scheduleSave();
+      }
+    },
+    onDragCancel() {
+      clearUmpireDragVisuals();
+    },
+    dragImage(item) {
+      const ghost = document.createElement('div');
+      ghost.className = 'umpire-drag-ghost touch-dnd-follower';
+      const count = isSelected(item.getAttribute('data-umpire-id'))
+        ? state.selectedIds.length
+        : 1;
+      ghost.textContent = count > 1 ? count + ' umpires' : umpireDisplayName(state.umpiresById[item.getAttribute('data-umpire-id')] || {}) || 'Umpire';
+      return ghost;
     }
   });
 
@@ -1195,6 +1423,17 @@
       state.selectedIds = state.selectedIds.filter((id) => id !== removedId);
       renderAll();
       scheduleSave();
+      return;
+    }
+
+    const emptySlot = e.target.closest('#umpireRingModal .umpire-slot.is-empty');
+    if (emptySlot && state.selectedIds.length) {
+      const ring = Number(emptySlot.getAttribute('data-ring'));
+      const slotKey = emptySlot.getAttribute('data-slot');
+      if (assignSelectedToSlot(ring, slotKey)) {
+        renderAll();
+        scheduleSave();
+      }
       return;
     }
 
@@ -1278,6 +1517,20 @@
   });
 
   applyGridLayout(readStoredGridLayout(), { skipStore: true });
+  syncMobileLayoutClass();
+  syncMobileHint();
+  bindScrollAffordances();
+  let lastMobileLayout = isMobileView();
+  window.addEventListener('resize', function () {
+    const mobile = isMobileView();
+    syncMobileLayoutClass();
+    syncMobileHint();
+    if (mobile !== lastMobileLayout) {
+      lastMobileLayout = mobile;
+      if (state.ringCount > 0) renderRings();
+    }
+    syncScrollAffordances();
+  });
   window.addEventListener('message', (event) => {
     if (event.origin !== window.location.origin) return;
     if (!event.data || event.data.type !== 'portal-data-updated') return;

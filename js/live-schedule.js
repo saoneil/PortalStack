@@ -1,3 +1,5 @@
+import { bindTouchDnD } from './touch-dnd.js';
+
 const DEFAULT_MATCH = 3;
 const DEFAULT_BUFFER = 0.5;
 const SLOT = 5;
@@ -55,14 +57,6 @@ const ctx = {
 
 const PORTAL_LAST_EVENT_KEY = 'portal-last-event-id';
 
-function readLastEventId() {
-  try {
-    return String(sessionStorage.getItem(PORTAL_LAST_EVENT_KEY) || '').trim();
-  } catch (_) {
-    return '';
-  }
-}
-
 function rememberLastEventId(eventId) {
   const id = String(eventId || '').trim();
   if (!id) return;
@@ -73,9 +67,16 @@ function rememberLastEventId(eventId) {
 
 function preferredSavedEventId(items) {
   const list = Array.isArray(items) ? items : [];
-  const lastId = readLastEventId();
-  if (lastId && list.some((item) => String(item.eventId) === lastId)) return lastId;
   if (list.length === 1) return String(list[0].eventId || '');
+  return '';
+}
+
+function resolvePickerSelection(items, override = '') {
+  const list = Array.isArray(items) ? items : [];
+  if (!list.length) return '';
+  if (list.length === 1) return String(list[0].eventId || '');
+  const explicit = String(override || ctx.eventId || '').trim();
+  if (explicit && list.some((item) => String(item.eventId) === explicit)) return explicit;
   return '';
 }
 
@@ -780,8 +781,12 @@ function beginPendingBreak(allRings) {
   ctx.pendingBreak = { allRings: wantAll, duration: DEFAULT_BREAK_MINUTES };
   syncPendingBreakUi();
   showToast(wantAll
-    ? 'Click a ring or the scratch pad to place a 30 min break on all rings.'
-    : 'Click a ring or the scratch pad to place a 30 min break.');
+    ? (isScratchPadVisible()
+      ? 'Click a ring or the scratch pad to place a 30 min break on all rings.'
+      : 'Tap a ring to place a 30 min break on all rings.')
+    : (isScratchPadVisible()
+      ? 'Click a ring or the scratch pad to place a 30 min break.'
+      : 'Tap a ring to place a 30 min break.'));
 }
 
 function placePendingBreakAt(dayIndex, ringIndex, startOffset) {
@@ -1382,7 +1387,7 @@ function renderScratch() {
     return;
   }
 
-  scratchPanel.hidden = false;
+  scratchPanel.hidden = !isScratchPadVisible();
   stage.classList.remove('is-readonly');
   const ids = ctx.state?.scratch_ids || [];
   if (!ids.length) {
@@ -1870,6 +1875,62 @@ function renderViewer() {
   } else {
     startNowScroll();
   }
+  syncLiveScrollAffordances();
+}
+
+function isLiveMobileView() {
+  return window.matchMedia('(max-width: 768px)').matches;
+}
+
+function isScratchPadVisible() {
+  return window.matchMedia('(max-width: 900px)').matches === false;
+}
+
+function updateLiveScrollAffordance(el, cueId, gradientEl) {
+  if (!el) return;
+  const canScrollX = el.scrollWidth > el.clientWidth + 6;
+  const canScrollY = el.scrollHeight > el.clientHeight + 6;
+  const canScroll = canScrollX || canScrollY;
+  const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 6;
+  const atRight = el.scrollLeft + el.clientWidth >= el.scrollWidth - 6;
+  const atEnd = (!canScrollY || atBottom) && (!canScrollX || atRight);
+  const gradient = gradientEl || el;
+  gradient.classList.toggle('has-scroll', canScroll);
+  gradient.classList.toggle('at-scroll-end', atEnd);
+  el.classList.toggle('has-scroll', canScroll);
+  el.classList.toggle('at-scroll-end', atEnd);
+  const cue = cueId ? document.getElementById(cueId) : null;
+  if (cue) cue.classList.toggle('is-visible', canScroll && !atEnd);
+}
+
+function syncLiveScrollAffordances() {
+  if (!isLiveMobileView() || !isToolMode()) {
+    document.querySelectorAll('.live-scroll-cue').forEach((cue) => cue.classList.remove('is-visible'));
+    document.querySelectorAll('.live-board-wrap.has-scroll, .live-scratch.has-scroll, .live-times-grid-wrap.has-scroll')
+      .forEach((el) => el.classList.remove('has-scroll', 'at-scroll-end'));
+    return;
+  }
+  updateLiveScrollAffordance(document.getElementById('liveBoardDrop'), 'liveBoardScrollCue');
+  if (isScratchPadVisible()) {
+    updateLiveScrollAffordance(document.getElementById('liveScratchDrop'), 'liveScratchScrollCue');
+  }
+  updateLiveScrollAffordance(document.querySelector('.live-times-grid-wrap'), null);
+}
+
+function bindLiveScrollAffordances() {
+  const targets = [
+    document.getElementById('liveBoardDrop'),
+    document.getElementById('liveScratchDrop'),
+    document.querySelector('.live-times-grid-wrap')
+  ];
+  targets.forEach((el) => {
+    if (!el || el.dataset.scrollAffordanceBound) return;
+    el.dataset.scrollAffordanceBound = '1';
+    el.addEventListener('scroll', () => syncLiveScrollAffordances(), { passive: true });
+    if (typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(() => syncLiveScrollAffordances()).observe(el);
+    }
+  });
 }
 
 function setPanels({ picker = false, viewer = false, missing = false } = {}) {
@@ -2275,6 +2336,115 @@ function bindDragDrop() {
     }
     placeFromScratchAt(payload.id, target.dayIndex, target.ringIndex, target.startOffset);
   });
+
+  const clearTouchDragVisuals = () => {
+    document.querySelectorAll('#liveBoard .da-schedule-block.da-dragging, .live-scratch-item.da-dragging')
+      .forEach((el) => el.classList.remove('da-dragging'));
+    activeDrag = null;
+    clearDropTargets();
+    removeDragGhost();
+    removeDragImage();
+  };
+
+  const dropOntoBoard = (clientX, clientY, payload) => {
+    const preview = payload ? updateDragGhost(clientX, clientY, payload) : null;
+    removeDragGhost();
+    removeDragImage();
+    if (!ctx.canEdit) return;
+
+    const target = preview || dropTargetFromPoint(clientX, clientY);
+    if (!target) {
+      if (payload) showToast('Drop onto a ring lane to place.', true);
+      return;
+    }
+
+    if (ctx.pendingBreak && !payload) {
+      placePendingBreakAt(target.dayIndex, target.ringIndex, target.startOffset);
+      return;
+    }
+    if (!payload || (payload.from !== 'scratch' && payload.from !== 'board')) return;
+
+    if (payload.from === 'board') {
+      const ok = placeBlockAt(payload.id, target.dayIndex, target.ringIndex, target.startOffset);
+      if (ok) showToast(isBreakId(payload.id) ? 'Break moved.' : 'Moved.');
+      return;
+    }
+    placeFromScratchAt(payload.id, target.dayIndex, target.ringIndex, target.startOffset);
+  };
+
+  bindTouchDnD(document, {
+    selector: '.da-schedule-block[data-id], .live-scratch-item[data-id]',
+    onDragStart(el) {
+      if (!ctx.canEdit) return false;
+      hideContextMenu();
+      cancelPendingBreak({ silent: true });
+
+      if (el.classList.contains('da-schedule-block')) {
+        const id = el.getAttribute('data-id');
+        el.classList.add('da-dragging');
+        document.querySelectorAll(`#liveBoard .da-schedule-block[data-id="${CSS.escape(id)}"]`)
+          .forEach((node) => node.classList.add('da-dragging'));
+        const payload = {
+          id,
+          from: 'board',
+          kind: el.getAttribute('data-kind') || 'division'
+        };
+        activeDrag = payload;
+        return payload;
+      }
+
+      if (el.classList.contains('live-scratch-item')) {
+        el.classList.add('da-dragging');
+        const payload = { id: el.getAttribute('data-id'), from: 'scratch' };
+        activeDrag = payload;
+        return payload;
+      }
+
+      return false;
+    },
+    onDragMove(touch, payload, under) {
+      if (!payload) return;
+      clearDropTargets();
+      if (payload.from === 'board' && under?.closest('#liveScratchDrop') && isScratchPadVisible()) {
+        scratchDrop?.classList.add('is-drop-target');
+        removeDragGhost();
+        return;
+      }
+      if (under?.closest('#liveBoardDrop')) {
+        boardDrop?.classList.add('is-drop-target');
+        updateDragGhost(touch.clientX, touch.clientY, payload);
+        return;
+      }
+      removeDragGhost();
+    },
+    onDragEnd(touch, payload, under) {
+      if (!payload) {
+        clearTouchDragVisuals();
+        return;
+      }
+      clearDropTargets();
+      if (payload.from === 'board' && under?.closest('#liveScratchDrop') && isScratchPadVisible()) {
+        sendToScratch([payload.id]);
+        renderViewer();
+        showToast(isBreakId(payload.id) ? 'Break moved to scratch.' : 'Moved to scratch.');
+        clearTouchDragVisuals();
+        ctx.suppressScratchClick = true;
+        window.setTimeout(() => { ctx.suppressScratchClick = false; }, 0);
+        return;
+      }
+      if (under?.closest('#liveBoardDrop')) {
+        dropOntoBoard(touch.clientX, touch.clientY, payload);
+        clearTouchDragVisuals();
+        ctx.suppressBlockClick = true;
+        window.setTimeout(() => { ctx.suppressBlockClick = false; }, 0);
+        return;
+      }
+      clearTouchDragVisuals();
+    },
+    onDragCancel() {
+      clearTouchDragVisuals();
+    }
+  });
 }
 
 function bindContextMenu() {
@@ -2486,6 +2656,11 @@ function bindViewerEvents() {
   bindDragDrop();
   bindContextMenu();
   bindTimesPanel();
+  bindLiveScrollAffordances();
+  window.addEventListener('resize', () => {
+    renderScratch();
+    syncLiveScrollAffordances();
+  });
 }
 
 function bindTimesPanel() {
@@ -2629,9 +2804,8 @@ async function loadEventOptions({ selectedEventId = '' } = {}) {
       return `<option value="${escapeHtml(item.eventId)}">${escapeHtml(formatOptionLabel(item))}</option>`;
     }).join('');
 
-    if (selectedEventId) {
-      select.value = String(selectedEventId);
-    }
+    const pick = resolvePickerSelection(items, selectedEventId);
+    if (pick) select.value = pick;
     return true;
   } catch (err) {
     ctx.savedItems = [];
@@ -2651,7 +2825,7 @@ async function showPicker() {
   setPanels({ viewer: true });
   updateHeader();
   const loaded = await loadEventOptions({
-    selectedEventId: ctx.eventId || readLastEventId()
+    selectedEventId: ctx.eventId
   });
   if (!loaded) return;
   if (isToolMode() && !ctx.eventId && ctx.clientId) {
@@ -2675,7 +2849,7 @@ async function applyPortalDataUpdate(payload = {}) {
   }
 
   const loaded = await loadEventOptions({
-    selectedEventId: ctx.eventId || eventId || readLastEventId()
+    selectedEventId: ctx.eventId || eventId
   });
   if (!loaded) return;
 
@@ -2753,7 +2927,7 @@ function bindPicker() {
       if (ctx.clientId && ctx.eventId) {
         await refreshSchedule({ silent: false, force: true });
       } else {
-        await loadEventOptions({ selectedEventId: readLastEventId() });
+        await loadEventOptions();
         const preferred = preferredSavedEventId(ctx.savedItems);
         if (preferred && ctx.clientId) {
           window.location.replace(scheduleHref(ctx.clientId, preferred));

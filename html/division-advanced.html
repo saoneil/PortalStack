@@ -343,96 +343,108 @@
         <button type="button" id="daCustomDivisionCloseBtn" class="da-custom-division-close" aria-label="Close">✕</button>
       </header>
       <div class="da-split da-draws-layout da-custom-division-layout">
-        <section class="da-table-wrap da-split-list da-custom-division-left">
-          <div class="da-custom-filters" id="customAthleteFilters">
-            <div class="da-custom-filter-row">
-              <button type="button" class="da-custom-filter-btn" id="customFilterMaleBtn" aria-pressed="false">male</button>
-              <button type="button" class="da-custom-filter-btn" id="customFilterFemaleBtn" aria-pressed="false">female</button>
-            </div>
-            <div class="da-custom-filter-row">
-              <span class="da-custom-filter-label">rank</span>
-              <select id="customFilterRankMin" class="da-select da-select-sm da-custom-filter-select" aria-label="Rank min">
-                <option value="">any</option>
-              </select>
-              <span class="da-band-sep">–</span>
-              <select id="customFilterRankMax" class="da-select da-select-sm da-custom-filter-select" aria-label="Rank max">
-                <option value="">any</option>
-              </select>
-            </div>
-            <div class="da-custom-filter-row">
-              <span class="da-custom-filter-label">age</span>
-              <input id="customFilterAgeMin" class="da-input da-input-sm da-custom-filter-num" type="number" min="0" step="1" inputmode="decimal" placeholder="min" aria-label="Age min">
-              <span class="da-band-sep">–</span>
-              <input id="customFilterAgeMax" class="da-input da-input-sm da-custom-filter-num" type="number" min="0" step="1" inputmode="decimal" placeholder="max" aria-label="Age max">
-            </div>
-            <div class="da-custom-filter-row">
-              <span class="da-custom-filter-label">ht</span>
-              <input id="customFilterHeightMin" class="da-input da-input-sm da-custom-filter-num" type="number" min="0" step="0.1" inputmode="decimal" placeholder="min" aria-label="Height min cm">
-              <span class="da-band-sep">–</span>
-              <input id="customFilterHeightMax" class="da-input da-input-sm da-custom-filter-num" type="number" min="0" step="0.1" inputmode="decimal" placeholder="max" aria-label="Height max cm">
-              <span class="da-custom-filter-unit">cm</span>
-            </div>
-            <div class="da-custom-filter-row">
-              <span class="da-custom-filter-label">wt</span>
-              <input id="customFilterWeightMin" class="da-input da-input-sm da-custom-filter-num" type="number" min="0" step="0.1" inputmode="decimal" placeholder="min" aria-label="Weight min kg">
-              <span class="da-band-sep">–</span>
-              <input id="customFilterWeightMax" class="da-input da-input-sm da-custom-filter-num" type="number" min="0" step="0.1" inputmode="decimal" placeholder="max" aria-label="Weight max kg">
-              <span class="da-custom-filter-unit">kg</span>
-            </div>
-          </div>
-          <label class="da-inline-label" for="customAthleteSearch">athlete search</label>
-          <input id="customAthleteSearch" class="da-input da-custom-control" type="search" autocomplete="off" placeholder="search athletes by name or club...">
-          <div id="customAthleteSourceList" class="da-draw-athletes da-custom-source-list" aria-label="all athletes"></div>
-        </section>
-        <section class="da-draws-right da-custom-division-right">
-          <div class="da-custom-division-meta">
-            <div class="da-custom-meta-field">
-              <label class="da-inline-label" for="customDivisionName">division name</label>
-              <input id="customDivisionName" class="da-input da-custom-control" type="text" autocomplete="off" maxlength="255" placeholder="type new division name">
-            </div>
-            <div class="da-custom-meta-field">
-              <label class="da-inline-label" for="customDivisionEventKey">event / mode</label>
-              <select id="customDivisionEventKey" class="da-select da-custom-control"></select>
-            </div>
-            <div class="da-custom-meta-field">
-              <label class="da-inline-label" for="customDivisionDrawType">draw type</label>
-              <select id="customDivisionDrawType" class="da-select da-custom-control"></select>
-            </div>
-            <p id="customDivisionWarning" class="da-hint da-custom-warning" hidden></p>
-          </div>
-          <div class="da-custom-view-bar">
-            <nav class="da-subtabs da-draws-view-tabs" role="tablist" aria-label="custom draw view">
-              <button type="button" class="da-subtab active" data-subtab="pool">athletes</button>
-              <button type="button" class="da-subtab" data-subtab="matches">draw</button>
-              <button type="button" class="da-subtab" data-subtab="edit">edit</button>
-            </nav>
-            <button type="button" id="customDivisionClearBtn" class="da-btn da-btn-sm da-custom-clear-btn" disabled>clear</button>
-          </div>
-          <div class="da-draws-upper da-custom-subpanel-wrap">
-            <div class="da-subpanel active" data-subpanel="pool">
-              <div id="customDrawAthletesList" class="da-draw-athletes da-draw-pool"></div>
-            </div>
-            <div class="da-subpanel" data-subpanel="matches" hidden>
-              <p id="customDrawMatchesHint" class="da-hint">select athletes to preview.</p>
-              <div id="customDrawMatchesViewport" class="da-matches-viewport" hidden>
-                <div class="da-matches-zoom" aria-label="draw zoom">
-                  <button type="button" id="customMatchesZoomOut" class="da-btn da-btn-sm" title="zoom out">−</button>
-                  <button type="button" id="customMatchesZoomIn" class="da-btn da-btn-sm" title="zoom in">+</button>
-                  <button type="button" id="customMatchesZoomFit" class="da-btn da-btn-sm" title="fit">fit</button>
+        <div class="da-custom-upper-scroll">
+          <div class="da-custom-upper-grid">
+            <div class="da-custom-filters-block">
+              <div class="da-custom-filters" id="customAthleteFilters">
+                <div class="da-custom-filter-row">
+                  <button type="button" class="da-custom-filter-btn" id="customFilterMaleBtn" aria-pressed="false">male</button>
+                  <button type="button" class="da-custom-filter-btn" id="customFilterFemaleBtn" aria-pressed="false">female</button>
                 </div>
-                <div id="customDrawMatchesContent" class="da-matches-content"></div>
+                <div class="da-custom-filter-row">
+                  <span class="da-custom-filter-label">rank</span>
+                  <select id="customFilterRankMin" class="da-select da-select-sm da-custom-filter-select" aria-label="Rank min">
+                    <option value="">any</option>
+                  </select>
+                  <span class="da-band-sep">–</span>
+                  <select id="customFilterRankMax" class="da-select da-select-sm da-custom-filter-select" aria-label="Rank max">
+                    <option value="">any</option>
+                  </select>
+                </div>
+                <div class="da-custom-filter-row">
+                  <span class="da-custom-filter-label">age</span>
+                  <input id="customFilterAgeMin" class="da-input da-input-sm da-custom-filter-num" type="number" min="0" step="1" inputmode="decimal" placeholder="min" aria-label="Age min">
+                  <span class="da-band-sep">–</span>
+                  <input id="customFilterAgeMax" class="da-input da-input-sm da-custom-filter-num" type="number" min="0" step="1" inputmode="decimal" placeholder="max" aria-label="Age max">
+                </div>
+                <div class="da-custom-filter-row">
+                  <span class="da-custom-filter-label">ht</span>
+                  <input id="customFilterHeightMin" class="da-input da-input-sm da-custom-filter-num" type="number" min="0" step="0.1" inputmode="decimal" placeholder="min" aria-label="Height min cm">
+                  <span class="da-band-sep">–</span>
+                  <input id="customFilterHeightMax" class="da-input da-input-sm da-custom-filter-num" type="number" min="0" step="0.1" inputmode="decimal" placeholder="max" aria-label="Height max cm">
+                  <span class="da-custom-filter-unit">cm</span>
+                </div>
+                <div class="da-custom-filter-row">
+                  <span class="da-custom-filter-label">wt</span>
+                  <input id="customFilterWeightMin" class="da-input da-input-sm da-custom-filter-num" type="number" min="0" step="0.1" inputmode="decimal" placeholder="min" aria-label="Weight min kg">
+                  <span class="da-band-sep">–</span>
+                  <input id="customFilterWeightMax" class="da-input da-input-sm da-custom-filter-num" type="number" min="0" step="0.1" inputmode="decimal" placeholder="max" aria-label="Weight max kg">
+                  <span class="da-custom-filter-unit">kg</span>
+                </div>
               </div>
+              <label class="da-inline-label" for="customAthleteSearch">athlete search</label>
+              <input id="customAthleteSearch" class="da-input da-custom-control da-custom-search-input" type="search" autocomplete="off" placeholder="search athletes by name or club...">
             </div>
-            <div class="da-subpanel" data-subpanel="edit" hidden>
-              <div id="customDrawEditTypeBar" class="da-edit-type-bar" hidden>
-                <label class="da-inline-label" for="customDrawEditTypeSelect">draw type</label>
-                <select id="customDrawEditTypeSelect" class="da-select" disabled></select>
+            <div class="da-custom-meta-block">
+              <div class="da-custom-division-meta">
+                <div class="da-custom-meta-field">
+                  <label class="da-inline-label" for="customDivisionName">division name</label>
+                  <input id="customDivisionName" class="da-input da-custom-control" type="text" autocomplete="off" maxlength="255" placeholder="type new division name">
+                </div>
+                <div class="da-custom-meta-field">
+                  <label class="da-inline-label" for="customDivisionEventKey">event / mode</label>
+                  <select id="customDivisionEventKey" class="da-select da-custom-control"></select>
+                </div>
+                <div class="da-custom-meta-field">
+                  <label class="da-inline-label" for="customDivisionDrawType">draw type</label>
+                  <select id="customDivisionDrawType" class="da-select da-custom-control"></select>
+                </div>
+                <p id="customDivisionWarning" class="da-hint da-custom-warning" hidden></p>
               </div>
-              <p id="customDrawEditHint" class="da-hint da-edit-hint">select athletes to edit this new draw.</p>
-              <div id="customInteractiveEditor" class="da-interactive-editor"></div>
+              <div class="da-custom-view-bar">
+                <nav class="da-subtabs da-draws-view-tabs" role="tablist" aria-label="custom draw view">
+                  <button type="button" class="da-subtab active" data-subtab="pool">athletes</button>
+                  <button type="button" class="da-subtab" data-subtab="matches">draw</button>
+                  <button type="button" class="da-subtab" data-subtab="edit">edit</button>
+                </nav>
+                <button type="button" id="customDivisionClearBtn" class="da-btn da-btn-sm da-custom-clear-btn" disabled>clear</button>
+              </div>
             </div>
           </div>
-        </section>
+        </div>
+        <div class="da-custom-lower-split">
+          <section class="da-custom-pane da-custom-source-pane" aria-label="competitors">
+            <h3 class="da-custom-pane-title">competitors</h3>
+            <div id="customAthleteSourceList" class="da-draw-athletes da-custom-source-list" aria-label="all athletes"></div>
+          </section>
+          <section class="da-custom-pane da-custom-selected-pane" aria-label="division athletes">
+            <h3 class="da-custom-pane-title">selected</h3>
+            <div class="da-draws-upper da-custom-subpanel-wrap">
+              <div class="da-subpanel active" data-subpanel="pool">
+                <div id="customDrawAthletesList" class="da-draw-athletes da-draw-pool"></div>
+              </div>
+              <div class="da-subpanel" data-subpanel="matches" hidden>
+                <p id="customDrawMatchesHint" class="da-hint">select athletes to preview.</p>
+                <div id="customDrawMatchesViewport" class="da-matches-viewport" hidden>
+                  <div class="da-matches-zoom" aria-label="draw zoom">
+                    <button type="button" id="customMatchesZoomOut" class="da-btn da-btn-sm" title="zoom out">−</button>
+                    <button type="button" id="customMatchesZoomIn" class="da-btn da-btn-sm" title="zoom in">+</button>
+                    <button type="button" id="customMatchesZoomFit" class="da-btn da-btn-sm" title="fit">fit</button>
+                  </div>
+                  <div id="customDrawMatchesContent" class="da-matches-content"></div>
+                </div>
+              </div>
+              <div class="da-subpanel" data-subpanel="edit" hidden>
+                <div id="customDrawEditTypeBar" class="da-edit-type-bar" hidden>
+                  <label class="da-inline-label" for="customDrawEditTypeSelect">draw type</label>
+                  <select id="customDrawEditTypeSelect" class="da-select" disabled></select>
+                </div>
+                <p id="customDrawEditHint" class="da-hint da-edit-hint">select athletes to edit this new draw.</p>
+                <div id="customInteractiveEditor" class="da-interactive-editor"></div>
+              </div>
+            </div>
+          </section>
+        </div>
       </div>
       <footer class="da-custom-division-actions">
         <button type="button" id="customDivisionSaveBtn" class="da-btn da-btn-primary">save division</button>

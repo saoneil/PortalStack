@@ -2,6 +2,7 @@ import { apiFetch } from './api.js';
 import { showConfirmModal, showToast } from './ui.js';
 import { state } from './state.js';
 import { getPatternMeta } from './pattern-form.js';
+import { bindTouchDnD } from '../touch-dnd.js';
 
 let dragSourceId = null;
 let selectedSlotId = null;
@@ -221,6 +222,40 @@ function bindMatchDrag(root, entry) {
         showToast(err.message || 'could not reorder matches.', true);
       }
     });
+  });
+
+  bindTouchDnD(root, {
+    selector: '[data-slot-id][draggable="true"]',
+    onDragStart(el) {
+      dragSourceId = el.dataset.slotId;
+      el.classList.add('dragging');
+      return dragSourceId;
+    },
+    onDragMove(_touch, sourceId, under) {
+      root.querySelectorAll('.drag-over').forEach((node) => node.classList.remove('drag-over'));
+      const slot = under?.closest('[data-slot-id]');
+      const targetId = slot?.dataset?.slotId;
+      if (slot && targetId && targetId !== sourceId) slot.classList.add('drag-over');
+    },
+    async onDragEnd(_touch, sourceId, under) {
+      root.querySelectorAll('.drag-over').forEach((node) => node.classList.remove('drag-over'));
+      const target = under?.closest('[data-slot-id]');
+      const targetId = target?.dataset?.slotId;
+      dragSourceId = null;
+      root.querySelectorAll('.dragging').forEach((node) => node.classList.remove('dragging'));
+      if (!sourceId || !targetId || sourceId === targetId) return;
+      try {
+        await swapSlots(entry, sourceId, targetId);
+      } catch (err) {
+        showToast(err.message || 'could not reorder matches.', true);
+      }
+    },
+    onDragCancel() {
+      dragSourceId = null;
+      root.querySelectorAll('.dragging, .drag-over').forEach((node) => {
+        node.classList.remove('dragging', 'drag-over');
+      });
+    }
   });
 }
 

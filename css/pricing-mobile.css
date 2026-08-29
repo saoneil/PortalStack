@@ -1,0 +1,228 @@
+.pricing-compact-list {
+  display: none;
+}
+
+.pricing-mobile-custom {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  border-radius: 10px;
+  background: rgba(0, 212, 255, 0.06);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.pricing-mobile-custom .email-link {
+  color: #00d4ff;
+}
+
+/* Phone: accordion list, description hidden until expanded */
+@media (max-width: 480px) {
+  .pricing-content table,
+  .pricing-lang-panel table,
+  #pricingOverlay table {
+    display: none;
+  }
+
+  .pricing-compact-list.pricing-layout-phone {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .pricing-mobile-item {
+    border: 1px solid rgba(0, 212, 255, 0.35);
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+  }
+
+  .pricing-mobile-item[open] {
+    border-color: rgba(0, 212, 255, 0.65);
+    box-shadow: 0 0 12px rgba(0, 212, 255, 0.15);
+  }
+
+  .pricing-mobile-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 14px;
+    cursor: pointer;
+    list-style: none;
+    font-size: 15px;
+    line-height: 1.35;
+    color: #fff;
+  }
+
+  .pricing-mobile-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .pricing-mobile-summary::after {
+    content: '›';
+    flex: 0 0 auto;
+    color: #00d4ff;
+    font-size: 22px;
+    line-height: 1;
+    transform: rotate(90deg);
+    transition: transform 0.15s ease;
+  }
+
+  .pricing-mobile-item[open] .pricing-mobile-summary::after {
+    transform: rotate(-90deg);
+  }
+
+  .pricing-mobile-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-weight: bold;
+    color: #00d4ff;
+    text-align: left;
+  }
+
+  .pricing-mobile-price {
+    flex: 0 0 auto;
+    text-align: right;
+    color: #fff;
+    font-size: 14px;
+    line-height: 1.3;
+  }
+
+  .pricing-mobile-body {
+    padding: 0 14px 14px;
+    border-top: 1px solid rgba(0, 212, 255, 0.2);
+  }
+
+  .pricing-mobile-desc {
+    margin: 12px 0 0;
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 14px;
+    line-height: 1.55;
+    text-align: left;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: normal;
+  }
+
+  .pricing-mobile-checkout {
+    margin-top: 14px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .pricing-mobile-checkout .paypal-link {
+    min-width: 0;
+  }
+
+  .pricing-mobile-custom {
+    font-size: 13px;
+    padding: 10px 12px;
+  }
+}
+
+/* Tablet: wrapped description and pay link in full-width cards */
+@media (min-width: 481px) and (max-width: 1024px) {
+  .pricing-content table,
+  .pricing-lang-panel table,
+  #pricingOverlay table {
+    display: none;
+  }
+
+  .pricing-compact-list.pricing-layout-tablet {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .pricing-tablet-item {
+    border: 1px solid rgba(0, 212, 255, 0.35);
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.25);
+    padding: 14px 16px;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .pricing-tablet-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .pricing-layout-tablet .pricing-mobile-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-weight: bold;
+    color: #00d4ff;
+    font-size: 16px;
+    line-height: 1.35;
+    text-align: left;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: normal;
+  }
+
+  .pricing-layout-tablet .pricing-mobile-price {
+    flex: 0 0 auto;
+    text-align: right;
+    color: #fff;
+    font-size: 15px;
+    line-height: 1.35;
+    white-space: normal;
+  }
+
+  .pricing-layout-tablet .pricing-mobile-desc {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 15px;
+    line-height: 1.55;
+    text-align: left;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: normal;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .pricing-layout-tablet .pricing-mobile-checkout {
+    margin-top: 12px;
+    display: flex;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .pricing-layout-tablet .pricing-mobile-checkout .paypal-link {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .pricing-layout-tablet .pricing-mobile-custom {
+    font-size: 14px;
+  }
+
+  #pricingOverlay .pricing-modal-body,
+  .pricing-content {
+    overflow-x: hidden;
+  }
+}

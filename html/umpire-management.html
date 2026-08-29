@@ -50,10 +50,12 @@
           <h2 id="umpireCountHeading" class="umpire-mgmt-count">0 registered umpires</h2>
           <p class="umpire-mgmt-hint">Click a ring to assign positions. Select referees, then drag onto a ring or into the ring window.</p>
         </div>
+        <p class="umpire-scroll-cue" id="umpirePoolScrollCue" aria-hidden="true">Scroll umpires ↓</p>
         <ul id="umpireList" class="umpire-mgmt-list"></ul>
         <p id="umpireListEmpty" class="umpire-mgmt-empty" hidden>No umpires are registered for this event.</p>
       </aside>
       <section class="umpire-mgmt-boards" aria-label="Schedule rings">
+        <p class="umpire-scroll-cue" id="umpireRingsScrollCue" aria-hidden="true">Scroll rings ↓</p>
         <div id="umpireRingGrid" class="umpire-mgmt-rings"></div>
         <p id="umpireRingsEmpty" class="umpire-mgmt-empty" hidden>No rings yet. Set rings in the Live Event Schedule tool.</p>
         <div id="umpireRingModal" class="umpire-ring-modal" hidden>
@@ -71,6 +73,6 @@
       </section>
     </div>
   </main>
-  <script src="/js/umpire-management.js"></script>
+  <script type="module" src="/js/umpire-management.js"></script>
 </body>
 </html>

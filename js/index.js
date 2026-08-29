@@ -53,6 +53,7 @@ function loadPublicPricing(lang) {
       var bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
       content.innerHTML = bodyMatch ? bodyMatch[1] : html;
       stripPaymentLinks(content);
+      enhancePricingForMobile(content);
     })
     .catch(function() {
       content.innerHTML = '<p class="pricing-error">Unable to load pricing right now. Please try again shortly.</p>';

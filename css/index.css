@@ -288,6 +288,11 @@ h1 {
   justify-content: center;
   z-index: 10000;
   padding: 20px;
+  padding-top: max(20px, env(safe-area-inset-top));
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+  padding-left: max(20px, env(safe-area-inset-left));
+  padding-right: max(20px, env(safe-area-inset-right));
+  box-sizing: border-box;
 }
 
 .pricing-overlay[hidden] {
@@ -298,12 +303,14 @@ h1 {
   position: relative;
   width: 95vw;
   max-width: 1000px;
-  max-height: 80vh;
+  max-height: min(85dvh, 85vh);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   background: rgba(33, 33, 33, 0.98);
   border-radius: 16px;
   padding: 32px 40px;
   box-shadow: 0 0 40px rgba(0, 212, 255, 0.35);
+  box-sizing: border-box;
 }
 
 .pricing-close-btn {
@@ -408,39 +415,41 @@ h1 {
   border: 0;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   body {
     height: auto;
     min-height: 100dvh;
-    align-items: center;
-    justify-content: center;
+    align-items: stretch;
+    justify-content: flex-start;
     overflow-x: hidden;
     overflow-y: auto;
-    padding: 24px 16px;
+    padding: 28px 16px;
   }
 
   .center-container {
     width: 100%;
     max-width: 360px;
     margin: 0 auto;
-    padding: 12px 18px 12px 8px;
+    padding: 12px 18px 20px 8px;
     align-items: center;
-    justify-content: center;
+    justify-content: space-evenly;
+    flex: 1 1 auto;
+    min-height: calc(100dvh - 56px);
     text-align: center;
+    gap: 36px;
   }
 
   .form {
     width: 100%;
     max-width: 320px;
-    margin-left: auto;
-    margin-right: auto;
-    padding: 16px 10px 10px;
+    margin: 0 auto;
+    padding: 0 10px;
   }
 
   .trust-footer {
     width: 100%;
     max-width: 320px;
-    margin: 8px auto 0;
+    margin: 0 auto;
     font-size: 11px;
     line-height: 1.45;
     text-align: center;
@@ -462,7 +471,7 @@ h1 {
   .portal-title {
     width: 100%;
     font-size: 22px;
-    margin: 0 0 4px;
+    margin: 0;
     text-align: center;
   }
 
@@ -477,7 +486,7 @@ h1 {
   }
 
   .form .btn {
-    padding: 12px 14px;
+    padding: 16px 14px;
     font-size: 15px;
   }
 
@@ -488,7 +497,9 @@ h1 {
   .trust-footer p {
     margin: 3px 0;
   }
+}
 
+@media (max-width: 768px) {
   .pricing-modal {
     padding: 28px 16px 20px;
     max-height: 85vh;
@@ -521,5 +532,78 @@ h1 {
   .pricing-content .paypal-logo {
     height: 24px;
     width: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    padding: 20px 12px;
+  }
+
+  .center-container {
+    max-width: 100%;
+    padding: 8px 12px 16px 4px;
+    gap: 32px;
+    min-height: calc(100dvh - 40px);
+  }
+
+  .portal-title {
+    font-size: 20px;
+  }
+
+  .form {
+    max-width: 100%;
+    padding: 0 6px;
+  }
+
+  .form .btn {
+    padding: 15px 12px;
+  }
+
+  .pricing-overlay {
+    padding: 10px;
+    padding-top: max(10px, env(safe-area-inset-top));
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+    padding-left: max(10px, env(safe-area-inset-left));
+    padding-right: max(10px, env(safe-area-inset-right));
+  }
+
+  .pricing-modal {
+    padding: 24px 10px 16px;
+    max-height: 90dvh;
+    width: 100%;
+    border-radius: 12px;
+  }
+
+  .pricing-close-btn {
+    top: 10px;
+    right: 10px;
+    font-size: 24px;
+  }
+
+  .pricing-content h1 {
+    font-size: 16px;
+  }
+
+  .pricing-content th,
+  .pricing-content td {
+    padding: 4px 3px;
+    font-size: 10px;
+  }
+
+  .pricing-content th:nth-child(1),
+  .pricing-content td:nth-child(1) { width: 14%; }
+  .pricing-content th:nth-child(2),
+  .pricing-content td:nth-child(2) {
+    width: 11%;
+    font-size: 10px;
+  }
+  .pricing-content th:nth-child(3),
+  .pricing-content td:nth-child(3) { width: 55%; }
+  .pricing-content th:nth-child(4),
+  .pricing-content td:nth-child(4) { width: 20%; }
+
+  .pricing-content .paypal-logo {
+    height: 20px;
   }
 }

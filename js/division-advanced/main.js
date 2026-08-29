@@ -11,7 +11,7 @@ import {
 } from './ui.js';
 import { divisionTitleFromSpec } from './merge-division.js';
 import { initPatternForm, bindPatternForm, collectPatternFormPayload } from './pattern-form.js';
-import { initCustomDivisionFeature } from './custom-division.js';
+import { initCustomDivisionFeature, closeCustomDivisionModal, isCustomDivisionModalOpen } from './custom-division.js';
 
 function setPrompt(message, { hidden = false } = {}) {
   const prompt = document.getElementById('workflowProgressText');
@@ -1021,6 +1021,11 @@ function bindEmbedCloseAsBack() {
         event.origin
       );
     };
+    if (isCustomDivisionModalOpen()) {
+      closeCustomDivisionModal();
+      reply(true);
+      return;
+    }
     if (state.screen === 'divisions') {
       refreshWheelFromStatus()
         .then(() => reply(true))
