@@ -56,6 +56,7 @@ const ctx = {
 };
 
 const PORTAL_LAST_EVENT_KEY = 'portal-last-event-id';
+const PORTAL_FOCUS_DAY_KEY = 'portal-focus-day-index';
 
 function rememberLastEventId(eventId) {
   const id = String(eventId || '').trim();
@@ -63,6 +64,44 @@ function rememberLastEventId(eventId) {
   try {
     sessionStorage.setItem(PORTAL_LAST_EVENT_KEY, id);
   } catch (_) { /* ignore */ }
+}
+
+function readLastEventId() {
+  try {
+    return String(sessionStorage.getItem(PORTAL_LAST_EVENT_KEY) || '').trim();
+  } catch (_) {
+    return '';
+  }
+}
+
+function notifyPortalEventSelected(eventId) {
+  if (eventId) rememberLastEventId(eventId);
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        type: 'portal-event-selected',
+        eventId: String(eventId || '')
+      }, window.location.origin);
+    }
+  } catch (_) { /* ignore */ }
+}
+
+function readFocusDayIndex(dayCount) {
+  const params = new URLSearchParams(window.location.search);
+  let raw = params.get('day');
+  if (raw == null || raw === '') {
+    try {
+      raw = localStorage.getItem(PORTAL_FOCUS_DAY_KEY);
+    } catch (_) {
+      raw = null;
+    }
+  }
+  if (raw == null || raw === '') return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return null;
+  const index = Math.floor(n);
+  if (dayCount > 0) return Math.max(0, Math.min(dayCount - 1, index));
+  return index;
 }
 
 function preferredSavedEventId(items) {
@@ -75,7 +114,7 @@ function resolvePickerSelection(items, override = '') {
   const list = Array.isArray(items) ? items : [];
   if (!list.length) return '';
   if (list.length === 1) return String(list[0].eventId || '');
-  const explicit = String(override || ctx.eventId || '').trim();
+  const explicit = String(override || ctx.eventId || readLastEventId() || '').trim();
   if (explicit && list.some((item) => String(item.eventId) === explicit)) return explicit;
   return '';
 }
@@ -613,9 +652,15 @@ function scrollBoardToNow({ smooth = true } = {}) {
   const timelines = [...wrap.querySelectorAll('.da-schedule-timeline')];
   if (!timelines.length) return;
 
+  const focusDay = readFocusDayIndex(days.length);
   let scrollLine = null;
   timelines.forEach((timeline) => {
     const dayIndex = Number(timeline.getAttribute('data-day-index') || 0);
+    const line = timeline.querySelector('.live-now-line');
+    if (focusDay != null && dayIndex !== focusDay) {
+      if (line) line.hidden = true;
+      return;
+    }
     const day = days[dayIndex] || activeDay();
     const placed = positionNowLine(timeline, day);
     if (placed?.inWindow && !scrollLine) scrollLine = placed.line;
@@ -2829,7 +2874,7 @@ async function showPicker() {
   });
   if (!loaded) return;
   if (isToolMode() && !ctx.eventId && ctx.clientId) {
-    const preferred = preferredSavedEventId(ctx.savedItems);
+    const preferred = resolvePickerSelection(ctx.savedItems, readLastEventId());
     if (preferred) {
       window.location.replace(scheduleHref(ctx.clientId, preferred));
     }
@@ -2916,6 +2961,7 @@ function bindPicker() {
       return;
     }
     rememberLastEventId(eventId);
+    notifyPortalEventSelected(eventId);
     window.location.href = scheduleHref(ctx.clientId, eventId);
   });
 
@@ -2945,10 +2991,39 @@ function bindPicker() {
 
   window.addEventListener('message', (event) => {
     if (event.origin !== window.location.origin) return;
-    if (!event.data || event.data.type !== 'portal-data-updated') return;
+    if (!event.data) return;
+    if (event.data.type === 'portal-focus-day') {
+      try {
+        localStorage.setItem(PORTAL_FOCUS_DAY_KEY, String(Math.max(0, Number(event.data.dayIndex) || 0)));
+      } catch (_) { /* ignore */ }
+      if (!isToolMode()) scrollBoardToNow({ smooth: true });
+      return;
+    }
+    if (event.data.type === 'portal-event-selected') {
+      const eventId = String(event.data.eventId || '').trim();
+      if (!eventId || eventId === String(ctx.eventId || '')) return;
+      rememberLastEventId(eventId);
+      const known = !ctx.savedItems.length
+        || ctx.savedItems.some((item) => String(item.eventId) === eventId);
+      if (!known) return;
+      const go = (clientId) => {
+        if (clientId) window.location.href = scheduleHref(clientId, eventId);
+      };
+      if (ctx.clientId) {
+        go(ctx.clientId);
+        return;
+      }
+      loadEventOptions({ selectedEventId: eventId }).then(() => go(ctx.clientId));
+      return;
+    }
+    if (event.data.type !== 'portal-data-updated') return;
     applyPortalDataUpdate(event.data).catch((err) => {
       showToast(err.message || 'Unable to refresh schedule.', true);
     });
+  });
+  window.addEventListener('storage', (event) => {
+    if (event.key !== PORTAL_FOCUS_DAY_KEY) return;
+    if (!isToolMode()) scrollBoardToNow({ smooth: true });
   });
 }
 

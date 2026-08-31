@@ -415,6 +415,19 @@ function toNullableDate(value) {
   return trimmed;
 }
 
+function toNullableDateTime(value) {
+  if (value == null || value === '') return null;
+  if (value instanceof Date && !isNaN(value.getTime())) return value;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return toNullableDate(raw);
+  }
+  const parsed = new Date(raw.indexOf('T') === -1 ? raw.replace(' ', 'T') : raw);
+  if (isNaN(parsed.getTime())) return null;
+  return parsed;
+}
+
 function isValidCalendarDate(value) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const [year, month, day] = value.split('-').map(Number);
@@ -457,6 +470,25 @@ function parseWaiverFields(body) {
     return { error: 'Waiver text is required when requiring a waiver for registration.' };
   }
   return { waiverText, waiverRequired: waiverRequired && waiverText ? 1 : 0 };
+}
+
+function sortClientEvents(rows) {
+  return (rows || []).slice().sort((a, b) => {
+    const dateA = a.event_date_start ? new Date(a.event_date_start).getTime() : 0;
+    const dateB = b.event_date_start ? new Date(b.event_date_start).getTime() : 0;
+    if (dateA !== dateB) return dateA - dateB;
+    return String(a.event_name || '').localeCompare(String(b.event_name || ''));
+  });
+}
+
+function sortRegistrations(rows) {
+  return (rows || []).slice().sort((a, b) => {
+    const roleCmp = String(a.role || '').localeCompare(String(b.role || ''));
+    if (roleCmp) return roleCmp;
+    const lastCmp = String(a.last_name || '').localeCompare(String(b.last_name || ''));
+    if (lastCmp) return lastCmp;
+    return String(a.first_name || '').localeCompare(String(b.first_name || ''));
+  });
 }
 
 function isEventOpenForRegistration(events, eventId) {
@@ -1519,14 +1551,14 @@ app.get('/api/release-notes-list', requireLogin, (req, res) => {
 // API endpoint to list events owned by the authenticated client
 app.get('/api/client-events', requireLogin, (req, res) => {
   const clientId = req.session.clientId;
-  const sql = 'SELECT id, active, event_name, event_date_start, event_date_end, registration_open_date, registration_close_date, event_location, event_events, event_link, event_contact, LENGTH(event_poster) > 0 AS has_poster, waiver_required, waiver_text FROM events WHERE client_id = ? ORDER BY event_date_start ASC, event_name ASC';
+  const sql = 'SELECT id, active, event_name, event_date_start, event_date_end, registration_open_date, registration_close_date, event_location, event_events, event_link, event_contact, LENGTH(event_poster) > 0 AS has_poster, waiver_required, waiver_text FROM events WHERE client_id = ?';
 
   db.query(sql, [clientId], (err, results) => {
     if (err) {
       console.error(err);
       return res.status(500).json({ error: 'Unable to load events. Please try again shortly.' });
     }
-    res.json(results || []);
+    res.json(sortClientEvents(results));
   });
 });
 
@@ -1624,32 +1656,295 @@ app.post('/api/client-events/:eventId', requireLogin, upload.single('eventPoster
   });
 });
 
+const REGISTRATION_EVENT_FLAG_COLUMNS = [
+  'individual_patterns',
+  'individual_sparring',
+  'individual_special_technique',
+  'individual_power_test',
+  'team_patterns',
+  'team_sparring',
+  'team_special_technique',
+  'team_power_test',
+  'pre_arranged_sparring'
+];
+
+function pickRegistrationField(body, snake, camel) {
+  if (!body) return undefined;
+  if (Object.prototype.hasOwnProperty.call(body, snake)) return body[snake];
+  if (camel && Object.prototype.hasOwnProperty.call(body, camel)) return body[camel];
+  return undefined;
+}
+
+function parseOrganizerRegistrationBody(body) {
+  const source = body || {};
+  const roleRaw = toNullableString(pickRegistrationField(source, 'role'), 45);
+  const role = roleRaw ? roleRaw.toLowerCase() : null;
+  if (!role || !ALLOWED_ROLES.includes(role)) {
+    return { error: 'Please select a valid role.' };
+  }
+  const storedRole = role === 'team' ? 'athlete' : role;
+
+  const firstName = toNullableString(pickRegistrationField(source, 'first_name', 'firstName'), 100);
+  const lastName = toNullableString(pickRegistrationField(source, 'last_name', 'lastName'), 100);
+  const contactEmail = toNullableString(pickRegistrationField(source, 'contact_email', 'contactEmail'), 100);
+
+  if (!firstName || !lastName) {
+    return { error: 'First name and last name are required.' };
+  }
+  if (!contactEmail || !isValidEmail(contactEmail)) {
+    return { error: 'A valid email address is required.' };
+  }
+
+  let gender = toNullableString(pickRegistrationField(source, 'gender'), 1);
+  if (gender) {
+    gender = gender.toUpperCase();
+    if (!['M', 'F', 'X'].includes(gender)) {
+      return { error: 'Gender must be M, F, or X.' };
+    }
+  }
+
+  const parsedOtherEvents = parseOtherEventsValue(
+    pickRegistrationField(source, 'other_events', 'otherEvents')
+  );
+  if (parsedOtherEvents && parsedOtherEvents.error) {
+    return { error: parsedOtherEvents.error };
+  }
+
+  const eventFlags = {};
+  REGISTRATION_EVENT_FLAG_COLUMNS.forEach((column) => {
+    const camel = column.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+    eventFlags[column] = toTinyIntFlag(pickRegistrationField(source, column, camel));
+  });
+
+  const waiverAccepted = toTinyIntFlag(
+    pickRegistrationField(source, 'waiver_accepted', 'waiverAccepted')
+  );
+  let waiverAcceptedAt = null;
+  if (waiverAccepted) {
+    waiverAcceptedAt = toNullableDateTime(
+      pickRegistrationField(source, 'waiver_accepted_at', 'waiverAcceptedAt')
+    ) || new Date();
+  }
+
+  return {
+    role: storedRole,
+    contactEmail,
+    firstName,
+    lastName,
+    dob: toNullableDate(pickRegistrationField(source, 'dob')),
+    rank: toNullableString(pickRegistrationField(source, 'rank'), 8),
+    gender,
+    weightKg: toNullableDecimal(pickRegistrationField(source, 'weight_kg', 'weightKg')),
+    heightKg: toNullableDecimal(pickRegistrationField(source, 'height_kg', 'heightKg')),
+    teamNameOrCountry: toNullableString(
+      pickRegistrationField(source, 'team_name_or_country', 'teamNameOrCountry'),
+      100
+    ),
+    eventFlags,
+    otherEvents: parsedOtherEvents || null,
+    waiverAccepted,
+    waiverAcceptedAt
+  };
+}
+
+function organizerRegistrationWriteParams(parsed) {
+  return [
+    parsed.role,
+    parsed.contactEmail,
+    parsed.firstName,
+    parsed.lastName,
+    parsed.dob,
+    parsed.rank,
+    parsed.gender,
+    parsed.weightKg,
+    parsed.heightKg,
+    parsed.teamNameOrCountry,
+    parsed.eventFlags.individual_patterns,
+    parsed.eventFlags.individual_sparring,
+    parsed.eventFlags.individual_special_technique,
+    parsed.eventFlags.individual_power_test,
+    parsed.eventFlags.team_patterns,
+    parsed.eventFlags.team_sparring,
+    parsed.eventFlags.team_special_technique,
+    parsed.eventFlags.team_power_test,
+    parsed.eventFlags.pre_arranged_sparring,
+    parsed.otherEvents,
+    parsed.waiverAccepted,
+    parsed.waiverAcceptedAt
+  ];
+}
+
+function parseRegistrationId(raw) {
+  const id = Number(raw);
+  if (!Number.isInteger(id) || id <= 0) return null;
+  return id;
+}
+
+function verifyClientOwnsEvent(clientId, eventId, callback) {
+  const verifySQL = 'SELECT id FROM events WHERE id = ? AND client_id = ?';
+  db.query(verifySQL, [eventId, clientId], (err, eventResults) => {
+    if (err) {
+      callback(err);
+      return;
+    }
+    callback(null, !!(eventResults && eventResults.length > 0));
+  });
+}
+
 // API endpoint to get registrations for a specific event owned by the authenticated client
 app.get('/api/client-events/:eventId/registrations', requireLogin, (req, res) => {
   const clientId = req.session.clientId;
   const eventId = req.params.eventId;
-  
-  // First verify the event belongs to this client
-  const verifySQL = 'SELECT id FROM events WHERE id = ? AND client_id = ?';
-  db.query(verifySQL, [eventId, clientId], (err, eventResults) => {
+
+  verifyClientOwnsEvent(clientId, eventId, (err, ownsEvent) => {
     if (err) {
       console.error(err);
       return res.status(500).json({ error: 'Unable to verify event ownership. Please try again shortly.' });
     }
-    
-    if (!eventResults || eventResults.length === 0) {
+
+    if (!ownsEvent) {
       return res.status(403).json({ error: 'You do not have permission to view registrations for this event.' });
     }
-    
-    // Fetch registrations for this event, excluding internal IDs and active flag
-    const sql = 'SELECT role, contact_email, first_name, last_name, dob, `rank`, gender, weight_kg, height_kg, team_name_or_country, individual_patterns, individual_sparring, individual_special_technique, individual_power_test, team_patterns, team_sparring, team_special_technique, team_power_test, pre_arranged_sparring, other_events, waiver_accepted, waiver_accepted_at FROM registration WHERE event_id = ? ORDER BY role, last_name, first_name';
-    
-    db.query(sql, [eventId], (err, results) => {
-      if (err) {
-        console.error(err);
+
+    const sql = 'SELECT id, role, contact_email, first_name, last_name, dob, `rank`, gender, weight_kg, height_kg, team_name_or_country, individual_patterns, individual_sparring, individual_special_technique, individual_power_test, team_patterns, team_sparring, team_special_technique, team_power_test, pre_arranged_sparring, other_events, waiver_accepted, waiver_accepted_at FROM registration WHERE event_id = ?';
+
+    db.query(sql, [eventId], (queryErr, results) => {
+      if (queryErr) {
+        console.error(queryErr);
         return res.status(500).json({ error: 'Unable to load registrations. Please try again shortly.' });
       }
-      res.json(results || []);
+      res.json(sortRegistrations(results));
+    });
+  });
+});
+
+app.post('/api/client-events/:eventId/registrations', requireLogin, (req, res) => {
+  const clientId = req.session.clientId;
+  const eventId = req.params.eventId;
+  const parsed = parseOrganizerRegistrationBody(req.body);
+  if (parsed.error) {
+    return res.status(400).json({ error: parsed.error });
+  }
+
+  verifyClientOwnsEvent(clientId, eventId, (err, ownsEvent) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Unable to verify event ownership. Please try again shortly.' });
+    }
+
+    if (!ownsEvent) {
+      return res.status(403).json({ error: 'You do not have permission to add registrations for this event.' });
+    }
+
+    const sql = 'INSERT INTO registration (event_id, active, role, contact_email, first_name, last_name, dob, `rank`, gender, weight_kg, height_kg, team_name_or_country, individual_patterns, individual_sparring, individual_special_technique, individual_power_test, team_patterns, team_sparring, team_special_technique, team_power_test, pre_arranged_sparring, other_events, waiver_accepted, waiver_accepted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+    const params = [eventId, '1'].concat(organizerRegistrationWriteParams(parsed));
+
+    db.query(sql, params, (insertErr, insertResult) => {
+      if (insertErr) {
+        console.error(insertErr);
+        return res.status(500).json({ error: 'Unable to save registration. Please try again shortly.' });
+      }
+
+      insertLog(req.session.username, {
+        action: 'organizer_registration_create',
+        page: 'landing',
+        eventId: eventId,
+        registrationId: insertResult.insertId || null
+      }, req.ip);
+
+      res.json({
+        success: true,
+        id: insertResult.insertId || null
+      });
+    });
+  });
+});
+
+app.put('/api/client-events/:eventId/registrations/:registrationId', requireLogin, (req, res) => {
+  const clientId = req.session.clientId;
+  const eventId = req.params.eventId;
+  const registrationId = parseRegistrationId(req.params.registrationId);
+  if (!registrationId) {
+    return res.status(400).json({ error: 'Invalid registration.' });
+  }
+
+  const parsed = parseOrganizerRegistrationBody(req.body);
+  if (parsed.error) {
+    return res.status(400).json({ error: parsed.error });
+  }
+
+  verifyClientOwnsEvent(clientId, eventId, (err, ownsEvent) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Unable to verify event ownership. Please try again shortly.' });
+    }
+
+    if (!ownsEvent) {
+      return res.status(403).json({ error: 'You do not have permission to update registrations for this event.' });
+    }
+
+    const sql = 'UPDATE registration SET role = ?, contact_email = ?, first_name = ?, last_name = ?, dob = ?, `rank` = ?, gender = ?, weight_kg = ?, height_kg = ?, team_name_or_country = ?, individual_patterns = ?, individual_sparring = ?, individual_special_technique = ?, individual_power_test = ?, team_patterns = ?, team_sparring = ?, team_special_technique = ?, team_power_test = ?, pre_arranged_sparring = ?, other_events = ?, waiver_accepted = ?, waiver_accepted_at = ? WHERE id = ? AND event_id = ?';
+    const params = organizerRegistrationWriteParams(parsed).concat([registrationId, eventId]);
+
+    db.query(sql, params, (updateErr, updateResult) => {
+      if (updateErr) {
+        console.error(updateErr);
+        return res.status(500).json({ error: 'Unable to update registration. Please try again shortly.' });
+      }
+
+      if (!updateResult || updateResult.affectedRows === 0) {
+        return res.status(404).json({ error: 'Registration not found for this event.' });
+      }
+
+      insertLog(req.session.username, {
+        action: 'organizer_registration_update',
+        page: 'landing',
+        eventId: eventId,
+        registrationId: registrationId
+      }, req.ip);
+
+      res.json({ success: true, id: registrationId });
+    });
+  });
+});
+
+app.delete('/api/client-events/:eventId/registrations/:registrationId', requireLogin, (req, res) => {
+  const clientId = req.session.clientId;
+  const eventId = req.params.eventId;
+  const registrationId = parseRegistrationId(req.params.registrationId);
+  if (!registrationId) {
+    return res.status(400).json({ error: 'Invalid registration.' });
+  }
+
+  verifyClientOwnsEvent(clientId, eventId, (err, ownsEvent) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Unable to verify event ownership. Please try again shortly.' });
+    }
+
+    if (!ownsEvent) {
+      return res.status(403).json({ error: 'You do not have permission to delete registrations for this event.' });
+    }
+
+    const sql = 'DELETE FROM registration WHERE id = ? AND event_id = ?';
+    db.query(sql, [registrationId, eventId], (deleteErr, deleteResult) => {
+      if (deleteErr) {
+        console.error(deleteErr);
+        return res.status(500).json({ error: 'Unable to delete registration. Please try again shortly.' });
+      }
+
+      if (!deleteResult || deleteResult.affectedRows === 0) {
+        return res.status(404).json({ error: 'Registration not found for this event.' });
+      }
+
+      insertLog(req.session.username, {
+        action: 'organizer_registration_delete',
+        page: 'landing',
+        eventId: eventId,
+        registrationId: registrationId
+      }, req.ip);
+
+      res.json({ success: true });
     });
   });
 });
@@ -1865,6 +2160,7 @@ const UMPIRE_SLOT_KEYS = [
   'equipment_verifier_1',
   'equipment_verifier_2'
 ];
+const UMPIRE_SLOT_CAPACITY = 3;
 
 function queryAsync(sql, params) {
   return new Promise((resolve, reject) => {
@@ -1898,9 +2194,15 @@ function ensureUmpireAssignmentsTable() {
 function emptyUmpireRingAssignments() {
   const row = {};
   UMPIRE_SLOT_KEYS.forEach((key) => {
-    row[key] = null;
+    row[key] = [null, null, null];
   });
   return row;
+}
+
+function parseUmpireSlotIds(value) {
+  if (value == null || value === '') return [];
+  if (Array.isArray(value)) return value;
+  return [value];
 }
 
 function sanitizeUmpireAssignments(raw, ringCount, validUmpireIds) {
@@ -1913,11 +2215,15 @@ function sanitizeUmpireAssignments(raw, ringCount, validUmpireIds) {
     const rowSrc = src[key] && typeof src[key] === 'object' ? src[key] : {};
     const row = emptyUmpireRingAssignments();
     UMPIRE_SLOT_KEYS.forEach((slotKey) => {
-      const id = rowSrc[slotKey] == null || rowSrc[slotKey] === '' ? '' : String(rowSrc[slotKey]);
-      if (id && validUmpireIds.has(id) && !used.has(id)) {
-        row[slotKey] = id;
+      const seats = new Array(UMPIRE_SLOT_CAPACITY).fill(null);
+      parseUmpireSlotIds(rowSrc[slotKey]).forEach((item, index) => {
+        if (index >= UMPIRE_SLOT_CAPACITY) return;
+        const id = item == null || item === '' ? '' : String(item);
+        if (!id || !validUmpireIds.has(id) || used.has(id)) return;
+        seats[index] = id;
         used.add(id);
-      }
+      });
+      row[slotKey] = seats;
     });
     next[key] = row;
   }
@@ -2032,7 +2338,7 @@ app.put('/api/umpire-management/events/:eventId/assignments', requireLogin, requ
     const assignments = sanitizeUmpireAssignments(req.body && req.body.assignments, ringCount, validIds);
 
     await ensureUmpireAssignmentsTable();
-    const json = JSON.stringify({ format_version: 1, assignments });
+    const json = JSON.stringify({ format_version: 2, assignments });
     await queryAsync(
       `INSERT INTO umpire_assignments (client_id, event_id, state_json)
        VALUES (?, ?, CAST(? AS JSON))

@@ -253,7 +253,8 @@ body.umpire-mgmt-page {
 }
 
 .umpire-mgmt-item.is-dragging,
-.umpire-slot-person.is-dragging {
+.umpire-slot-person.is-dragging,
+.umpire-slot-seat.is-dragging {
   opacity: 0.4;
 }
 
@@ -415,19 +416,30 @@ body.umpire-mgmt-page {
   min-height: 0;
   display: flex;
   align-items: center;
+  justify-content: center;
+  gap: 0.2em;
   overflow: hidden;
+}
+
+.umpire-ring-name-role {
+  flex: 0 0 auto;
+  color: rgba(255, 255, 255, 0.98);
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
 }
 
 .umpire-ring-name-text {
   display: block;
-  width: 100%;
+  min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   color: #fff;
   font-size: 10px;
   font-weight: 700;
   line-height: 1;
-  text-align: center;
+  text-align: left;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
 }
 
@@ -445,23 +457,24 @@ body.umpire-mgmt-page {
 
 .umpire-ring-overlay.is-schedule {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 2.4fr) minmax(0, 1fr) minmax(0, 1fr);
   align-content: stretch;
   justify-content: stretch;
   align-items: stretch;
   overflow: hidden;
-  padding: 4% 6% 5%;
-  gap: 0.35em;
+  padding: 5% 6% 6%;
+  gap: 0.3em;
 }
 
 .umpire-mgmt-rings.is-schedule-overlay .umpire-ring-card {
-  width: min(100cqi, calc(100cqb * 0.9));
-  height: min(calc(100cqi * 1.14), 100cqb);
+  width: min(100cqi, calc(100cqb * 0.86));
+  height: min(calc(100cqi * 1.22), 100cqb);
 }
 
 .umpire-ring-sched-label {
   display: block;
-  margin-bottom: 0.15em;
+  flex: 0 0 auto;
+  margin-bottom: 0.12em;
   color: rgba(255, 255, 255, 0.72);
   font-size: clamp(8px, 2.4cqi, 11px);
   font-weight: 800;
@@ -471,9 +484,15 @@ body.umpire-mgmt-page {
 }
 
 .umpire-ring-sched-text {
-  display: block;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  flex: 1 1 auto;
   width: 100%;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -492,9 +511,9 @@ body.umpire-mgmt-page {
 
 .umpire-ring-sched-current .umpire-ring-sched-text {
   color: #fff;
-  font-size: clamp(11px, 3.8cqi, 17px);
+  font-size: clamp(36px, 15.6cqi, 78px);
   font-weight: 900;
-  line-height: 1.2;
+  line-height: 1.1;
   text-align: center;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }
@@ -511,9 +530,9 @@ body.umpire-mgmt-page {
 
 .umpire-ring-sched-next .umpire-ring-sched-text {
   color: rgba(255, 255, 255, 0.9);
-  font-size: clamp(9px, 3cqi, 13px);
-  font-weight: 600;
-  line-height: 1.2;
+  font-size: clamp(26px, 10.4cqi, 47px);
+  font-weight: 700;
+  line-height: 1.1;
   text-align: center;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
 }
@@ -636,6 +655,99 @@ body.umpire-mgmt-page {
   gap: 8px;
 }
 
+.umpire-ring-modal-cols.is-mobile-roster {
+  display: block;
+  overflow: auto;
+}
+
+.umpire-ring-roster {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.umpire-ring-roster-item {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 4px 8px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.umpire-ring-roster-item.is-primary {
+  background: rgba(0, 70, 90, 0.45);
+  box-shadow: inset 3px 0 0 #00d4ff;
+}
+
+.umpire-ring-roster-item.is-secondary {
+  padding-left: 18px;
+}
+
+.umpire-ring-roster-item.is-secondary .umpire-ring-roster-role,
+.umpire-ring-roster-item.is-secondary .umpire-ring-roster-name {
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 600;
+}
+
+.umpire-ring-roster-item.is-secondary .umpire-ring-roster-name {
+  font-size: 14px;
+}
+
+.umpire-ring-roster-item.is-selected {
+  background: rgba(0, 80, 100, 0.45);
+}
+
+.umpire-ring-roster-item.is-dragging {
+  opacity: 0.45;
+}
+
+.umpire-ring-roster-role {
+  flex: 0 0 2.4em;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.umpire-ring-roster-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.umpire-ring-roster-clear {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.umpire-ring-roster-clear:hover,
+.umpire-ring-roster-clear:active {
+  background: rgba(255, 80, 80, 0.35);
+  color: #fff;
+}
+
+.umpire-ring-roster-empty {
+  margin: 24px 8px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 15px;
+  font-style: italic;
+  text-align: center;
+}
+
 .umpire-ring-col {
   min-height: 0;
   display: flex;
@@ -678,8 +790,8 @@ body.umpire-mgmt-page {
   flex-direction: column;
   align-items: stretch;
   justify-content: center;
-  gap: 1px;
-  padding: 4px 8px;
+  gap: 2px;
+  padding: 4px 6px;
   border: 1px dashed rgba(0, 212, 255, 0.28);
   border-radius: 4px;
   background: rgba(0, 30, 40, 0.45);
@@ -691,7 +803,195 @@ body.umpire-mgmt-page {
   border-style: solid;
   border-color: rgba(0, 212, 255, 0.4);
   background: rgba(0, 50, 68, 0.72);
+}
+
+.umpire-slot-row {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.umpire-slot-seats {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.umpire-slot-seat {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 2px 4px;
+  border: 1px dashed rgba(0, 212, 255, 0.22);
+  border-radius: 3px;
+  background: rgba(0, 20, 28, 0.55);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.umpire-slot-seat-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 1px;
+  overflow: hidden;
+  text-align: center;
+}
+
+.umpire-slot-line {
+  flex: 0 0 auto;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-align: center;
+  line-height: 1;
+}
+
+.umpire-slot-seat-body .umpire-slot-line.umpire-slot-person {
+  font-size: 12px;
+}
+
+.umpire-slot-seat-body .umpire-slot-line.umpire-slot-meta {
+  font-size: 6px;
+}
+
+.umpire-slot-seat-body .umpire-slot-line.umpire-slot-person.is-wrap {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.umpire-slot-seat.is-primary {
+  flex: 4 1 0;
+  box-shadow: inset 3px 0 0 rgba(0, 212, 255, 0.55);
+}
+
+.umpire-slot-seat.is-secondary {
+  flex: 3 1 0;
+}
+
+.umpire-slot-seat-stack .umpire-slot-seat.is-primary,
+.umpire-slot-seat-stack .umpire-slot-seat.is-secondary,
+.umpire-slot-seat-row .umpire-slot-seat.is-primary,
+.umpire-slot-seat-row .umpire-slot-seat.is-secondary {
+  flex: 1 1 0;
+}
+
+.umpire-slot-seats.is-split-stack > .umpire-slot-seat.is-primary {
+  flex: 6 1 0;
+  max-width: none;
+  min-height: 100%;
+}
+
+.umpire-slot-seat-stack {
+  flex: 4 1 0;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.umpire-slot-seat-stack .umpire-slot-seat {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.umpire-slot-seats.is-stack-over-row {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.umpire-slot-seats.is-stack-over-row > .umpire-slot-seat.is-primary {
+  flex: 6 1 0;
+  min-height: 0;
+  width: 100%;
+  max-width: none;
+}
+
+.umpire-slot-seats.is-split-stack,
+.umpire-slot-seats.is-stack-over-row {
+  min-height: 0;
+  align-items: stretch;
+}
+
+.umpire-slot-seat-row {
+  flex: 4 1 0;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.umpire-slot-seat-row .umpire-slot-seat {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+}
+
+.umpire-slot-seat.is-filled {
+  border-style: solid;
+  border-color: rgba(0, 212, 255, 0.35);
+  background: rgba(0, 40, 55, 0.72);
   cursor: grab;
+}
+
+.umpire-slot-seat.is-primary.is-filled {
+  border-color: #00d4ff;
+  border-width: 2px;
+  background: rgba(0, 70, 95, 0.92);
+  box-shadow: inset 3px 0 0 #00d4ff;
+}
+
+.umpire-slot-seat.is-secondary {
+  border-style: dashed;
+  background: rgba(0, 16, 22, 0.5);
+}
+
+.umpire-slot-seat.is-secondary.is-filled {
+  border-style: solid;
+  border-color: rgba(0, 212, 255, 0.18);
+  background: rgba(0, 28, 38, 0.55);
+}
+
+.umpire-slot-seat.is-secondary .umpire-slot-person {
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 600;
+}
+
+.umpire-slot-seat.is-secondary .umpire-slot-meta {
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.umpire-slot-seat.is-drop-target {
+  border-color: #00d4ff;
+  background: rgba(0, 212, 255, 0.16);
+}
+
+.umpire-slot-seat.is-selected {
+  box-shadow: 0 0 0 1px #00d4ff;
+  background: rgba(0, 80, 100, 0.55);
 }
 
 .umpire-slot.is-drop-target {
@@ -708,24 +1008,42 @@ body.umpire-mgmt-page {
 
 .umpire-slot-role {
   flex: 0 0 auto;
+  width: 2.2em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: rgba(255, 255, 255, 0.55);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
 }
 
 .umpire-slot-placeholder,
 .umpire-slot-person,
-.umpire-slot-meta {
+.umpire-slot-meta,
+.umpire-slot-line {
   min-width: 0;
+  max-width: 100%;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
-  text-align: left;
+  text-align: center;
+}
+
+.umpire-slot-seat .umpire-slot-line {
+  width: 100%;
+}
+
+.umpire-slot-seat.is-empty {
+  justify-content: center;
+}
+
+.umpire-slot-seat.is-empty .umpire-slot-placeholder {
+  flex: 0 1 auto;
+  width: auto;
+  max-width: 100%;
 }
 
 .umpire-slot-placeholder {
@@ -745,24 +1063,28 @@ body.umpire-mgmt-page {
   padding: 0;
   font-family: inherit;
   display: block;
+  line-height: 1;
 }
 
 .umpire-slot-meta {
   display: block;
   color: rgba(255, 255, 255, 0.55);
-  font-size: 11px;
-  line-height: 1.2;
+  font-size: 6px;
+  line-height: 1;
 }
 
 .umpire-slot-clear {
-  flex: 0 0 auto;
-  width: 18px;
-  height: 18px;
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  z-index: 1;
+  width: 14px;
+  height: 14px;
   border: 0;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.35);
   color: rgba(255, 255, 255, 0.7);
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1;
   cursor: pointer;
   padding: 0;
@@ -884,7 +1206,7 @@ body.umpire-mgmt-page {
     max-height: 100%;
     width: 100%;
     height: auto;
-    gap: 10px;
+    gap: 14px;
     overflow-x: hidden;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -895,78 +1217,42 @@ body.umpire-mgmt-page {
     box-sizing: border-box;
   }
 
-  .umpire-mgmt-rings.is-mobile-list .umpire-ring.is-mobile {
-    display: block;
+  .umpire-mgmt-rings.is-mobile-list .umpire-ring {
+    display: grid;
+    grid-template-rows: auto minmax(0, auto);
     width: 100%;
     height: auto;
     min-height: 0;
     max-height: none;
     flex: 0 0 auto;
-    grid-template-rows: none;
     container-type: normal;
     position: relative;
     margin: 0;
     padding: 0;
+    gap: 6px;
   }
 
-  .umpire-ring.is-mobile {
-    width: 100%;
+  .umpire-mgmt-rings.is-mobile-list .umpire-ring-body {
+    width: min(100%, 78vw, 340px);
+    aspect-ratio: 1 / 1;
     height: auto;
-    min-height: 0;
-    flex: 0 0 auto;
-    display: block;
-    grid-template-rows: none;
+    margin: 0 auto;
     container-type: normal;
-    cursor: pointer;
   }
 
-  .umpire-ring-tile {
+  .umpire-mgmt-rings.is-mobile-list .umpire-ring-card {
     width: 100%;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    min-height: 56px;
-    padding: 12px 14px;
-    border: 1px solid rgba(0, 212, 255, 0.4);
-    border-radius: 8px;
-    background: rgba(0, 40, 55, 0.88);
-    color: #fff;
-    text-align: center;
-    cursor: pointer;
-    flex-shrink: 0;
-    position: relative;
-    transition: border-color 0.15s ease, background 0.15s ease;
+    height: 100%;
   }
 
-  .umpire-ring.is-mobile:active .umpire-ring-tile,
-  .umpire-ring.is-mobile:focus-visible .umpire-ring-tile {
-    border-color: #00d4ff;
-    background: rgba(0, 70, 90, 0.95);
-    outline: none;
-  }
-
-  .umpire-ring-tile-label {
-    color: #00d4ff;
+  .umpire-mgmt-rings.is-mobile-list .umpire-ring-title {
     font-size: 14px;
-    font-weight: 800;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    line-height: 1.2;
   }
 
-  .umpire-ring-tile-summary {
-    color: rgba(255, 255, 255, 0.78);
-    font-size: 12px;
-    font-weight: 600;
-    line-height: 1.35;
-    width: 100%;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  .umpire-mgmt-rings.is-mobile-list .umpire-ring:active .umpire-ring-card,
+  .umpire-mgmt-rings.is-mobile-list .umpire-ring:focus-visible .umpire-ring-card {
+    outline: 2px solid #00d4ff;
+    outline-offset: 2px;
   }
 
   .umpire-ring-modal {
@@ -990,30 +1276,18 @@ body.umpire-mgmt-page {
     padding: 0 8px;
   }
 
-  .umpire-slot.is-empty {
+  .umpire-slot.is-empty,
+  .umpire-slot-seat.is-empty {
     cursor: pointer;
   }
 
-  .umpire-slot.is-empty:active {
+  .umpire-slot.is-empty:active,
+  .umpire-slot-seat.is-empty:active {
     background: rgba(0, 212, 255, 0.1);
   }
 
-  .umpire-slot.is-filled {
-    flex-direction: row;
-    align-items: center;
-    justify-content: stretch;
-    padding: 6px 8px;
-  }
-
-  .umpire-slot-top-mobile {
-    flex: 1 1 auto;
-    min-width: 0;
-    width: 100%;
-  }
-
-  .umpire-slot-top-mobile .umpire-slot-person {
-    flex: 1 1 auto;
-    min-width: 0;
+  .umpire-slot {
+    padding: 5px 6px;
   }
 }
 

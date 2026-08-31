@@ -1,4 +1,4 @@
-import { apiFetch, logInteraction, notifyPortalDataUpdated, rememberPortalEventId } from './api.js';
+import { apiFetch, logInteraction, notifyPortalDataUpdated, notifyPortalEventSelected, readPortalEventId, rememberPortalEventId } from './api.js';
 import { state, requireEvent, selectedDrawEntry } from './state.js';
 import {
   showToast, showConfirmModal, showPromptModal, setBusy, renderDivisionsTable, renderDraws,
@@ -452,30 +452,43 @@ async function downloadEventDrawPdfs() {
 function bindEventSelect() {
   const select = document.getElementById('eventSelect');
   select?.addEventListener('change', async (e) => {
-    state.eventId = e.target.value;
-    if (state.eventId) rememberPortalEventId(state.eventId);
-    resetSessionData();
-    renderDivisionsTable();
-    renderDraws();
-    if (!state.eventId) {
-      await refreshWheelFromStatus();
-      return;
-    }
-    setWheelPhase('pick');
-    setPrompt('loading event…');
-    try {
-      await withRingWorking(
-        async () => {
-          await loadSavedForEvent();
-          await refreshWheelFromStatus();
-        },
-        { from: 0, ceiling: 24, prompt: 'loading event…' }
-      );
-    } catch (err) {
-      showToast(err.message || 'unable to load event data.', true);
-      setWheelPhase('choose');
-    }
+    await applySelectedEvent(e.target.value);
   });
+}
+
+async function applySelectedEvent(eventId, { notifyParent = true } = {}) {
+  const select = document.getElementById('eventSelect');
+  const next = String(eventId || '').trim();
+  if (select && next && [...select.options].some((o) => o.value === next)) {
+    select.value = next;
+  } else if (select && !next) {
+    select.value = '';
+  }
+  if (String(state.eventId || '') === next && state.eventId) return;
+  state.eventId = next;
+  if (state.eventId) rememberPortalEventId(state.eventId);
+  if (notifyParent) notifyPortalEventSelected(state.eventId);
+  resetSessionData();
+  renderDivisionsTable();
+  renderDraws();
+  if (!state.eventId) {
+    await refreshWheelFromStatus();
+    return;
+  }
+  setWheelPhase('pick');
+  setPrompt('loading event…');
+  try {
+    await withRingWorking(
+      async () => {
+        await loadSavedForEvent();
+        await refreshWheelFromStatus();
+      },
+      { from: 0, ceiling: 24, prompt: 'loading event…' }
+    );
+  } catch (err) {
+    showToast(err.message || 'unable to load event data.', true);
+    setWheelPhase('choose');
+  }
 }
 
 function bindWheelActions() {
@@ -1013,6 +1026,14 @@ function bindEmbedCloseAsBack() {
   if (!document.documentElement.classList.contains('da-embed')) return;
   window.addEventListener('message', (event) => {
     if (event.origin !== window.location.origin) return;
+    if (event.data?.type === 'portal-event-selected') {
+      const eventId = String(event.data.eventId || '').trim();
+      if (eventId === String(state.eventId || '')) return;
+      applySelectedEvent(eventId, { notifyParent: false }).catch((err) => {
+        showToast(err.message || 'unable to load event data.', true);
+      });
+      return;
+    }
     if (event.data?.type !== 'da-close-request') return;
     const requestId = event.data.id;
     const reply = (handled) => {
@@ -1079,7 +1100,12 @@ async function init() {
     } catch (_) { /* ignore */ }
   renderDivisionsTable();
   renderDraws();
-    await refreshWheelFromStatus();
+    const lastId = readPortalEventId();
+    if (lastId && state.events.some((event) => String(event.id) === lastId)) {
+      await applySelectedEvent(lastId, { notifyParent: false });
+    } else {
+      await refreshWheelFromStatus();
+    }
   } catch (err) {
     try {
       showToast(err?.message || 'unable to load draw creation.', true);

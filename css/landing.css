@@ -105,6 +105,31 @@ body {
   font-size: 20px;
 }
 
+.organizer-tools-heading {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  flex-wrap: nowrap;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.organizer-tools-heading > span {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.organizer-schedule-tool {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  max-width: 100%;
+}
+
 .landing-tables-row {
   display: flex;
   flex-wrap: wrap;
@@ -202,6 +227,7 @@ th, td {
 #organizerToolsGrid td {
   text-align: center;
 }
+
 
 table, th, td {
   color: #fff;
@@ -831,6 +857,29 @@ table button:hover {
   flex-shrink: 0;
 }
 
+#eventCreationOverlay .large-modal-content,
+#eventRegistrationOverlay .large-modal-content {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#eventCreationOverlay .large-modal-body,
+#eventRegistrationOverlay .large-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+#eventCreationOverlay .modal-close-btn,
+#eventRegistrationOverlay .modal-close-btn {
+  z-index: 3;
+  background: rgba(33, 33, 33, 0.98);
+}
+
 .draw-creation-modal-content {
   max-width: none;
   width: 96vw;
@@ -1028,6 +1077,24 @@ table button:hover {
   box-shadow: 0 0 12px 2px #00d4ff66;
 }
 
+.organizer-event-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  max-width: none;
+  padding: 6px 10px;
+  font-size: 14px;
+}
+
+.organizer-day-select {
+  flex: 0 0 auto;
+  width: 72px;
+  max-width: 72px;
+  min-width: 0;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
 .event-results-tool {
   display: inline-flex;
   flex-direction: row;
@@ -1120,6 +1187,46 @@ table button:hover {
 
 .reg-table tr:last-child td {
   border-bottom: none;
+}
+
+.reg-table-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.reg-table input[type="text"],
+.reg-table input[type="email"],
+.reg-table input[type="date"],
+.reg-table input[type="number"],
+.reg-table select {
+  width: 100%;
+  min-width: 88px;
+  box-sizing: border-box;
+  background: #111;
+  color: #ddd;
+  border: 1px solid #00d4ff55;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 13px;
+}
+
+.reg-table input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+
+.reg-table td.reg-flag-cell,
+.reg-table th.reg-flag-cell {
+  text-align: center;
+}
+
+.reg-table .reg-delete-btn {
+  margin: 0;
+  padding: 4px 10px;
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 /* Tab styling */
@@ -1635,6 +1742,7 @@ table button:hover {
     width: 100%;
     max-width: 100%;
     min-width: 0;
+    overflow: hidden;
   }
 
   #eventCreationOverlay .event-form,
@@ -1810,7 +1918,7 @@ table button:hover {
     top: 12px;
     right: 12px;
     padding: 0;
-    background: none;
+    background: rgba(33, 33, 33, 0.98);
     border: none;
     border-radius: 0;
   }
@@ -1852,10 +1960,20 @@ table button:hover {
     align-items: stretch;
   }
 
-  .event-select:not(.event-results-select) {
+  .event-select:not(.event-results-select):not(.organizer-event-select):not(.organizer-day-select) {
     width: 100%;
     min-width: 0;
     font-size: 16px;
+  }
+
+  .organizer-tools-heading {
+    gap: 8px;
+  }
+
+  .organizer-event-select {
+    max-width: none;
+    font-size: 13px;
+    padding: 4px 8px;
   }
 
   .event-results-tool {
@@ -1871,20 +1989,33 @@ table button:hover {
 
   #organizerToolsGrid th:first-child,
   #organizerToolsGrid td:first-child {
-    width: 55%;
+    width: 46%;
     white-space: normal;
     word-break: break-word;
     vertical-align: middle;
     line-height: 1.35;
   }
 
-  #organizerToolsGrid th:last-child,
-  #organizerToolsGrid td:last-child {
-    width: 45%;
+  #organizerToolsGrid th:nth-child(2),
+  #organizerToolsGrid td:nth-child(2) {
+    width: 54%;
     min-width: 0;
     vertical-align: middle;
     padding-left: 4px;
     padding-right: 4px;
+  }
+
+  #organizerToolsGrid .organizer-schedule-tool {
+    gap: 4px;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  #organizerToolsGrid .organizer-day-select {
+    width: 58px;
+    max-width: 58px;
+    font-size: 11px;
+    padding: 4px 2px;
   }
 
   #organizerToolsGrid .event-results-tool {

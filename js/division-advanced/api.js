@@ -36,11 +36,32 @@ export function logInteraction(action, details) {
 
 const PORTAL_LAST_EVENT_KEY = 'portal-last-event-id';
 
+export function readPortalEventId() {
+  try {
+    return String(sessionStorage.getItem(PORTAL_LAST_EVENT_KEY) || '').trim();
+  } catch (_) {
+    return '';
+  }
+}
+
 export function rememberPortalEventId(eventId) {
   const id = String(eventId || '').trim();
   if (!id) return;
   try {
     sessionStorage.setItem(PORTAL_LAST_EVENT_KEY, id);
+  } catch (_) { /* ignore */ }
+}
+
+export function notifyPortalEventSelected(eventId) {
+  if (eventId) rememberPortalEventId(eventId);
+  const payload = {
+    type: 'portal-event-selected',
+    eventId: String(eventId || '')
+  };
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(payload, window.location.origin);
+    }
   } catch (_) { /* ignore */ }
 }
 

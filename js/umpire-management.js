@@ -32,6 +32,21 @@ import { bindTouchDnD } from './touch-dnd.js';
     equipment_verifier_2: 'Equipment Verifier 2'
   };
 
+  const SLOT_ABBREV = {
+    jury_president: 'JP',
+    jury_member: 'JM',
+    it_umpire: 'IT',
+    umpire_1: 'CR',
+    umpire_2: 'R',
+    umpire_3: 'R',
+    umpire_4: 'R',
+    umpire_5: 'R',
+    equipment_verifier_1: 'EV',
+    equipment_verifier_2: 'EV'
+  };
+
+  const SLOT_CAPACITY = 3;
+
   const RING_SLOTS = RING_SLOT_GROUPS.reduce((list, group) => {
     group.slots.forEach((key) => {
       list.push({ key, label: SLOT_LABELS[key] || key, group: group.id });
@@ -70,47 +85,82 @@ import { bindTouchDnD } from './touch-dnd.js';
     document.documentElement.classList.toggle('umpire-mgmt-mobile', isMobileView());
   }
 
-  function ringAssignedNameList(ring) {
-    const seenIds = new Set();
-    return RING_SLOTS.map((slot) => {
-      const id = state.assignments[String(ring)] && state.assignments[String(ring)][slot.key];
-      const key = id == null || id === '' ? '' : String(id);
-      if (!key || seenIds.has(key)) return '';
-      seenIds.add(key);
+  function ringAssignedEntries(ring) {
+    const row = state.assignments[String(ring)];
+    const entries = [];
+    RING_SLOTS.forEach((slot) => {
+      const key = seatArray(row, slot.key)[0] || '';
+      if (!key) return;
       const umpire = state.umpiresById[key];
-      return umpire ? umpireDisplayName(umpire) : '';
-    }).filter(Boolean);
+      if (!umpire) return;
+      entries.push({
+        name: umpireDisplayName(umpire),
+        abbrev: SLOT_ABBREV[slot.key] || ''
+      });
+    });
+    return entries;
   }
 
-  function ringTileSummary(ring, names) {
-    if (state.overlaySchedule) {
-      const info = ringScheduleOverlay(ring);
-      if (info.current && info.current !== '—') return 'Now: ' + info.current;
-      const next = (info.upcoming && info.upcoming[0]) || '';
-      if (next) return 'Next: ' + next;
-      return 'No upcoming divisions';
-    }
-    if (!names.length) return 'Tap to assign umpires';
-    if (names.length === 1) return names[0];
-    return names.length + ' umpires assigned';
+  function ringCouncilEntries(ring) {
+    const row = state.assignments[String(ring)];
+    const entries = [];
+    RING_SLOTS.forEach((slot) => {
+      const seats = seatArray(row, slot.key);
+      const abbrev = SLOT_ABBREV[slot.key] || '';
+      for (let i = 0; i < SLOT_CAPACITY; i += 1) {
+        const id = seats[i];
+        if (!id) continue;
+        const umpire = state.umpiresById[String(id)];
+        if (!umpire) continue;
+        entries.push({
+          id: String(id),
+          name: umpireDisplayName(umpire),
+          abbrev,
+          primary: i === 0
+        });
+      }
+    });
+    return entries;
   }
 
-  function renderMobileRingTile(ring, names) {
-    const summary = ringTileSummary(ring, names);
+  function renderRingCard(ring, mobile) {
+    const hideNames = Boolean(mobile);
+    const entries = hideNames ? [] : ringAssignedEntries(ring);
+    const names = entries.map((entry) => entry.name);
+    const nameList = entries.length
+      ? entries.map((entry) => (
+        '<span class="umpire-ring-name">' +
+          (entry.abbrev ? '<span class="umpire-ring-name-role">' + escapeHtml(entry.abbrev) + ':</span>' : '') +
+          '<span class="umpire-ring-name-text">' + escapeHtml(entry.name) + '</span>' +
+        '</span>'
+      )).join('')
+      : '<span class="umpire-ring-name is-empty">No umpires assigned</span>';
+    const overlayHtml = state.overlaySchedule
+      ? renderScheduleOverlay(ring)
+      : hideNames
+        ? ''
+        : (
+        '<div class="umpire-ring-overlay">' +
+          '<div class="umpire-ring-names' + (names.length ? '' : ' is-empty') + '">' + nameList + '</div>' +
+        '</div>'
+      );
     return (
-      '<div class="umpire-ring is-mobile" data-ring="' + ring + '" role="button" tabindex="0">' +
-        '<div class="umpire-ring-tile">' +
-          '<span class="umpire-ring-tile-label">Ring ' + ring + '</span>' +
-          '<span class="umpire-ring-tile-summary">' + escapeHtml(summary) + '</span>' +
+      '<div class="umpire-ring" data-ring="' + ring + '" role="button" tabindex="0">' +
+        '<div class="umpire-ring-title">Ring ' + ring + '</div>' +
+        '<div class="umpire-ring-body">' +
+          '<div class="umpire-ring-card" data-ring="' + ring + '">' +
+            '<div class="umpire-ring-square"></div>' +
+            overlayHtml +
+          '</div>' +
         '</div>' +
       '</div>'
     );
   }
 
-  function assignSelectedToSlot(ring, slotKey) {
+  function assignSelectedToSlot(ring, slotKey, seatIndex) {
     const ids = uniqueIds(state.selectedIds);
     if (!ids.length) return false;
-    if (ids.length === 1) return placeUmpire(ids[0], ring, slotKey);
+    if (ids.length === 1) return placeUmpire(ids[0], ring, slotKey, seatIndex);
     const group = RING_SLOT_GROUPS.find((item) => item.slots.indexOf(slotKey) !== -1);
     const slots = group ? group.slots.slice(group.slots.indexOf(slotKey)) : [slotKey];
     return assignToSlotsTopDown(ids, ring, slots);
@@ -135,6 +185,7 @@ import { bindTouchDnD } from './touch-dnd.js';
 
   const RING_GRID_LAYOUT_KEY = 'umpireRingGridLayout';
   const PORTAL_LAST_EVENT_KEY = 'portal-last-event-id';
+  const PORTAL_FOCUS_DAY_KEY = 'portal-focus-day-index';
 
   function readLastEventId() {
     try {
@@ -150,6 +201,33 @@ import { bindTouchDnD } from './touch-dnd.js';
     try {
       sessionStorage.setItem(PORTAL_LAST_EVENT_KEY, id);
     } catch (_) { /* ignore */ }
+  }
+
+  function notifyPortalEventSelected(eventId) {
+    if (eventId) rememberLastEventId(eventId);
+    try {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({
+          type: 'portal-event-selected',
+          eventId: String(eventId || '')
+        }, window.location.origin);
+      }
+    } catch (_) { /* ignore */ }
+  }
+
+  function readFocusDayIndex(dayCount) {
+    let raw = null;
+    try {
+      raw = localStorage.getItem(PORTAL_FOCUS_DAY_KEY);
+    } catch (_) {
+      raw = null;
+    }
+    if (raw == null || raw === '') return null;
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n < 0) return null;
+    const index = Math.floor(n);
+    if (dayCount > 0) return Math.max(0, Math.min(dayCount - 1, index));
+    return index;
   }
   const RING_GRID_LAYOUTS = {
     '1x': { rows: 1, cols: 0 },
@@ -289,6 +367,13 @@ import { bindTouchDnD } from './touch-dnd.js';
       ? overlay.days
       : [{ name: 'Day 1', start_time: '08:00', end_time: '18:00' }];
     const dayCount = days.length;
+    const override = readFocusDayIndex(dayCount);
+    if (override != null) {
+      return {
+        dayIndex: override,
+        nowOff: overlayNowOffset(days[override] || days[0])
+      };
+    }
     const hasEventDate = Boolean(state.eventDateStart);
     const diff = hasEventDate ? overlayCalendarDiff() : 0;
     let dayIndex;
@@ -319,42 +404,37 @@ import { bindTouchDnD } from './touch-dnd.js';
     if (inPlay) {
       return {
         current: inPlay.name,
-        upcoming: items.filter((item) => item.start >= inPlay.end).slice(0, 1).map((item) => item.name)
+        upcoming: items.filter((item) => item.start >= inPlay.end).slice(0, 2).map((item) => item.name)
       };
     }
     const future = items.filter((item) => item.start >= ctx.nowOff);
     if (future.length) {
       return {
         current: future[0].name,
-        upcoming: future.slice(1, 2).map((item) => item.name)
+        upcoming: future.slice(1, 3).map((item) => item.name)
       };
     }
     return { current: '—', upcoming: [] };
   }
 
+  function renderScheduleBlock(kind, label, name) {
+    const text = String(name || '').trim() || '—';
+    const empty = text === '—';
+    return (
+      '<div class="umpire-ring-sched-' + kind + (empty ? ' is-empty' : '') + '">' +
+        '<span class="umpire-ring-sched-label">' + escapeHtml(label) + '</span>' +
+        '<span class="umpire-ring-sched-text">' + escapeHtml(text) + '</span>' +
+      '</div>'
+    );
+  }
+
   function renderScheduleOverlay(ring) {
     const info = ringScheduleOverlay(ring);
-    const nextName = info.upcoming[0] || '';
-    const nextHtml = nextName
-      ? (
-        '<div class="umpire-ring-sched-next">' +
-          '<span class="umpire-ring-sched-label">Next</span>' +
-          '<span class="umpire-ring-sched-text">' + escapeHtml(nextName) + '</span>' +
-        '</div>'
-      )
-      : (
-        '<div class="umpire-ring-sched-next is-empty">' +
-          '<span class="umpire-ring-sched-label">Next</span>' +
-          '<span class="umpire-ring-sched-text">—</span>' +
-        '</div>'
-      );
     return (
       '<div class="umpire-ring-overlay is-schedule">' +
-        '<div class="umpire-ring-sched-current">' +
-          '<span class="umpire-ring-sched-label">Now</span>' +
-          '<span class="umpire-ring-sched-text">' + escapeHtml(info.current || '—') + '</span>' +
-        '</div>' +
-        nextHtml +
+        renderScheduleBlock('current', 'Now', info.current) +
+        renderScheduleBlock('next', 'Next', info.upcoming[0]) +
+        renderScheduleBlock('next', 'Then', info.upcoming[1]) +
       '</div>'
     );
   }
@@ -423,7 +503,7 @@ import { bindTouchDnD } from './touch-dnd.js';
   function emptyRingAssignments() {
     const row = {};
     RING_SLOTS.forEach((slot) => {
-      row[slot.key] = null;
+      row[slot.key] = [null, null, null];
     });
     return row;
   }
@@ -437,6 +517,37 @@ import { bindTouchDnD } from './touch-dnd.js';
     return next;
   }
 
+  function parseSlotIds(value) {
+    if (value == null || value === '') return [];
+    if (Array.isArray(value)) return value;
+    return [value];
+  }
+
+  function seatArray(row, key) {
+    const seats = ['', '', ''];
+    if (!row) return seats;
+    parseSlotIds(row[key]).forEach((item, index) => {
+      if (index >= SLOT_CAPACITY) return;
+      const id = item == null || item === '' ? '' : String(item);
+      if (id && state.umpiresById[id]) seats[index] = id;
+    });
+    return seats;
+  }
+
+  function setSeatArray(row, key, seats) {
+    if (!row) return;
+    const out = [];
+    for (let i = 0; i < SLOT_CAPACITY; i += 1) {
+      const id = String((seats[i] == null ? '' : seats[i]) || '');
+      out.push(id && state.umpiresById[id] ? id : null);
+    }
+    row[key] = out;
+  }
+
+  function slotIds(row, key) {
+    return seatArray(row, key).filter(Boolean);
+  }
+
   function normalizeAssignments(raw, ringCount) {
     const next = emptyAssignments(ringCount);
     const used = new Set();
@@ -445,27 +556,26 @@ import { bindTouchDnD } from './touch-dnd.js';
       const key = String(ring);
       const row = src[key] && typeof src[key] === 'object' ? src[key] : {};
       RING_SLOTS.forEach((slot) => {
-        const id = row[slot.key] == null || row[slot.key] === '' ? '' : String(row[slot.key]);
-        if (id && state.umpiresById[id] && !used.has(id)) {
-          next[key][slot.key] = id;
+        const seats = [null, null, null];
+        parseSlotIds(row[slot.key]).forEach((item, index) => {
+          if (index >= SLOT_CAPACITY) return;
+          const id = item == null || item === '' ? '' : String(item);
+          if (!id || !state.umpiresById[id] || used.has(id)) return;
+          seats[index] = id;
           used.add(id);
-        } else {
-          next[key][slot.key] = null;
-        }
+        });
+        next[key][slot.key] = seats;
       });
     }
     return next;
   }
 
-  function slotValue(row, key) {
-    if (!row) return '';
-    const value = row[key];
-    if (value == null || value === '') return '';
-    return String(value);
+  function slotIsEmpty(row, key) {
+    return seatArray(row, key).every((seatId) => !seatId);
   }
 
-  function slotIsEmpty(row, key) {
-    return !slotValue(row, key);
+  function slotHasRoom(row, key) {
+    return seatArray(row, key).some((seatId) => !seatId);
   }
 
   function clearUmpireFromAllSlots(id) {
@@ -475,7 +585,14 @@ import { bindTouchDnD } from './touch-dnd.js';
       const row = state.assignments[String(ring)];
       if (!row) continue;
       RING_SLOTS.forEach((slot) => {
-        if (slotValue(row, slot.key) === key) row[slot.key] = null;
+        const seats = seatArray(row, slot.key);
+        let changed = false;
+        for (let i = 0; i < SLOT_CAPACITY; i += 1) {
+          if (seats[i] !== key) continue;
+          seats[i] = '';
+          changed = true;
+        }
+        if (changed) setSeatArray(row, slot.key, seats);
       });
     }
   }
@@ -486,13 +603,16 @@ import { bindTouchDnD } from './touch-dnd.js';
       const row = state.assignments[String(ring)];
       if (!row) continue;
       RING_SLOTS.forEach((slot) => {
-        const id = slotValue(row, slot.key);
-        if (!id || used.has(id) || !state.umpiresById[id]) {
-          row[slot.key] = null;
-          return;
+        const seats = seatArray(row, slot.key);
+        for (let i = 0; i < SLOT_CAPACITY; i += 1) {
+          const id = seats[i];
+          if (!id || used.has(id) || !state.umpiresById[id]) {
+            seats[i] = '';
+            continue;
+          }
+          used.add(id);
         }
-        used.add(id);
-        row[slot.key] = id;
+        setSeatArray(row, slot.key, seats);
       });
     }
   }
@@ -505,8 +625,11 @@ import { bindTouchDnD } from './touch-dnd.js';
       if (!row) continue;
       for (let i = 0; i < RING_SLOTS.length; i += 1) {
         const slotKey = RING_SLOTS[i].key;
-        if (slotValue(row, slotKey) === umpireKey) {
-          return { ring, slot: slotKey };
+        const seats = seatArray(row, slotKey);
+        for (let index = 0; index < SLOT_CAPACITY; index += 1) {
+          if (seats[index] === umpireKey) {
+            return { ring, slot: slotKey, index };
+          }
         }
       }
     }
@@ -550,9 +673,13 @@ import { bindTouchDnD } from './touch-dnd.js';
   function ringAssignedIds(ring) {
     const row = state.assignments[String(ring)];
     if (!row) return [];
-    return RING_SLOTS
-      .map((slot) => row[slot.key] == null ? '' : String(row[slot.key]))
-      .filter(Boolean);
+    const ids = [];
+    RING_SLOTS.forEach((slot) => {
+      slotIds(row, slot.key).forEach((id) => {
+        ids.push(id);
+      });
+    });
+    return ids;
   }
 
   function setSelection(ids, anchorId, anchorScope) {
@@ -612,7 +739,7 @@ import { bindTouchDnD } from './touch-dnd.js';
     document.querySelectorAll('[data-umpire-id]').forEach((el) => {
       el.classList.toggle('is-selected', isSelected(el.getAttribute('data-umpire-id')));
     });
-    document.querySelectorAll('.umpire-slot').forEach((el) => {
+    document.querySelectorAll('.umpire-slot-seat').forEach((el) => {
       el.classList.toggle('is-selected', isSelected(el.getAttribute('data-umpire-id')));
     });
   }
@@ -648,48 +775,73 @@ import { bindTouchDnD } from './touch-dnd.js';
     }).join('');
   }
 
-  function renderSlot(ring, slot) {
-    const assignedId = state.assignments[String(ring)] ? state.assignments[String(ring)][slot.key] : null;
-    const umpire = assignedId ? state.umpiresById[String(assignedId)] : null;
+  function renderSeat(ring, slot, id, index) {
+    const umpire = id ? state.umpiresById[String(id)] : null;
     const filled = Boolean(umpire);
-    const mobile = isMobileView();
+    const selected = filled && isSelected(umpireId(umpire));
+    const name = filled ? umpireDisplayName(umpire) : '';
     const rank = filled ? String(umpire.rank || '').trim() : '';
-    const club = filled ? String(umpire.team_name_or_country || '').trim() : '';
-    if (mobile && filled) {
-      return (
-        '<div class="umpire-slot is-filled' + (isSelected(umpireId(umpire)) ? ' is-selected' : '') + '"' +
-          ' draggable="true" data-umpire-id="' + escapeHtml(umpireId(umpire)) + '"' +
-          ' data-ring="' + ring + '" data-slot="' + escapeHtml(slot.key) + '"' +
-          ' title="' + escapeHtml(slot.label) + '">' +
-          '<div class="umpire-slot-top umpire-slot-top-mobile">' +
-            '<span class="umpire-slot-person' + (isSelected(umpireId(umpire)) ? ' is-selected' : '') + '">' +
-              escapeHtml(umpireDisplayName(umpire)) +
-            '</span>' +
-            '<button type="button" class="umpire-slot-clear" data-clear="1" aria-label="Remove ' + escapeHtml(umpireDisplayName(umpire)) + ' from ' + escapeHtml(slot.label) + '">×</button>' +
-          '</div>' +
-        '</div>'
-      );
-    }
-    const details = filled
-      ? (
-        '<span class="umpire-slot-person' + (isSelected(umpireId(umpire)) ? ' is-selected' : '') + '">' +
-          escapeHtml(umpireDisplayName(umpire)) +
-        '</span>' +
-        (rank ? '<span class="umpire-slot-meta">' + escapeHtml(rank) + '</span>' : '') +
-        (club ? '<span class="umpire-slot-meta">' + escapeHtml(club) + '</span>' : '')
-      )
-      : '<span class="umpire-slot-placeholder">' + (isMobileView() ? 'Tap to assign' : 'Drop umpire') + '</span>';
+    const team = filled ? String(umpire.team_name_or_country || '').trim() : '';
+    const placeholder = '—';
+    const title = filled
+      ? [name, rank, team].filter(Boolean).join(' · ')
+      : slot.label;
     return (
-      '<div class="umpire-slot' + (filled ? ' is-filled' : ' is-empty') + (filled && isSelected(umpireId(umpire)) ? ' is-selected' : '') + '"' +
+      '<div class="umpire-slot-seat' +
+        (filled ? ' is-filled' : ' is-empty') +
+        (index === 0 ? ' is-primary' : ' is-secondary') +
+        (selected ? ' is-selected' : '') + '"' +
         (filled ? ' draggable="true" data-umpire-id="' + escapeHtml(umpireId(umpire)) + '"' : '') +
+        ' data-ring="' + ring + '" data-slot="' + escapeHtml(slot.key) + '" data-seat="' + index + '"' +
+        ' title="' + escapeHtml(title) + '">' +
+        (filled
+          ? (
+            '<div class="umpire-slot-seat-body">' +
+              '<span class="umpire-slot-line umpire-slot-person' + (selected ? ' is-selected' : '') + '">' +
+                escapeHtml(name) +
+              '</span>' +
+              (rank ? '<span class="umpire-slot-line umpire-slot-meta">' + escapeHtml(rank) + '</span>' : '') +
+              (team ? '<span class="umpire-slot-line umpire-slot-meta">' + escapeHtml(team) + '</span>' : '') +
+            '</div>' +
+            '<button type="button" class="umpire-slot-clear" data-clear="1" aria-label="Remove ' + escapeHtml(name) + ' from ' + escapeHtml(slot.label) + '">×</button>'
+          )
+          : '<span class="umpire-slot-placeholder">' + placeholder + '</span>') +
+      '</div>'
+    );
+  }
+
+  function seatLayoutHtml(colId, seats) {
+    if (colId === 'equipment') {
+      return seats[0] + '<div class="umpire-slot-seat-row">' + seats[1] + seats[2] + '</div>';
+    }
+    if (colId === 'officials' || colId === 'umpires') {
+      return seats[0] + '<div class="umpire-slot-seat-stack">' + seats[1] + seats[2] + '</div>';
+    }
+    return seats.join('');
+  }
+
+  function seatLayoutClass(colId) {
+    if (colId === 'equipment') return ' is-stack-over-row';
+    if (colId === 'officials' || colId === 'umpires') return ' is-split-stack';
+    return '';
+  }
+
+  function renderSlot(ring, slot, colId) {
+    const seats = seatArray(state.assignments[String(ring)], slot.key);
+    const abbrev = SLOT_ABBREV[slot.key] || '';
+    const seatHtml = [];
+    for (let i = 0; i < SLOT_CAPACITY; i += 1) {
+      seatHtml.push(renderSeat(ring, slot, seats[i] || '', i));
+    }
+    const layoutClass = seatLayoutClass(colId);
+    const filled = seats.some(Boolean);
+    return (
+      '<div class="umpire-slot' + (filled ? ' is-filled' : ' is-empty') + '"' +
         ' data-ring="' + ring + '" data-slot="' + escapeHtml(slot.key) + '">' +
-        '<div class="umpire-slot-top">' +
-          '<span class="umpire-slot-role">' + escapeHtml(slot.label) + '</span>' +
-          (filled
-            ? '<button type="button" class="umpire-slot-clear" data-clear="1" aria-label="Remove ' + escapeHtml(umpireDisplayName(umpire)) + '">×</button>'
-            : '') +
+        '<div class="umpire-slot-row">' +
+          '<span class="umpire-slot-role">' + escapeHtml(abbrev) + '</span>' +
+          '<div class="umpire-slot-seats' + layoutClass + '">' + seatLayoutHtml(colId, seatHtml) + '</div>' +
         '</div>' +
-        details +
       '</div>'
     );
   }
@@ -716,46 +868,249 @@ import { bindTouchDnD } from './touch-dnd.js';
     grid.classList.toggle('is-schedule-overlay', Boolean(state.overlaySchedule && !mobile));
     grid.hidden = Boolean(state.openRing);
     empty.hidden = true;
-    if (mobile) {
-      grid.innerHTML = Array.from({ length: n }, (_, i) => {
-        const ring = i + 1;
-        return renderMobileRingTile(ring, ringAssignedNameList(ring));
-      }).join('');
-    } else {
+    if (!mobile) {
       const dims = ringGridDims(n);
       grid.style.setProperty('--ring-cols', String(dims.cols));
       grid.style.setProperty('--ring-rows', String(dims.rows));
-      grid.innerHTML = Array.from({ length: n }, (_, i) => {
-        const ring = i + 1;
-        const names = ringAssignedNameList(ring);
-        const nameList = names.length
-          ? names.map((name) => (
-            '<span class="umpire-ring-name"><span class="umpire-ring-name-text">' + escapeHtml(name) + '</span></span>'
-          )).join('')
-          : '<span class="umpire-ring-name is-empty">No umpires assigned</span>';
-        const overlayHtml = state.overlaySchedule
-          ? renderScheduleOverlay(ring)
-          : (
-            '<div class="umpire-ring-overlay">' +
-              '<div class="umpire-ring-names' + (names.length ? '' : ' is-empty') + '">' + nameList + '</div>' +
-            '</div>'
-          );
-        return (
-          '<div class="umpire-ring" data-ring="' + ring + '" role="button" tabindex="0">' +
-            '<div class="umpire-ring-title">Ring ' + ring + '</div>' +
-            '<div class="umpire-ring-body">' +
-              '<div class="umpire-ring-card" data-ring="' + ring + '">' +
-                '<div class="umpire-ring-square"></div>' +
-                overlayHtml +
-              '</div>' +
-            '</div>' +
-          '</div>'
-        );
-      }).join('');
+    } else {
+      grid.style.removeProperty('--ring-cols');
+      grid.style.removeProperty('--ring-rows');
     }
+    grid.innerHTML = Array.from({ length: n }, (_, i) => renderRingCard(i + 1, mobile)).join('');
     renderRingModal();
     syncOverlayTimer();
-    if (!mobile && !state.overlaySchedule) scheduleFitRingNames();
+    if (state.overlaySchedule) scheduleFitScheduleOverlay();
+    else if (!mobile) scheduleFitRingNames();
+  }
+
+  function elementOverflows(el) {
+    if (!el) return false;
+    return el.scrollWidth > el.clientWidth + 0.5 || el.scrollHeight > el.clientHeight + 0.5;
+  }
+
+  const textMeasureCtx = document.createElement('canvas').getContext('2d');
+
+  function measureTextWidth(text, weight, px, family) {
+    textMeasureCtx.font = weight + ' ' + px + 'px ' + family;
+    return textMeasureCtx.measureText(text || '').width;
+  }
+
+  function applySeatNameSize(seat, namePx, wrapName) {
+    const body = seat.querySelector('.umpire-slot-seat-body');
+    if (!body) return;
+    const nameLine = body.querySelector('.umpire-slot-person');
+    const metaLines = Array.from(body.querySelectorAll('.umpire-slot-meta'));
+    if (!nameLine) return;
+    const metaPx = namePx / 2;
+    nameLine.style.fontSize = namePx + 'px';
+    nameLine.style.lineHeight = '1';
+    nameLine.classList.toggle('is-wrap', Boolean(wrapName));
+    metaLines.forEach((line) => {
+      line.style.fontSize = metaPx + 'px';
+      line.style.lineHeight = '1';
+    });
+  }
+
+  function seatBodyOverflows(body) {
+    if (body.scrollHeight > body.clientHeight + 0.5) return true;
+    if (body.scrollWidth > body.clientWidth + 0.5) return true;
+    const lines = body.querySelectorAll('.umpire-slot-line');
+    for (let i = 0; i < lines.length; i += 1) {
+      if (lines[i].scrollWidth > lines[i].clientWidth + 0.5) return true;
+    }
+    return false;
+  }
+
+  function fitSeatFonts(seat) {
+    const body = seat.querySelector('.umpire-slot-seat-body');
+    if (!body) return 0;
+    const nameLine = body.querySelector('.umpire-slot-person');
+    const metaLines = Array.from(body.querySelectorAll('.umpire-slot-meta'));
+    if (!nameLine) return 0;
+
+    const availW = body.clientWidth;
+    const availH = body.clientHeight;
+    if (availW < 4 || availH < 4) return 0;
+
+    const family = getComputedStyle(nameLine).fontFamily || 'sans-serif';
+    const nameWeight = getComputedStyle(nameLine).fontWeight || '700';
+    const metaWeight = metaLines[0]
+      ? (getComputedStyle(metaLines[0]).fontWeight || '400')
+      : '400';
+    const sample = 100;
+    const nameW = measureTextWidth(nameLine.textContent, nameWeight, sample, family);
+    let metaW = 0;
+    metaLines.forEach((line) => {
+      metaW = Math.max(metaW, measureTextWidth(line.textContent, metaWeight, sample, family));
+    });
+
+    const lineGap = 1;
+    const metaCount = metaLines.length;
+    const gaps = lineGap * Math.max(0, metaCount);
+    const desktop = !isMobileView();
+    const boxW = Math.max(1, availW);
+    const minPx = 6;
+    const maxPx = desktop ? 64 : 52;
+
+    const maxByMetaWidth = metaW > 0 ? (boxW * sample / metaW) * 2 : maxPx;
+    const maxByNameWidth = nameW > 0 ? (boxW * sample / nameW) : maxPx;
+    const maxByOneLineHeight = (availH - gaps) / (1 + metaCount / 2);
+    const oneLine = Math.min(maxPx, maxByOneLineHeight, maxByNameWidth, maxByMetaWidth);
+
+    const isSecondary = seat.classList.contains('is-secondary');
+    let best = oneLine;
+    let wrapName = false;
+    if (isSecondary) {
+      const maxByTwoLineHeight = (availH - gaps) / (2 + metaCount / 2);
+      const maxByNameWrapWidth = nameW > 0 ? (boxW * 2 * sample / nameW) : maxPx;
+      const twoLine = Math.min(maxPx, maxByTwoLineHeight, maxByNameWrapWidth, maxByMetaWidth);
+      const wrapGain = desktop ? 1.25 : 1.08;
+      if (twoLine > oneLine * wrapGain) {
+        best = twoLine;
+        wrapName = true;
+      }
+    }
+
+    best = Math.max(minPx, best);
+    applySeatNameSize(seat, best, wrapName);
+
+    let lo = minPx;
+    let hi = Math.min(maxPx, Math.max(best, maxByOneLineHeight) * (desktop ? 1.2 : 1.08));
+    if (seatBodyOverflows(body)) {
+      hi = best;
+    } else {
+      lo = best;
+    }
+    for (let i = 0; i < 18; i += 1) {
+      const mid = (lo + hi) / 2;
+      applySeatNameSize(seat, mid, wrapName);
+      if (seatBodyOverflows(body)) {
+        hi = mid;
+      } else {
+        best = mid;
+        lo = mid;
+      }
+    }
+    applySeatNameSize(seat, best, wrapName);
+    return best;
+  }
+
+  function fitSlotGroup(slotEl) {
+    const filled = Array.from(slotEl.querySelectorAll('.umpire-slot-seat.is-filled'));
+    if (!filled.length) return false;
+    let pending = false;
+    filled.forEach((seat) => {
+      if (!fitSeatFonts(seat)) pending = true;
+    });
+    return pending;
+  }
+
+  function fitEmptySeatFont(seat) {
+    const placeholder = seat.querySelector('.umpire-slot-placeholder');
+    if (!placeholder) return true;
+    const rect = seat.getBoundingClientRect();
+    if (rect.width < 4 || rect.height < 4) return false;
+    const isPrimary = seat.classList.contains('is-primary');
+    let lo = 6;
+    let hi = Math.max(
+      rect.height * (isPrimary ? 0.85 : 0.7),
+      rect.width * (isPrimary ? 0.4 : 0.32),
+      isPrimary ? 24 : 16
+    );
+    let best = lo;
+    for (let i = 0; i < 16; i += 1) {
+      const mid = (lo + hi) / 2;
+      placeholder.style.fontSize = mid + 'px';
+      if (elementOverflows(placeholder) || elementOverflows(seat)) {
+        hi = mid;
+      } else {
+        best = mid;
+        lo = mid;
+      }
+    }
+    placeholder.style.fontSize = best + 'px';
+    return true;
+  }
+
+  function fitSlotNameFonts() {
+    const modal = document.getElementById('umpireRingModal');
+    const cols = document.getElementById('umpireRingModalCols');
+    if (!modal || modal.hidden || !cols || cols.classList.contains('is-mobile-roster')) return;
+    let pending = false;
+    cols.querySelectorAll('.umpire-slot').forEach((slotEl) => {
+      if (fitSlotGroup(slotEl)) pending = true;
+    });
+    cols.querySelectorAll('.umpire-slot-seat.is-empty').forEach((seat) => {
+      if (!fitEmptySeatFont(seat)) pending = true;
+    });
+    if (pending) {
+      requestAnimationFrame(fitSlotNameFonts);
+    }
+  }
+
+  function scheduleFitSlotNames() {
+    requestAnimationFrame(function () {
+      requestAnimationFrame(fitSlotNameFonts);
+    });
+  }
+
+  const SCHEDULE_TEXT_MAX_LINES = 2;
+
+  function scheduleTextLineHeight(text) {
+    const style = window.getComputedStyle(text);
+    let lineHeight = parseFloat(style.lineHeight);
+    if (!Number.isFinite(lineHeight) || lineHeight <= 0) {
+      const fontSize = parseFloat(style.fontSize) || 12;
+      lineHeight = fontSize * 1.1;
+    }
+    return lineHeight;
+  }
+
+  function scheduleTextExceedsLines(text, maxLines) {
+    return text.scrollHeight > scheduleTextLineHeight(text) * maxLines + 0.5;
+  }
+
+  function scheduleBlockOverflows(block, text) {
+    return scheduleTextExceedsLines(text, SCHEDULE_TEXT_MAX_LINES)
+      || block.scrollHeight > block.clientHeight + 0.5
+      || block.scrollWidth > block.clientWidth + 0.5
+      || text.scrollWidth > text.clientWidth + 0.5;
+  }
+
+  function fitScheduleOverlayFonts() {
+    const grid = document.getElementById('umpireRingGrid');
+    if (!grid || grid.hidden || !state.overlaySchedule) return;
+    grid.querySelectorAll('.umpire-ring-sched-current, .umpire-ring-sched-next').forEach((block) => {
+      const text = block.querySelector('.umpire-ring-sched-text');
+      if (!text) return;
+      const availW = text.clientWidth;
+      const availH = text.clientHeight;
+      if (availW < 4 || availH < 4) return;
+      const isCurrent = block.classList.contains('umpire-ring-sched-current');
+      let lo = 21;
+      let hi = Math.max(
+        lo,
+        Math.min(isCurrent ? 99 : 57, availH * (isCurrent ? 1.3 : 1.09))
+      );
+      let best = lo;
+      for (let i = 0; i < 18; i += 1) {
+        const mid = (lo + hi) / 2;
+        text.style.fontSize = mid + 'px';
+        if (scheduleBlockOverflows(block, text)) {
+          hi = mid;
+        } else {
+          best = mid;
+          lo = mid;
+        }
+      }
+      text.style.fontSize = best + 'px';
+    });
+  }
+
+  function scheduleFitScheduleOverlay() {
+    requestAnimationFrame(function () {
+      requestAnimationFrame(fitScheduleOverlayFonts);
+    });
   }
 
   function namesOverflow(texts) {
@@ -772,6 +1127,7 @@ import { bindTouchDnD } from './touch-dnd.js';
     if (!grid || grid.hidden || state.overlaySchedule) return;
     grid.querySelectorAll('.umpire-ring-names:not(.is-empty)').forEach((list) => {
       const texts = list.querySelectorAll('.umpire-ring-name-text');
+      const roles = list.querySelectorAll('.umpire-ring-name-role');
       if (!texts.length) return;
       const cell = texts[0].parentElement;
       const maxPx = Math.max(7, Math.min(
@@ -782,11 +1138,17 @@ import { bindTouchDnD } from './touch-dnd.js';
       let lo = 6;
       let hi = maxPx;
       let best = lo;
+      const applySize = (px) => {
+        texts.forEach((el) => {
+          el.style.fontSize = px + 'px';
+        });
+        roles.forEach((el) => {
+          el.style.fontSize = px + 'px';
+        });
+      };
       for (let i = 0; i < 16; i += 1) {
         const mid = (lo + hi) / 2;
-        texts.forEach((el) => {
-          el.style.fontSize = mid + 'px';
-        });
+        applySize(mid);
         if (namesOverflow(texts)) {
           hi = mid;
         } else {
@@ -794,9 +1156,7 @@ import { bindTouchDnD } from './touch-dnd.js';
           lo = mid;
         }
       }
-      texts.forEach((el) => {
-        el.style.fontSize = best + 'px';
-      });
+      applySize(best);
     });
   }
 
@@ -804,6 +1164,27 @@ import { bindTouchDnD } from './touch-dnd.js';
     requestAnimationFrame(function () {
       requestAnimationFrame(fitRingNameFonts);
     });
+  }
+
+  function renderMobileRingRoster(ring) {
+    const entries = ringCouncilEntries(ring);
+    if (!entries.length) {
+      return '<p class="umpire-ring-roster-empty">No umpires assigned</p>';
+    }
+    return (
+      '<ul class="umpire-ring-roster">' +
+        entries.map((entry) => (
+          '<li class="umpire-ring-roster-item' +
+            (entry.primary ? ' is-primary' : ' is-secondary') +
+            (isSelected(entry.id) ? ' is-selected' : '') + '"' +
+            ' draggable="true" data-umpire-id="' + escapeHtml(entry.id) + '" data-ring="' + ring + '">' +
+            '<span class="umpire-ring-roster-role">' + escapeHtml(entry.abbrev) + '</span>' +
+            '<span class="umpire-ring-roster-name">' + escapeHtml(entry.name) + '</span>' +
+            '<button type="button" class="umpire-ring-roster-clear" data-clear="1" aria-label="Remove ' + escapeHtml(entry.name) + '">×</button>' +
+          '</li>'
+        )).join('') +
+      '</ul>'
+    );
   }
 
   function renderRingModal() {
@@ -821,19 +1202,29 @@ import { bindTouchDnD } from './touch-dnd.js';
       return;
     }
     modal.hidden = false;
-    if (card) card.setAttribute('data-ring', String(ring));
+    const mobile = isMobileView();
+    if (card) {
+      card.setAttribute('data-ring', String(ring));
+      card.classList.toggle('is-mobile-roster', mobile);
+    }
+    cols.classList.toggle('is-mobile-roster', mobile);
     if (title) title.textContent = 'Ring ' + ring;
     if (prevBtn) prevBtn.disabled = ring <= 1;
     if (nextBtn) nextBtn.disabled = ring >= state.ringCount;
     if (clearBtn) clearBtn.disabled = !ringHasAssignments(ring);
+    if (mobile) {
+      cols.innerHTML = renderMobileRingRoster(ring);
+      return;
+    }
     cols.innerHTML = RING_SLOT_GROUPS.map((group) => (
       '<div class="umpire-ring-col" data-ring="' + ring + '" data-col="' + escapeHtml(group.id) + '">' +
         '<h3 class="umpire-ring-col-title">' + escapeHtml(group.title) + '</h3>' +
         '<div class="umpire-ring-col-slots">' +
-          group.slots.map((key) => renderSlot(ring, { key, label: SLOT_LABELS[key] || key })).join('') +
+          group.slots.map((key) => renderSlot(ring, { key, label: SLOT_LABELS[key] || key }, group.id)).join('') +
         '</div>' +
       '</div>'
     )).join('');
+    scheduleFitSlotNames();
   }
 
   function openRingModal(ring) {
@@ -862,7 +1253,7 @@ import { bindTouchDnD } from './touch-dnd.js';
     const hint = document.querySelector('.umpire-mgmt-hint');
     if (!hint) return;
     hint.textContent = isMobileView()
-      ? 'Long-press an umpire to drag. Tap a ring to assign, or drag onto a role.'
+      ? 'Long-press an umpire to drag. Tap a ring to assign, or to see who is on that ring.'
       : 'Click a ring to assign positions. Select referees, then drag onto a ring or into the ring window.';
   }
 
@@ -935,26 +1326,46 @@ import { bindTouchDnD } from './touch-dnd.js';
     });
   }
 
-  function placeUmpire(id, toRing, toSlot) {
+  function placeUmpire(id, toRing, toSlot, toIndex) {
     const umpireKey = String(id || '');
     if (!umpireKey || !state.umpiresById[umpireKey]) return false;
-    const destRing = String(toRing);
-    const dest = state.assignments[destRing];
+    const dest = state.assignments[String(toRing)];
     if (!dest || !Object.prototype.hasOwnProperty.call(dest, toSlot)) return false;
 
-    const occupant = slotValue(dest, toSlot);
-    if (occupant === umpireKey) return false;
-
     const from = findAssignment(umpireKey);
-    clearUmpireFromAllSlots(umpireKey);
-    if (occupant) {
-      clearUmpireFromAllSlots(occupant);
-      if (from && (from.ring !== Number(toRing) || from.slot !== toSlot)) {
-        const fromRow = state.assignments[String(from.ring)];
-        if (fromRow && slotIsEmpty(fromRow, from.slot)) fromRow[from.slot] = occupant;
-      }
+    const destSeats = seatArray(dest, toSlot);
+    const hasIndex = toIndex != null && Number.isFinite(Number(toIndex));
+    let idx = hasIndex
+      ? Math.max(0, Math.min(SLOT_CAPACITY - 1, Math.floor(Number(toIndex))))
+      : destSeats.findIndex((seatId) => !seatId);
+    if (idx < 0) return false;
+
+    if (from && from.ring === Number(toRing) && from.slot === toSlot && from.index === idx) return false;
+
+    const occupant = destSeats[idx] === umpireKey ? '' : destSeats[idx];
+
+    if (from && from.ring === Number(toRing) && from.slot === toSlot) {
+      destSeats[from.index] = '';
+      if (occupant) destSeats[from.index] = occupant;
+      destSeats[idx] = umpireKey;
+      setSeatArray(dest, toSlot, destSeats);
+      enforceUniqueAssignments();
+      return true;
     }
-    dest[toSlot] = umpireKey;
+
+    if (from) {
+      const fromRow = state.assignments[String(from.ring)];
+      const fromSeats = seatArray(fromRow, from.slot);
+      fromSeats[from.index] = occupant && occupant !== umpireKey ? occupant : '';
+      setSeatArray(fromRow, from.slot, fromSeats);
+    } else if (occupant) {
+      clearUmpireFromAllSlots(occupant);
+    }
+
+    clearUmpireFromAllSlots(umpireKey);
+    const nextDest = seatArray(dest, toSlot);
+    nextDest[idx] = umpireKey;
+    setSeatArray(dest, toSlot, nextDest);
     enforceUniqueAssignments();
     return true;
   }
@@ -985,11 +1396,13 @@ import { bindTouchDnD } from './touch-dnd.js';
     if (!row) return false;
     const removed = [];
     RING_SLOTS.forEach((slot) => {
-      const id = slotValue(row, slot.key);
-      if (id) {
-        removed.push(id);
-        row[slot.key] = null;
+      const seats = seatArray(row, slot.key);
+      for (let i = 0; i < SLOT_CAPACITY; i += 1) {
+        if (!seats[i]) continue;
+        removed.push(seats[i]);
+        seats[i] = '';
       }
+      setSeatArray(row, slot.key, seats);
     });
     if (!removed.length) return false;
     const gone = new Set(removed);
@@ -997,9 +1410,8 @@ import { bindTouchDnD } from './touch-dnd.js';
     return true;
   }
 
-  function assignToSlotsTopDown(ids, ring, slotKeys) {
-    const destKey = String(ring);
-    const dest = state.assignments[destKey];
+  function assignIdsToSlots(ids, ring, slotKeys, spread) {
+    const dest = state.assignments[String(ring)];
     const keys = slotKeys && slotKeys.length ? slotKeys : RING_SLOTS.map((slot) => slot.key);
     if (!dest) return false;
     let changed = false;
@@ -1007,17 +1419,37 @@ import { bindTouchDnD } from './touch-dnd.js';
       const loc = findAssignment(id);
       if (loc && loc.ring === Number(ring) && keys.indexOf(loc.slot) !== -1) return;
       clearUmpireFromAllSlots(id);
-      const emptyKey = keys.find((key) => slotIsEmpty(dest, key));
-      if (!emptyKey) return;
-      dest[emptyKey] = id;
+      let destSlot = null;
+      if (spread) {
+        let fewest = SLOT_CAPACITY;
+        keys.forEach((key) => {
+          const n = slotIds(dest, key).length;
+          if (n < fewest) {
+            fewest = n;
+            destSlot = key;
+          }
+        });
+      } else {
+        destSlot = keys.find((key) => slotHasRoom(dest, key)) || null;
+      }
+      if (!destSlot || !slotHasRoom(dest, destSlot)) return;
+      const seats = seatArray(dest, destSlot);
+      const emptyIndex = seats.findIndex((seatId) => !seatId);
+      if (emptyIndex === -1) return;
+      seats[emptyIndex] = id;
+      setSeatArray(dest, destSlot, seats);
       changed = true;
     });
     if (changed) enforceUniqueAssignments();
     return changed;
   }
 
+  function assignToSlotsTopDown(ids, ring, slotKeys) {
+    return assignIdsToSlots(ids, ring, slotKeys, false);
+  }
+
   function assignToRingTopDown(ids, ring) {
-    return assignToSlotsTopDown(ids, ring, RING_SLOTS.map((slot) => slot.key));
+    return assignIdsToSlots(ids, ring, RING_SLOTS.map((slot) => slot.key), true);
   }
 
   function dragIdsHasAssigned(ids) {
@@ -1205,7 +1637,8 @@ import { bindTouchDnD } from './touch-dnd.js';
 
   function executeUmpireDrop(ids, under) {
     if (!under) return false;
-    const slot = under.closest('#umpireRingModal .umpire-slot');
+    const seat = under.closest('#umpireRingModal .umpire-slot-seat');
+    const slot = seat ? seat.closest('.umpire-slot') : under.closest('#umpireRingModal .umpire-slot');
     const col = under.closest('.umpire-ring-col');
     const modalCard = under.closest('#umpireRingModalCard');
     const ringWrap = under.closest('.umpire-mgmt-rings .umpire-ring');
@@ -1217,16 +1650,22 @@ import { bindTouchDnD } from './touch-dnd.js';
     if (slot) {
       const ring = Number(slot.getAttribute('data-ring'));
       const slotKey = slot.getAttribute('data-slot');
+      const seatIndex = seat && seat.getAttribute('data-seat') != null
+        ? Number(seat.getAttribute('data-seat'))
+        : null;
       if (unique.length === 1) {
-        changed = placeUmpire(unique[0], ring, slotKey);
+        changed = placeUmpire(unique[0], ring, slotKey, Number.isFinite(seatIndex) ? seatIndex : null);
       } else {
         const group = RING_SLOT_GROUPS.find((item) => item.slots.indexOf(slotKey) !== -1);
-        changed = assignToSlotsTopDown(unique, ring, group ? group.slots : [slotKey]);
+        const slots = group
+          ? [slotKey].concat(group.slots.filter((key) => key !== slotKey))
+          : [slotKey];
+        changed = assignToSlotsTopDown(unique, ring, slots);
       }
     } else if (col) {
       const ring = Number(col.getAttribute('data-ring'));
       const group = RING_SLOT_GROUPS.find((item) => item.id === col.getAttribute('data-col'));
-      changed = assignToSlotsTopDown(unique, ring, group ? group.slots : []);
+      changed = assignIdsToSlots(unique, ring, group ? group.slots : [], true);
     } else if (modalCard || ringCard) {
       const ring = Number((modalCard || ringCard).getAttribute('data-ring'));
       changed = assignToRingTopDown(unique, ring);
@@ -1265,14 +1704,15 @@ import { bindTouchDnD } from './touch-dnd.js';
   function highlightUmpireDropTarget(under) {
     clearDropHighlights();
     if (!under || !dragPayload) return;
-    const slot = under.closest('#umpireRingModal .umpire-slot');
+    const seat = under.closest('#umpireRingModal .umpire-slot-seat');
+    const slot = seat ? seat.closest('.umpire-slot') : under.closest('#umpireRingModal .umpire-slot');
     const col = under.closest('.umpire-ring-col');
     const modalCard = under.closest('#umpireRingModalCard');
     const ringWrap = under.closest('.umpire-mgmt-rings .umpire-ring');
     const ringCard = under.closest('.umpire-ring-card') || (ringWrap ? ringWrap.querySelector('.umpire-ring-card') : null);
     const pool = under.closest('#umpirePool');
     const canDropOnPool = Boolean(pool && dragIdsHasAssigned(dragPayload.ids));
-    const target = slot || col || modalCard || ringCard || (canDropOnPool ? pool : null);
+    const target = seat || slot || col || modalCard || ringCard || (canDropOnPool ? pool : null);
     if (target) target.classList.add('is-drop-target');
   }
 
@@ -1316,14 +1756,15 @@ import { bindTouchDnD } from './touch-dnd.js';
 
   document.addEventListener('dragover', (e) => {
     if (!dragPayload) return;
-    const slot = e.target.closest('#umpireRingModal .umpire-slot');
+    const seat = e.target.closest('#umpireRingModal .umpire-slot-seat');
+    const slot = seat ? seat.closest('.umpire-slot') : e.target.closest('#umpireRingModal .umpire-slot');
     const col = e.target.closest('.umpire-ring-col');
     const modalCard = e.target.closest('#umpireRingModalCard');
     const ringWrap = e.target.closest('.umpire-mgmt-rings .umpire-ring');
     const ringCard = e.target.closest('.umpire-ring-card') || (ringWrap ? ringWrap.querySelector('.umpire-ring-card') : null);
     const pool = e.target.closest('#umpirePool');
     const canDropOnPool = Boolean(pool && dragIdsHasAssigned(dragPayload.ids));
-    const target = slot || col || modalCard || ringCard || (canDropOnPool ? pool : null);
+    const target = seat || slot || col || modalCard || ringCard || (canDropOnPool ? pool : null);
     if (target) {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
@@ -1410,36 +1851,60 @@ import { bindTouchDnD } from './touch-dnd.js';
       return;
     }
 
-    const clearBtn = e.target.closest('.umpire-slot-clear');
-    if (clearBtn) {
-      const slotEl = clearBtn.closest('.umpire-slot');
-      if (!slotEl) return;
-      const ring = Number(slotEl.getAttribute('data-ring'));
-      const slotKey = slotEl.getAttribute('data-slot');
-      const row = state.assignments[String(ring)];
-      if (!row || !row[slotKey]) return;
-      const removedId = String(row[slotKey]);
-      row[slotKey] = null;
-      state.selectedIds = state.selectedIds.filter((id) => id !== removedId);
-      renderAll();
-      scheduleSave();
-      return;
-    }
-
-    const emptySlot = e.target.closest('#umpireRingModal .umpire-slot.is-empty');
-    if (emptySlot && state.selectedIds.length) {
-      const ring = Number(emptySlot.getAttribute('data-ring'));
-      const slotKey = emptySlot.getAttribute('data-slot');
-      if (assignSelectedToSlot(ring, slotKey)) {
+    const rosterClear = e.target.closest('.umpire-ring-roster-clear');
+    if (rosterClear) {
+      const row = rosterClear.closest('[data-umpire-id]');
+      const id = row && row.getAttribute('data-umpire-id');
+      if (id && unassignUmpire(id)) {
         renderAll();
         scheduleSave();
       }
       return;
     }
 
-    const filledSlot = e.target.closest('.umpire-slot.is-filled');
+    const clearBtn = e.target.closest('.umpire-slot-clear');
+    if (clearBtn) {
+      const seatEl = clearBtn.closest('.umpire-slot-seat');
+      const slotEl = clearBtn.closest('.umpire-slot');
+      if (!slotEl) return;
+      const ring = Number(slotEl.getAttribute('data-ring'));
+      const slotKey = slotEl.getAttribute('data-slot');
+      const row = state.assignments[String(ring)];
+      if (!row) return;
+      const seats = seatArray(row, slotKey);
+      const seatIndex = seatEl && seatEl.getAttribute('data-seat') != null
+        ? Number(seatEl.getAttribute('data-seat'))
+        : seats.findIndex((seatId) => seatId);
+      if (!Number.isFinite(seatIndex) || seatIndex < 0 || seatIndex >= SLOT_CAPACITY) return;
+      const removedId = seats[seatIndex];
+      if (!removedId) return;
+      seats[seatIndex] = '';
+      setSeatArray(row, slotKey, seats);
+      state.selectedIds = state.selectedIds.filter((id) => id !== removedId);
+      renderAll();
+      scheduleSave();
+      return;
+    }
+
+    const emptySeat = e.target.closest('#umpireRingModal .umpire-slot-seat.is-empty');
+    const emptySlot = emptySeat || e.target.closest('#umpireRingModal .umpire-slot.is-empty');
+    if (emptySlot && state.selectedIds.length) {
+      const slotEl = emptySeat ? emptySeat.closest('.umpire-slot') : emptySlot;
+      const ring = Number(slotEl.getAttribute('data-ring'));
+      const slotKey = slotEl.getAttribute('data-slot');
+      const seatIndex = emptySeat && emptySeat.getAttribute('data-seat') != null
+        ? Number(emptySeat.getAttribute('data-seat'))
+        : null;
+      if (assignSelectedToSlot(ring, slotKey, Number.isFinite(seatIndex) ? seatIndex : null)) {
+        renderAll();
+        scheduleSave();
+      }
+      return;
+    }
+
+    const filledSeat = e.target.closest('.umpire-slot-seat.is-filled');
     const umpireEl = e.target.closest('[data-umpire-id]')
-      || (filledSlot ? filledSlot.querySelector('[data-umpire-id]') : null);
+      || (filledSeat ? filledSeat : null);
     if (umpireEl && !e.target.closest('.umpire-slot-clear') && !e.target.closest('.umpire-ring-card')) {
       const scope = umpireEl.closest('#umpirePool')
         ? 'pool'
@@ -1489,6 +1954,7 @@ import { bindTouchDnD } from './touch-dnd.js';
   document.getElementById('umpireEventSelect')?.addEventListener('change', function (e) {
     const eventId = e.target.value;
     if (eventId) rememberLastEventId(eventId);
+    notifyPortalEventSelected(eventId);
     loadEvent(eventId);
   });
 
@@ -1507,8 +1973,19 @@ import { bindTouchDnD } from './touch-dnd.js';
   const ringGrid = document.getElementById('umpireRingGrid');
   if (ringGrid && typeof ResizeObserver !== 'undefined') {
     new ResizeObserver(function () {
-      if (!ringGrid.hidden && !state.overlaySchedule) fitRingNameFonts();
+      if (!ringGrid.hidden) {
+        if (state.overlaySchedule) fitScheduleOverlayFonts();
+        else fitRingNameFonts();
+      }
     }).observe(ringGrid);
+  }
+
+  const ringModalCols = document.getElementById('umpireRingModalCols');
+  if (ringModalCols && typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(function () {
+      const modal = document.getElementById('umpireRingModal');
+      if (modal && !modal.hidden) fitSlotNameFonts();
+    }).observe(ringModalCols);
   }
 
   window.addEventListener('pagehide', flushSaveKeepalive);
@@ -1533,9 +2010,31 @@ import { bindTouchDnD } from './touch-dnd.js';
   });
   window.addEventListener('message', (event) => {
     if (event.origin !== window.location.origin) return;
-    if (!event.data || event.data.type !== 'portal-data-updated') return;
+    if (!event.data) return;
+    if (event.data.type === 'portal-focus-day') {
+      try {
+        localStorage.setItem(PORTAL_FOCUS_DAY_KEY, String(Math.max(0, Number(event.data.dayIndex) || 0)));
+      } catch (_) { /* ignore */ }
+      if (state.overlaySchedule && state.ringCount > 0) renderRings();
+      return;
+    }
+    if (event.data.type === 'portal-event-selected') {
+      const eventId = String(event.data.eventId || '').trim();
+      if (eventId === String(state.eventId || '')) return;
+      const select = document.getElementById('umpireEventSelect');
+      if (eventId && !state.events.some((entry) => String(entry.id) === eventId)) return;
+      if (select) select.value = eventId;
+      if (eventId) rememberLastEventId(eventId);
+      loadEvent(eventId);
+      return;
+    }
+    if (event.data.type !== 'portal-data-updated') return;
     if (event.data.eventId) rememberLastEventId(event.data.eventId);
     refreshFromServer();
+  });
+  window.addEventListener('storage', (event) => {
+    if (event.key !== PORTAL_FOCUS_DAY_KEY) return;
+    if (state.overlaySchedule && state.ringCount > 0) renderRings();
   });
   loadEvents().then(() => {
     const select = document.getElementById('umpireEventSelect');

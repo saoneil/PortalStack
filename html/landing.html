@@ -91,7 +91,12 @@
 
   <div class="landing-tables-row">
     <div id="organizerToolsSection" class="landing-table-panel" hidden>
-      <div class="scoring-system-text">organizer tools:</div>
+      <div class="scoring-system-text organizer-tools-heading">
+        <span>organizer tools:</span>
+        <select id="organizerEventSelect" class="event-select organizer-event-select" aria-label="Select event">
+          <option value="">— choose an event —</option>
+        </select>
+      </div>
       <div class="scoring-table-container">
         <table id="organizerToolsGrid">
           <tr>
@@ -113,7 +118,14 @@
           <tr>
             <td>Live Event Schedule</td>
             <td>
-              <a href="#" id="openLiveScheduleToolBtn">Editor</a>/<a href="#" id="openLiveScheduleViewerBtn">Viewer</a>
+              <div class="organizer-schedule-tool">
+                <span>
+                  <a href="#" id="openLiveScheduleToolBtn">Editor</a>/<a href="#" id="openLiveScheduleViewerBtn">Viewer</a>
+                </span>
+                <select id="organizerDaySelect" class="event-select organizer-day-select" aria-label="Focus day" disabled>
+                  <option value="">—</option>
+                </select>
+              </div>
             </td>
           </tr>
           <tr>
@@ -208,6 +220,7 @@
   <div id="eventRegistrationOverlay" class="large-modal-overlay">
     <div class="large-modal-content">
       <button id="closeEventRegistrationBtn" class="modal-close-btn">✕</button>
+      <div class="large-modal-body">
       <h2 class="modal-title">event management</h2>
       
       <div id="eventRegEmptyState" style="display:none; text-align:center; color:#aaa; font-size:18px; margin:40px 0;">
@@ -314,13 +327,16 @@
         <div id="regTableContainer" style="display:none; margin-top:24px; padding-top:24px; border-top:1px solid rgba(0,212,255,0.25);">
           <div class="modal-section-header">
             <h3>registrations</h3>
-            <button id="downloadRegCsvBtn" class="action-btn" style="margin:0;">download CSV</button>
+            <div class="reg-table-actions">
+              <button type="button" id="addRegBtn" class="action-btn" style="margin:0;">add registration</button>
+              <button type="button" id="downloadRegCsvBtn" class="action-btn" style="margin:0;">download CSV</button>
+            </div>
           </div>
           <div class="scrollable-table-wrapper">
             <table id="regTable" class="reg-table"></table>
           </div>
           <div id="regEmptyMessage" style="display:none; text-align:center; color:#aaa; margin-top:20px; font-size:16px;">
-            no registrations found for this event
+            no registrations found for this event. use add registration to create one.
           </div>
         </div>
       </div>
@@ -337,12 +353,14 @@
           manage another event
         </button>
       </div>
+      </div>
     </div>
   </div>
 
   <div id="eventCreationOverlay" class="large-modal-overlay">
     <div class="large-modal-content">
       <button id="closeEventCreationBtn" class="modal-close-btn">✕</button>
+      <div class="large-modal-body">
       <h2 class="modal-title">event creation</h2>
 
       <form id="eventCreationForm" class="event-form">
@@ -437,6 +455,7 @@
         <button id="createAnotherEventBtn" class="action-btn" style="margin-top:24px;">
           create another event
         </button>
+      </div>
       </div>
     </div>
   </div>
@@ -552,6 +571,7 @@
       }
 
       if (hasPrincipleUserAccess) {
+        loadOrganizerEventSelect();
         var resultsSelect = document.getElementById('eventResultsSelect');
         var currentResultsEventId = resultsSelect && resultsSelect.value ? String(resultsSelect.value) : '';
         if (hasPrincipleUserAdvancedAccess) {
@@ -982,8 +1002,51 @@
       frame.src = withCacheBust(currentFramePath(frame, fallbackPath));
     }
 
-    function forwardPortalDataUpdated(payload) {
-      ['liveScheduleToolFrame', 'umpireManagementFrame'].forEach(function(id) {
+    var PORTAL_LAST_EVENT_KEY = 'portal-last-event-id';
+    var PORTAL_FOCUS_DAY_KEY = 'portal-focus-day-index';
+    var TOOL_FRAME_IDS = ['drawCreationFrame', 'liveScheduleToolFrame', 'umpireManagementFrame'];
+    var organizerEvents = [];
+    var organizerSavedSchedules = { clientId: '', items: [] };
+    var organizerEventSelectReady = false;
+    var organizerAppliedEventId = '';
+
+    function readStoredOrganizerEventId() {
+      try {
+        return String(sessionStorage.getItem(PORTAL_LAST_EVENT_KEY) || '').trim();
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function storeOrganizerEventId(eventId) {
+      var id = String(eventId || '').trim();
+      try {
+        if (id) sessionStorage.setItem(PORTAL_LAST_EVENT_KEY, id);
+        else sessionStorage.removeItem(PORTAL_LAST_EVENT_KEY);
+      } catch (e) {}
+    }
+
+    function readStoredFocusDayIndex() {
+      try {
+        var raw = localStorage.getItem(PORTAL_FOCUS_DAY_KEY);
+        if (raw == null || raw === '') return null;
+        var n = Number(raw);
+        if (!Number.isFinite(n) || n < 0) return null;
+        return Math.floor(n);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function storeFocusDayIndex(dayIndex) {
+      try {
+        if (dayIndex == null || dayIndex === '') localStorage.removeItem(PORTAL_FOCUS_DAY_KEY);
+        else localStorage.setItem(PORTAL_FOCUS_DAY_KEY, String(Math.max(0, Math.floor(Number(dayIndex) || 0))));
+      } catch (e) {}
+    }
+
+    function broadcastToToolFrames(payload) {
+      TOOL_FRAME_IDS.forEach(function(id) {
         var frame = document.getElementById(id);
         if (!frame || !frame.contentWindow) return;
         if (frame.getAttribute('src') === 'about:blank') return;
@@ -993,11 +1056,207 @@
       });
     }
 
+    function formatOrganizerEventLabel(event) {
+      var name = (event && event.event_name) || ('event ' + ((event && event.id) || ''));
+      var raw = event && event.event_date_start;
+      if (!raw) return name;
+      var d = new Date(raw);
+      if (Number.isNaN(d.getTime())) return name;
+      return name + ' (' + d.toLocaleDateString() + ')';
+    }
+
+    function selectedOrganizerEventId() {
+      var select = document.getElementById('organizerEventSelect');
+      return select ? String(select.value || '').trim() : '';
+    }
+
+    function populateOrganizerDaySelect() {
+      var daySelect = document.getElementById('organizerDaySelect');
+      if (!daySelect) return;
+      var eventId = selectedOrganizerEventId();
+      var item = (organizerSavedSchedules.items || []).find(function(entry) {
+        return String(entry.eventId) === eventId;
+      });
+      var days = item && Array.isArray(item.days) && item.days.length ? item.days : [];
+      if (!eventId || !days.length) {
+        daySelect.innerHTML = '<option value="">—</option>';
+        daySelect.disabled = true;
+        return;
+      }
+      var stored = readStoredFocusDayIndex();
+      var index = stored == null ? 0 : stored;
+      if (index >= days.length) index = days.length - 1;
+      if (index < 0) index = 0;
+      daySelect.innerHTML = days.map(function(day, i) {
+        var name = (day && day.name) || ('Day ' + (i + 1));
+        return '<option value="' + i + '">' + String(name)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;') + '</option>';
+      }).join('');
+      daySelect.disabled = false;
+      daySelect.value = String(index);
+      storeFocusDayIndex(index);
+    }
+
+    function applyOrganizerEventToRegistration() {
+      var eventId = selectedOrganizerEventId();
+      var select = document.getElementById('eventRegSelect');
+      var overlay = document.getElementById('eventRegistrationOverlay');
+      if (!select || !eventId) return;
+      if (![...select.options].some(function(opt) { return opt.value === eventId; })) return;
+      if (select.value === eventId) return;
+      select.value = eventId;
+      if (overlay && overlay.style.display === 'flex') {
+        select.dispatchEvent(new Event('change'));
+      }
+    }
+
+    function applyOrganizerEventToResults() {
+      var eventId = selectedOrganizerEventId();
+      var select = document.getElementById('eventResultsSelect');
+      if (!select || !eventId || select.disabled) return;
+      if (![...select.options].some(function(opt) { return opt.value === eventId; })) return;
+      if (select.value === eventId) return;
+      select.value = eventId;
+      if (typeof syncEventResultsSelectTitle === 'function') syncEventResultsSelectTitle();
+      if (typeof requerySelectedEventResults === 'function') {
+        requerySelectedEventResults(eventId, { silent: true });
+      }
+    }
+
+    function applyOrganizerEventToViewerPicker() {
+      var eventId = selectedOrganizerEventId();
+      var select = document.getElementById('liveScheduleViewerSelect');
+      var overlay = document.getElementById('liveScheduleViewerPickerOverlay');
+      if (!select || !eventId) return;
+      if (overlay && overlay.hidden) return;
+      if (![...select.options].some(function(opt) { return opt.value === eventId; })) return;
+      select.value = eventId;
+      var openBtn = document.getElementById('liveScheduleViewerPickerOpenBtn');
+      if (openBtn) openBtn.disabled = !select.value;
+    }
+
+    function setOrganizerEvent(eventId, options) {
+      var opts = options || {};
+      var select = document.getElementById('organizerEventSelect');
+      var next = String(eventId || '').trim();
+      if (select) {
+        if (next && ![...select.options].some(function(opt) { return opt.value === next; })) {
+          next = '';
+        }
+        if (select.value !== next) select.value = next;
+      }
+      var changed = organizerAppliedEventId !== next;
+      organizerAppliedEventId = next;
+      storeOrganizerEventId(next);
+      populateOrganizerDaySelect();
+      if (!opts.skipLocal) {
+        applyOrganizerEventToRegistration();
+        applyOrganizerEventToResults();
+        applyOrganizerEventToViewerPicker();
+      }
+      if (!opts.skipBroadcast && changed) {
+        broadcastToToolFrames({ type: 'portal-event-selected', eventId: next });
+        var daySelect = document.getElementById('organizerDaySelect');
+        if (daySelect && !daySelect.disabled && daySelect.value !== '') {
+          broadcastToToolFrames({
+            type: 'portal-focus-day',
+            dayIndex: Number(daySelect.value) || 0
+          });
+        }
+      }
+    }
+
+    function loadOrganizerSavedSchedules() {
+      return fetch('/api/live-schedule/saved')
+        .then(function(res) {
+          if (!res.ok) return { clientId: '', items: [] };
+          return res.json();
+        })
+        .then(function(data) {
+          organizerSavedSchedules = {
+            clientId: String((data && data.clientId) || ''),
+            items: (data && data.items) || []
+          };
+          populateOrganizerDaySelect();
+        })
+        .catch(function() {
+          organizerSavedSchedules = { clientId: '', items: [] };
+          populateOrganizerDaySelect();
+        });
+    }
+
+    function loadOrganizerEventSelect() {
+      var select = document.getElementById('organizerEventSelect');
+      if (!select) return Promise.resolve();
+      var keepId = selectedOrganizerEventId() || readStoredOrganizerEventId();
+      return fetch('/api/client-events')
+        .then(function(res) {
+          if (!res.ok) throw new Error('Unable to load events.');
+          return res.json();
+        })
+        .then(function(events) {
+          organizerEvents = Array.isArray(events) ? events : [];
+          if (!organizerEvents.length) {
+            select.innerHTML = '<option value="">— no events —</option>';
+            setOrganizerEvent('', { skipLocal: true });
+            return loadOrganizerSavedSchedules();
+          }
+          select.innerHTML = '<option value="">— choose an event —</option>' +
+            organizerEvents.map(function(event) {
+              return '<option value="' + String(event.id).replace(/"/g, '&quot;') + '">' +
+                String(formatOrganizerEventLabel(event))
+                  .replace(/&/g, '&amp;')
+                  .replace(/</g, '&lt;')
+                  .replace(/>/g, '&gt;') + '</option>';
+            }).join('');
+          var pick = keepId && organizerEvents.some(function(event) {
+            return String(event.id) === keepId;
+          }) ? keepId : '';
+          setOrganizerEvent(pick, { skipBroadcast: !organizerEventSelectReady });
+          organizerEventSelectReady = true;
+          return loadOrganizerSavedSchedules();
+        })
+        .catch(function() {
+          select.innerHTML = '<option value="">— unable to load —</option>';
+          organizerEventSelectReady = true;
+        });
+    }
+
+    function openSavedSchedulePage(pathPrefix) {
+      var eventId = selectedOrganizerEventId();
+      var clientId = organizerSavedSchedules.clientId;
+      var hasSchedule = (organizerSavedSchedules.items || []).some(function(item) {
+        return String(item.eventId) === eventId;
+      });
+      if (!eventId || !clientId || !hasSchedule) return false;
+      var url = pathPrefix + encodeURIComponent(clientId) + '/' + encodeURIComponent(eventId);
+      if (pathPrefix.indexOf('live-schedule') !== -1) {
+        var daySelect = document.getElementById('organizerDaySelect');
+        if (daySelect && !daySelect.disabled && daySelect.value !== '') {
+          url += '?day=' + encodeURIComponent(daySelect.value);
+        }
+      }
+      window.open(url, '_blank', 'noopener,noreferrer');
+      return true;
+    }
+
+    function forwardPortalDataUpdated(payload) {
+      broadcastToToolFrames(payload);
+      loadOrganizerSavedSchedules();
+    }
+
     window.addEventListener('message', function(event) {
       if (event.origin !== window.location.origin) return;
       if (!event.data) return;
       if (event.data.type === 'portal-data-updated') {
         forwardPortalDataUpdated(event.data);
+        if (event.data.eventId) setOrganizerEvent(event.data.eventId, { skipBroadcast: true });
+        return;
+      }
+      if (event.data.type === 'portal-event-selected') {
+        setOrganizerEvent(event.data.eventId);
       }
     });
 
@@ -1177,6 +1436,7 @@
         option.textContent = event.event_name + ' (' + startDate + ') - ' + status;
         select.appendChild(option);
       });
+      applyOrganizerEventToRegistration();
     }
 
     const STANDARD_EVENT_TYPE_KEYS = [
@@ -1254,6 +1514,9 @@
 
     document.getElementById('eventRegSelect').addEventListener('change', function() {
       const eventId = this.value;
+      if (eventId && eventId !== selectedOrganizerEventId()) {
+        setOrganizerEvent(eventId, { skipLocal: true });
+      }
       if (!eventId) {
         document.getElementById('regTableContainer').style.display = 'none';
         document.getElementById('eventDetailsContainer').style.display = 'none';
@@ -1432,6 +1695,47 @@
       }, 100);
     });
 
+    const REG_DISPLAY_FIELDS = [
+      'role',
+      'contact_email',
+      'first_name',
+      'last_name',
+      'dob',
+      'rank',
+      'gender',
+      'weight_kg',
+      'height_kg',
+      'team_name_or_country',
+      'individual_patterns',
+      'individual_sparring',
+      'individual_special_technique',
+      'individual_power_test',
+      'team_patterns',
+      'team_sparring',
+      'team_special_technique',
+      'team_power_test',
+      'pre_arranged_sparring',
+      'other_events',
+      'waiver_accepted',
+      'waiver_accepted_at'
+    ];
+
+    const REG_FLAG_FIELDS = {
+      individual_patterns: true,
+      individual_sparring: true,
+      individual_special_technique: true,
+      individual_power_test: true,
+      team_patterns: true,
+      team_sparring: true,
+      team_special_technique: true,
+      team_power_test: true,
+      pre_arranged_sparring: true,
+      waiver_accepted: true
+    };
+
+    const REG_ROLE_OPTIONS = ['athlete', 'team', 'coach', 'umpire', 'vip', 'medical', 'volunteer'];
+    const REG_GENDER_OPTIONS = ['', 'M', 'F', 'X'];
+
     function loadRegistrations(eventId) {
       fetch('/api/client-events/' + eventId + '/registrations')
         .then(res => {
@@ -1440,7 +1744,7 @@
         })
         .then(registrations => {
           currentRegistrations = registrations || [];
-          renderRegistrationsTable(registrations);
+          renderRegistrationsTable(currentRegistrations);
         })
         .catch(err => {
           showAppMessage({
@@ -1450,13 +1754,26 @@
         });
     }
 
-    function escapeHtml(str) {
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+    function registrationRequest(url, options) {
+      return fetch(url, Object.assign({ credentials: 'same-origin' }, options || {}))
+        .then(function(res) {
+          return res.json().then(function(data) {
+            if (!res.ok) {
+              throw new Error(data.error || 'Request failed');
+            }
+            return data;
+          }, function() {
+            throw new Error('Request failed');
+          });
+        });
+    }
+
+    function selectedEventId() {
+      return document.getElementById('eventRegSelect').value;
+    }
+
+    function isRegistrationFlag(field) {
+      return !!REG_FLAG_FIELDS[field];
     }
 
     function formatRegistrationCellValue(field, value, options) {
@@ -1465,80 +1782,349 @@
         return '';
       }
 
-      if (field === 'dob') {
+      if (field === 'dob' || field === 'waiver_accepted_at') {
         if (value instanceof Date && !isNaN(value.getTime())) {
           const year = value.getUTCFullYear();
           const month = String(value.getUTCMonth() + 1).padStart(2, '0');
           const day = String(value.getUTCDate()).padStart(2, '0');
-          return year + '-' + month + '-' + day;
+          if (field === 'dob') {
+            return year + '-' + month + '-' + day;
+          }
+          const hours = String(value.getUTCHours()).padStart(2, '0');
+          const minutes = String(value.getUTCMinutes()).padStart(2, '0');
+          const seconds = String(value.getUTCSeconds()).padStart(2, '0');
+          return year + '-' + month + '-' + day + ' ' + hours + ':' + minutes + ':' + seconds;
         }
         const str = String(value);
-        const match = str.match(/^(\d{4}-\d{2}-\d{2})/);
+        const match = str.match(/^(\d{4}-\d{2}-\d{2})[T ]?(\d{2}:\d{2}:\d{2})?/);
         if (match) {
-          return match[1];
+          if (field === 'dob' || !match[2]) {
+            return match[1];
+          }
+          return match[1] + ' ' + match[2];
         }
       }
 
-      if (typeof value === 'number' && (field === 'individual_patterns' || field === 'individual_sparring' || field === 'individual_special_technique' || field === 'individual_power_test' || field === 'team_patterns' || field === 'team_sparring' || field === 'team_special_technique' || field === 'team_power_test' || field === 'pre_arranged_sparring')) {
-        // CSV: ASCII-only so Excel does not mojibake UTF-8 checkmarks.
-        if (options.csv) return value === 1 ? 'Y' : '';
-        return value === 1 ? '✓' : '';
+      if (isRegistrationFlag(field) && field !== 'waiver_accepted') {
+        const flagged = value === 1 || value === true || value === '1';
+        if (options.csv) return flagged ? 'Y' : '';
+        return flagged ? '✓' : '';
       }
 
       return String(value);
+    }
+
+    function isFlagChecked(value) {
+      return value === 1 || value === true || value === '1' || value === '✓';
+    }
+
+    function buildRegistrationFieldControl(field, value) {
+      if (isRegistrationFlag(field)) {
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.checked = isFlagChecked(value);
+        input.dataset.field = field;
+        input.setAttribute('aria-label', field.replace(/_/g, ' '));
+        return input;
+      }
+
+      if (field === 'role') {
+        const select = document.createElement('select');
+        select.dataset.field = field;
+        select.setAttribute('aria-label', 'role');
+        const current = value == null ? '' : String(value);
+        const options = REG_ROLE_OPTIONS.slice();
+        if (current && options.indexOf(current) === -1) {
+          options.unshift(current);
+        }
+        options.forEach(function(optionValue) {
+          const option = document.createElement('option');
+          option.value = optionValue;
+          option.textContent = optionValue;
+          if (optionValue === current) option.selected = true;
+          select.appendChild(option);
+        });
+        if (!current) select.value = 'athlete';
+        return select;
+      }
+
+      if (field === 'gender') {
+        const select = document.createElement('select');
+        select.dataset.field = field;
+        select.setAttribute('aria-label', 'gender');
+        const current = value == null ? '' : String(value).toUpperCase();
+        const options = REG_GENDER_OPTIONS.slice();
+        if (current && options.indexOf(current) === -1) {
+          options.push(current);
+        }
+        options.forEach(function(optionValue) {
+          const option = document.createElement('option');
+          option.value = optionValue;
+          option.textContent = optionValue || '';
+          if (optionValue === current) option.selected = true;
+          select.appendChild(option);
+        });
+        return select;
+      }
+
+      const input = document.createElement('input');
+      input.dataset.field = field;
+      input.setAttribute('aria-label', field.replace(/_/g, ' '));
+      if (field === 'dob') {
+        input.type = 'date';
+        input.value = formatRegistrationCellValue('dob', value);
+      } else if (field === 'contact_email') {
+        input.type = 'email';
+        input.value = value == null ? '' : String(value);
+      } else if (field === 'weight_kg' || field === 'height_kg') {
+        input.type = 'number';
+        input.step = 'any';
+        input.value = value == null || value === '' ? '' : String(value);
+      } else {
+        input.type = 'text';
+        input.value = formatRegistrationCellValue(field, value);
+      }
+      return input;
+    }
+
+    function buildRegistrationRow(reg) {
+      const row = document.createElement('tr');
+      if (reg && reg.id) {
+        row.dataset.regId = String(reg.id);
+      }
+
+      REG_DISPLAY_FIELDS.forEach(function(field) {
+        const cell = document.createElement('td');
+        if (isRegistrationFlag(field)) {
+          cell.className = 'reg-flag-cell';
+        }
+        cell.appendChild(buildRegistrationFieldControl(field, reg ? reg[field] : ''));
+        row.appendChild(cell);
+      });
+
+      const actionCell = document.createElement('td');
+      const deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.className = 'action-btn reg-delete-btn';
+      deleteBtn.textContent = 'delete';
+      actionCell.appendChild(deleteBtn);
+      row.appendChild(actionCell);
+      return row;
     }
 
     function renderRegistrationsTable(registrations) {
       const container = document.getElementById('regTableContainer');
       const table = document.getElementById('regTable');
       const emptyMsg = document.getElementById('regEmptyMessage');
-      
-      if (!registrations || registrations.length === 0) {
-        container.style.display = 'block';
-        table.style.display = 'none';
-        emptyMsg.style.display = 'block';
-        return;
-      }
-      
+      const rows = registrations || [];
+
       container.style.display = 'block';
       table.style.display = 'table';
-      emptyMsg.style.display = 'none';
-      
-      // Build table headers
-      const headers = Object.keys(registrations[0]);
-      let headerHTML = '<thead><tr>';
-      headers.forEach(h => {
-        headerHTML += '<th>' + escapeHtml(h.replace(/_/g, ' ')) + '</th>';
+      emptyMsg.style.display = rows.length === 0 ? 'block' : 'none';
+
+      table.innerHTML = '';
+
+      const thead = document.createElement('thead');
+      const headerRow = document.createElement('tr');
+      REG_DISPLAY_FIELDS.forEach(function(field) {
+        const th = document.createElement('th');
+        if (isRegistrationFlag(field)) {
+          th.className = 'reg-flag-cell';
+        }
+        th.textContent = field.replace(/_/g, ' ');
+        headerRow.appendChild(th);
       });
-      headerHTML += '</tr></thead>';
-      
-      // Build table rows
-      let bodyHTML = '<tbody>';
-      registrations.forEach(reg => {
-        bodyHTML += '<tr>';
-        headers.forEach(h => {
-          const value = formatRegistrationCellValue(h, reg[h]);
-          bodyHTML += '<td>' + escapeHtml(value) + '</td>';
-        });
-        bodyHTML += '</tr>';
+      const actionHeader = document.createElement('th');
+      actionHeader.textContent = '';
+      headerRow.appendChild(actionHeader);
+      thead.appendChild(headerRow);
+
+      const tbody = document.createElement('tbody');
+      rows.forEach(function(reg) {
+        tbody.appendChild(buildRegistrationRow(reg));
       });
-      bodyHTML += '</tbody>';
-      
-      table.innerHTML = headerHTML + bodyHTML;
+
+      table.appendChild(thead);
+      table.appendChild(tbody);
     }
 
+    function registrationPayloadFromRow(row) {
+      const payload = {};
+      REG_DISPLAY_FIELDS.forEach(function(field) {
+        const input = row.querySelector('[data-field="' + field + '"]');
+        if (!input) return;
+        if (input.type === 'checkbox') {
+          payload[field] = input.checked ? 1 : 0;
+        } else {
+          payload[field] = input.value;
+        }
+      });
+      return payload;
+    }
+
+    function rowHasRequiredRegistrationFields(payload) {
+      return !!(payload.role && payload.first_name && payload.last_name && payload.contact_email);
+    }
+
+    function syncRegistrationCacheFromTable() {
+      const table = document.getElementById('regTable');
+      const rows = table ? table.querySelectorAll('tbody tr[data-reg-id]') : [];
+      currentRegistrations = [];
+      rows.forEach(function(row) {
+        const payload = registrationPayloadFromRow(row);
+        payload.id = Number(row.dataset.regId);
+        currentRegistrations.push(payload);
+      });
+    }
+
+    function saveRegistrationRow(row) {
+      const eventId = selectedEventId();
+      if (!eventId || !row) return;
+
+      if (row.dataset.saving === '1') {
+        row.dataset.saveAgain = '1';
+        return;
+      }
+
+      const payload = registrationPayloadFromRow(row);
+      if (!rowHasRequiredRegistrationFields(payload)) {
+        return;
+      }
+
+      const registrationId = row.dataset.regId;
+      const url = registrationId
+        ? '/api/client-events/' + encodeURIComponent(eventId) + '/registrations/' + encodeURIComponent(registrationId)
+        : '/api/client-events/' + encodeURIComponent(eventId) + '/registrations';
+      const method = registrationId ? 'PUT' : 'POST';
+
+      row.dataset.saving = '1';
+      registrationRequest(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(function(result) {
+          if (!registrationId && result.id) {
+            row.dataset.regId = String(result.id);
+          }
+          syncRegistrationCacheFromTable();
+        })
+        .catch(function(err) {
+          showAppMessage({
+            title: 'registration save failed',
+            message: err.message || 'Unable to save registration.'
+          });
+        })
+        .then(function() {
+          row.dataset.saving = '0';
+          if (row.dataset.saveAgain === '1') {
+            row.dataset.saveAgain = '0';
+            saveRegistrationRow(row);
+          }
+        });
+    }
+
+    function deleteRegistrationRow(row) {
+      const eventId = selectedEventId();
+      if (!eventId || !row) return;
+
+      const registrationId = row.dataset.regId;
+      if (!registrationId) {
+        row.remove();
+        const table = document.getElementById('regTable');
+        const remaining = table ? table.querySelectorAll('tbody tr') : [];
+        const emptyMsg = document.getElementById('regEmptyMessage');
+        if (emptyMsg) emptyMsg.style.display = remaining.length === 0 ? 'block' : 'none';
+        syncRegistrationCacheFromTable();
+        return;
+      }
+
+      if (!window.confirm('Delete this registration?')) {
+        return;
+      }
+
+      registrationRequest(
+        '/api/client-events/' + encodeURIComponent(eventId) + '/registrations/' + encodeURIComponent(registrationId),
+        { method: 'DELETE' }
+      )
+        .then(function() {
+          row.remove();
+          const table = document.getElementById('regTable');
+          const remaining = table ? table.querySelectorAll('tbody tr') : [];
+          const emptyMsg = document.getElementById('regEmptyMessage');
+          if (emptyMsg) emptyMsg.style.display = remaining.length === 0 ? 'block' : 'none';
+          syncRegistrationCacheFromTable();
+        })
+        .catch(function(err) {
+          showAppMessage({
+            title: 'registration delete failed',
+            message: err.message || 'Unable to delete registration.'
+          });
+        });
+    }
+
+    function addRegistrationRow() {
+      const eventId = selectedEventId();
+      if (!eventId) {
+        showAppMessage({ title: 'select an event', message: 'Please select an event.' });
+        return;
+      }
+
+      const table = document.getElementById('regTable');
+      const emptyMsg = document.getElementById('regEmptyMessage');
+      if (!table.querySelector('thead')) {
+        renderRegistrationsTable(currentRegistrations || []);
+      }
+      table.style.display = 'table';
+      if (emptyMsg) emptyMsg.style.display = 'none';
+
+      let tbody = table.querySelector('tbody');
+      if (!tbody) {
+        tbody = document.createElement('tbody');
+        table.appendChild(tbody);
+      }
+
+      const row = buildRegistrationRow({});
+      tbody.appendChild(row);
+      const firstInput = row.querySelector('input, select');
+      if (firstInput) firstInput.focus();
+    }
+
+    const regTable = document.getElementById('regTable');
+    if (regTable && !regTable.dataset.bound) {
+      regTable.dataset.bound = '1';
+      regTable.addEventListener('change', function(e) {
+        const field = e.target && e.target.dataset ? e.target.dataset.field : '';
+        if (!field) return;
+        const row = e.target.closest('tr');
+        if (row) saveRegistrationRow(row);
+      });
+      regTable.addEventListener('click', function(e) {
+        const deleteBtn = e.target.closest('.reg-delete-btn');
+        if (!deleteBtn) return;
+        const row = deleteBtn.closest('tr');
+        if (row) deleteRegistrationRow(row);
+      });
+    }
+
+    document.getElementById('addRegBtn').onclick = function() {
+      addRegistrationRow();
+    };
+
     document.getElementById('downloadRegCsvBtn').onclick = function() {
-      if (!currentRegistrations || currentRegistrations.length === 0) {
+      syncRegistrationCacheFromTable();
+      const csvRows = currentRegistrations || [];
+      if (!csvRows.length) {
         showAppMessage({ title: 'nothing to download', message: 'No registrations to download.' });
         return;
       }
 
-      logInteraction('download_registration_csv', { count: currentRegistrations.length });
+      logInteraction('download_registration_csv', { count: csvRows.length });
 
-      const headers = Object.keys(currentRegistrations[0]);
+      const headers = REG_DISPLAY_FIELDS.slice();
       let csv = headers.join(',') + '\n';
 
-      currentRegistrations.forEach(reg => {
+      csvRows.forEach(reg => {
         const row = headers.map(h => {
           let value = formatRegistrationCellValue(h, reg[h], { csv: true });
           value = value.replace(/"/g, '""');
@@ -1566,6 +2152,17 @@
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     };
+
+    document.getElementById('organizerEventSelect').addEventListener('change', function() {
+      setOrganizerEvent(this.value);
+    });
+
+    document.getElementById('organizerDaySelect').addEventListener('change', function() {
+      var dayIndex = Number(this.value);
+      if (!Number.isFinite(dayIndex) || dayIndex < 0) return;
+      storeFocusDayIndex(dayIndex);
+      broadcastToToolFrames({ type: 'portal-focus-day', dayIndex: dayIndex });
+    });
 
     // ========== ORGANIZER TOOL MODALS ==========
     document.getElementById('openDrawCreationBtn').onclick = function(e) {
@@ -1736,6 +2333,8 @@
                 '</option>';
             }).join('');
           openBtn.disabled = true;
+          applyOrganizerEventToViewerPicker();
+          if (select.value) openBtn.disabled = false;
         })
         .catch(function(err) {
           select.disabled = false;
@@ -1751,6 +2350,13 @@
     document.getElementById('openLiveScheduleViewerBtn').onclick = function(e) {
       e.preventDefault();
       requirePrincipleUserAdvancedAccess(function() {
+        if (openSavedSchedulePage('/live-schedule/')) {
+          logInteraction('open_live_schedule_viewer', {
+            description: 'Opened live event schedule viewer in a new tab',
+            eventId: selectedOrganizerEventId()
+          });
+          return;
+        }
         logInteraction('open_live_schedule_viewer_picker', { description: 'Opened live schedule viewer event picker' });
         openLiveScheduleViewerPicker('viewer');
       });
@@ -1759,6 +2365,13 @@
     document.getElementById('openDigitalIdToolBtn').onclick = function(e) {
       e.preventDefault();
       requirePrincipleUserAdvancedAccess(function() {
+        if (openSavedSchedulePage('/digital-id/')) {
+          logInteraction('open_digital_id_tool', {
+            description: 'Opened draws/digital ID card page in a new tab',
+            eventId: selectedOrganizerEventId()
+          });
+          return;
+        }
         logInteraction('open_digital_id_picker', { description: 'Opened draws/digital ID card event picker' });
         openLiveScheduleViewerPicker('digital-id');
       });
@@ -1876,9 +2489,10 @@
             }).join('');
           if (previous && items.some(function(item) { return String(item.eventId) === previous; })) {
             select.value = previous;
-          } else if (!previous) {
-            eventResultsSelectedMeta = null;
+          } else {
+            applyOrganizerEventToResults();
           }
+          if (!select.value) eventResultsSelectedMeta = null;
           syncEventResultsDownloadBtn();
           syncEventResultsSelectTitle();
         })
@@ -1892,7 +2506,8 @@
         });
     }
 
-    function requerySelectedEventResults(forcedEventId) {
+    function requerySelectedEventResults(forcedEventId, options) {
+      var opts = options || {};
       var select = document.getElementById('eventResultsSelect');
       var btn = document.getElementById('downloadEventResultsBtn');
       var eventId = forcedEventId != null && String(forcedEventId).trim() !== ''
@@ -1922,10 +2537,12 @@
           if (requestId !== eventResultsMetaRequestId) return null;
           eventResultsSelectedMeta = meta || { resultCount: 0 };
           if (!eventResultsSelectedMeta.resultCount) {
-            showAppMessage({
-              title: 'notice',
-              message: 'No saved results were found for that event yet. Finish scoring on the ring computers, then select the event again.'
-            });
+            if (!opts.silent) {
+              showAppMessage({
+                title: 'notice',
+                message: 'No saved results were found for that event yet. Finish scoring on the ring computers, then select the event again.'
+              });
+            }
           }
           syncEventResultsDownloadBtn();
           return eventResultsSelectedMeta;
@@ -1998,6 +2615,9 @@
     document.getElementById('eventResultsSelect').onchange = function() {
       syncEventResultsSelectTitle();
       requerySelectedEventResults(this.value);
+      if (this.value && this.value !== selectedOrganizerEventId()) {
+        setOrganizerEvent(this.value, { skipLocal: true });
+      }
     };
 
     document.getElementById('eventResultsSelect').addEventListener('mousedown', function(e) {
@@ -2055,11 +2675,15 @@
         eventId: eventId
       });
       closeLiveScheduleViewerPicker();
-      window.open(
-        pathPrefix + encodeURIComponent(clientId) + '/' + encodeURIComponent(eventId),
-        '_blank',
-        'noopener,noreferrer'
-      );
+      setOrganizerEvent(eventId);
+      var url = pathPrefix + encodeURIComponent(clientId) + '/' + encodeURIComponent(eventId);
+      if (mode !== 'digital-id') {
+        var daySelect = document.getElementById('organizerDaySelect');
+        if (daySelect && !daySelect.disabled && daySelect.value !== '') {
+          url += '?day=' + encodeURIComponent(daySelect.value);
+        }
+      }
+      window.open(url, '_blank', 'noopener,noreferrer');
     };
 
     document.getElementById('liveScheduleViewerPickerOverlay').addEventListener('click', function(e) {
