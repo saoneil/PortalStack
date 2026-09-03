@@ -495,52 +495,16 @@ function isEventOpenForRegistration(events, eventId) {
   return (events || []).some((eventRow) => String(eventRow.id) === String(eventId));
 }
 
-const PUBLIC_REGISTRATION_EVENTS_SQL = `
-  SELECT
-    id,
-    client_id,
-    event_name,
-    event_name AS \`Event Name\`,
-    event_date_start,
-    event_date_start AS \`Start Date\`,
-    event_date_end,
-    event_date_end AS \`End Date\`,
-    registration_open_date,
-    registration_open_date AS \`Registration Open Date\`,
-    registration_close_date,
-    registration_close_date AS \`Registration Close Date\`,
-    event_location,
-    event_location AS Location,
-    event_events,
-    event_link,
-    event_contact,
-    LENGTH(event_poster) > 0 AS has_poster,
-    CRC32(event_poster) AS poster_version,
-    CASE
-      WHEN waiver_required = 1 AND LENGTH(TRIM(COALESCE(waiver_text, ''))) > 0 THEN 1
-      ELSE 0
-    END AS waiver_required,
-    LENGTH(TRIM(COALESCE(waiver_text, ''))) > 0 AS has_waiver
-  FROM events
-  WHERE active = 1
-    AND COALESCE(event_date_end, event_date_start) >= CURDATE()
-  ORDER BY event_date_start ASC, event_name ASC
-`;
-
 function fetchPublicRegistrationEvents(callback) {
-  db.query(PUBLIC_REGISTRATION_EVENTS_SQL, (err, results) => {
+  const sql = 'CALL sp_pub_view_live_events()';
+  db.query(sql, (err, results) => {
     if (err) return callback(err);
-    callback(null, results || []);
+    callback(null, results[0] || []);
   });
 }
 
 function verifyEventEligibleForPublicRegistration(eventId, callback) {
-  const sql = `
-    SELECT id FROM events
-    WHERE id = ?
-      AND active = 1
-      AND COALESCE(event_date_end, event_date_start) >= CURDATE()
-  `;
+  const sql = 'SELECT id FROM events WHERE id = ? AND active = 1';
   db.query(sql, [eventId], (err, results) => {
     if (err) return callback(err);
     callback(null, results && results.length > 0);
@@ -937,81 +901,6 @@ app.post('/api/profile/timezone', requireLogin, (req, res) => {
   res.json({ ok: true, timezone });
 });
 
-function attachEventEventsToRows(rows, callback) {
-  const events = rows || [];
-  if (events.length === 0) {
-    callback(null, events);
-    return;
-  }
-
-  const eventIds = events
-    .map((eventRow) => {
-      if (eventRow.id != null) return eventRow.id;
-      if (eventRow.ID != null) return eventRow.ID;
-      if (eventRow.event_id != null) return eventRow.event_id;
-      return eventRow['Event ID'] != null ? eventRow['Event ID'] : null;
-    })
-    .filter((eventId) => eventId != null);
-
-  if (eventIds.length === 0) {
-    callback(null, events);
-    return;
-  }
-
-  const sql = 'SELECT id, event_events, event_link, LENGTH(event_poster) > 0 AS has_poster, event_date_start, event_date_end, registration_open_date, registration_close_date, event_location FROM events WHERE id IN (?)';
-  db.query(sql, [eventIds], (err, eventRows) => {
-    if (err) {
-      callback(err);
-      return;
-    }
-
-    const eventsById = Object.create(null);
-    (eventRows || []).forEach((eventRow) => {
-      eventsById[String(eventRow.id)] = {
-        event_events: eventRow.event_events,
-        event_link: eventRow.event_link,
-        has_poster: eventRow.has_poster === 1,
-        event_date_start: eventRow.event_date_start,
-        event_date_end: eventRow.event_date_end,
-        registration_open_date: eventRow.registration_open_date,
-        registration_close_date: eventRow.registration_close_date,
-        event_location: eventRow.event_location
-      };
-    });
-
-    events.forEach((eventRow) => {
-      const eventId = eventRow.id != null ? eventRow.id
-        : eventRow.ID != null ? eventRow.ID
-        : eventRow.event_id != null ? eventRow.event_id
-        : eventRow['Event ID'];
-      if (eventId == null) return;
-      const eventData = eventsById[String(eventId)];
-      if (eventData) {
-        eventRow.event_events = eventData.event_events || null;
-        eventRow.event_link = eventData.event_link || null;
-        eventRow.has_poster = eventData.has_poster || false;
-        if (eventData.event_date_start != null && eventData.event_date_start !== '') {
-          eventRow.event_date_start = eventData.event_date_start;
-        }
-        if (eventData.event_date_end != null && eventData.event_date_end !== '') {
-          eventRow.event_date_end = eventData.event_date_end;
-        }
-        if (eventData.registration_open_date != null && eventData.registration_open_date !== '') {
-          eventRow.registration_open_date = eventData.registration_open_date;
-        }
-        if (eventData.registration_close_date != null && eventData.registration_close_date !== '') {
-          eventRow.registration_close_date = eventData.registration_close_date;
-        }
-        if (eventData.event_location != null && eventData.event_location !== '') {
-          eventRow.event_location = eventData.event_location;
-        }
-      }
-    });
-
-    callback(null, events);
-  });
-}
-
 // Public event registration — stateless; no session data stored per user
 app.get('/api/registration/events', registrationApiLimiter, (req, res) => {
   fetchPublicRegistrationEvents((err, events) => {
@@ -1154,7 +1043,6 @@ function loadPublicRegistrationEventMeta(eventId, callback) {
     FROM events
     WHERE id = ?
       AND active = 1
-      AND COALESCE(event_date_end, event_date_start) >= CURDATE()
     LIMIT 1
   `;
   db.query(sql, [eventId], (err, results) => {
