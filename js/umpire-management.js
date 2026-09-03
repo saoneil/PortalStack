@@ -1,4 +1,5 @@
 import { bindTouchDnD } from './touch-dnd.js';
+import { logInteraction } from './portal-log.js';
 
 (function () {
   const RING_SLOT_GROUPS = [
@@ -1479,7 +1480,13 @@ import { bindTouchDnD } from './touch-dnd.js';
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ assignments: payload })
         });
-        if (seq === saveSeq && eventId === state.eventId) setStatus('');
+        if (seq === saveSeq && eventId === state.eventId) {
+          setStatus('');
+          logInteraction('umpire_assignments_save', {
+            eventId: eventId,
+            ringCount: state.ringCount
+          });
+        }
       } catch (err) {
         if (eventId === state.eventId && seq === saveSeq) {
           setStatus(err.message || 'Unable to save umpire assignments.', true);
@@ -1953,6 +1960,7 @@ import { bindTouchDnD } from './touch-dnd.js';
 
   document.getElementById('umpireEventSelect')?.addEventListener('change', function (e) {
     const eventId = e.target.value;
+    logInteraction('umpire_event_selected', { eventId: eventId || null });
     if (eventId) rememberLastEventId(eventId);
     notifyPortalEventSelected(eventId);
     loadEvent(eventId);
@@ -2037,6 +2045,7 @@ import { bindTouchDnD } from './touch-dnd.js';
     if (state.overlaySchedule && state.ringCount > 0) renderRings();
   });
   loadEvents().then(() => {
+    logInteraction('page_view', { description: 'Umpire management page loaded' });
     const select = document.getElementById('umpireEventSelect');
     const eventId = String((select && select.value) || readLastEventId() || '');
     if (eventId && state.events.some((event) => String(event.id) === eventId)) {

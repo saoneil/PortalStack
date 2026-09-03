@@ -25,6 +25,21 @@
     activeSuggestionIndex: -1
   };
 
+  function logInteraction(action, details) {
+    if (typeof window.portalLogInteraction === 'function') {
+      window.portalLogInteraction(action, details, 'digital-id');
+      return;
+    }
+    fetch('/api/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        interaction: Object.assign({ action: action, page: 'digital-id' }, details || {})
+      })
+    }).catch(function () {});
+  }
+
   function parseRoute() {
     const parts = window.location.pathname.split('/').filter(Boolean);
     if (parts[0] === 'digital-id' && parts.length >= 3) {
@@ -473,6 +488,12 @@
 
     els.athleteResult.hidden = false;
     setStatus(`${rows.length} division${rows.length === 1 ? '' : 's'} found.`);
+    logInteraction('digital_id_athlete_selected', {
+      eventId: state.eventId,
+      clientId: state.clientId,
+      athleteName: selected.name,
+      divisionCount: rows.length
+    });
   }
 
   function formatEventMeta(event) {
@@ -529,9 +550,20 @@
           ? `Ready — ${state.athletes.length} athlete${state.athletes.length === 1 ? '' : 's'} available to search.`
           : 'Schedule loaded, but no athlete names were found in the draws yet.'
       );
+      logInteraction('page_view', {
+        description: 'Digital ID page loaded',
+        eventId: state.eventId,
+        clientId: state.clientId,
+        athleteCount: state.athletes.length
+      });
     } catch (err) {
       els.eventTitle.textContent = 'Schedule unavailable';
       setStatus(err.message || 'Unable to load schedule.', true);
+      logInteraction('digital_id_load_error', {
+        eventId: state.eventId,
+        clientId: state.clientId,
+        error: err.message || 'unknown'
+      });
     }
   }
 

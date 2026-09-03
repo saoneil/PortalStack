@@ -1,4 +1,5 @@
 import { bindTouchDnD } from './touch-dnd.js';
+import { logInteraction } from './portal-log.js';
 
 const DEFAULT_MATCH = 3;
 const DEFAULT_BUFFER = 0.5;
@@ -1847,6 +1848,12 @@ async function autoFillSchedule() {
         ? 'Auto-fill finished with placements skipped (check day windows / durations).'
         : 'Auto-fill complete.')
   );
+  logInteraction('live_schedule_auto_fill', {
+    eventId: ctx.eventId,
+    clientId: ctx.clientId,
+    placed: result.placed || 0,
+    skipped: result.skipped || 0
+  });
 }
 
 function placedIdsInScheduleOrder(sched) {
@@ -2050,6 +2057,10 @@ function downloadQrCode() {
       URL.revokeObjectURL(objectUrl);
       document.body.removeChild(qrContainer);
       showToast('QR code downloaded.');
+      logInteraction('live_schedule_download_qr', {
+        eventId: ctx.eventId,
+        clientId: ctx.clientId
+      });
     });
   }, 100);
 }
@@ -2149,6 +2160,15 @@ async function saveSchedule({ silent = false } = {}) {
       }
     } else {
       showToast('Schedule saved.');
+    }
+    if (!silent) {
+      logInteraction('live_schedule_save', {
+        eventId: ctx.eventId,
+        clientId: ctx.clientId,
+        reflowed: Boolean(reflow?.reflowed),
+        placed: reflow?.placed || 0,
+        skipped: reflow?.skipped || 0
+      });
     }
   } finally {
     ctx.autoSaveInFlight = false;
@@ -2961,6 +2981,10 @@ function bindPicker() {
       return;
     }
     rememberLastEventId(eventId);
+    logInteraction('live_schedule_event_selected', {
+      eventId: eventId,
+      clientId: ctx.clientId
+    });
     notifyPortalEventSelected(eventId);
     window.location.href = scheduleHref(ctx.clientId, eventId);
   });
@@ -3044,6 +3068,12 @@ async function init() {
     updateHeader();
     try {
       await refreshSchedule();
+      logInteraction('page_view', {
+        description: 'Live schedule page loaded',
+        mode: ctx.mode,
+        eventId: ctx.eventId,
+        clientId: ctx.clientId
+      });
     } catch (err) {
       if (isToolMode()) {
         setPanels({ viewer: true });
@@ -3066,10 +3096,12 @@ async function init() {
 
   if (isToolMode()) {
     await showPicker();
+    logInteraction('page_view', { description: 'Live schedule tool opened', mode: ctx.mode });
     return;
   }
 
   await openFirstSavedSchedule();
+  logInteraction('page_view', { description: 'Live schedule viewer opened', mode: ctx.mode });
 }
 
 init().catch((err) => {

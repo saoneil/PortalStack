@@ -1,6 +1,6 @@
 /**
  * PMA Score Portal — Copyright (c) 2025–2026 Performance Martial Arts. All rights reserved.
- * Sole author: Sean O'Neil. Proprietary; see NOTICE and PROVENANCE.md.
+ * Sole author: Sean O'Neil. Proprietary; see docs/NOTICE and docs/PROVENANCE.md.
  */
 require('dotenv').config();
 
@@ -1519,7 +1519,7 @@ app.post('/api/registration/submit', registrationSubmitLimiter, (req, res) => {
 // Public interaction logs are limited to unauthenticated entry pages.
 app.post('/api/public-log', publicLogLimiter, (req, res) => {
   const interaction = req.body.interaction || {};
-  const publicPages = ['index', 'login', 'signup', 'registration_successful', 'registration', 'live-schedule'];
+  const publicPages = ['index', 'login', 'signup', 'registration_successful', 'registration', 'live-schedule', 'pricing', 'payments'];
 
   if (!publicPages.includes(interaction.page)) {
     return res.status(403).json({ error: 'Public logging is not allowed for this page' });

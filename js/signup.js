@@ -35,6 +35,7 @@ document.getElementById('registerForm').addEventListener('submit', function(e) {
   if (isReservedUsername(username)) {
     var error = document.getElementById('username-error');
     if (error) error.hidden = false;
+    logInteraction('register_validation_error', { client: client, username: username, reason: 'reserved_username' });
     return;
   }
 
@@ -48,12 +49,15 @@ document.getElementById('registerForm').addEventListener('submit', function(e) {
   .then(function(res) { return res.json().then(function(data) { return { ok: res.ok, data: data }; }); })
   .then(function(result) {
     if (result.data.success && result.data.redirect) {
+      logInteraction('register_success', { client: client, username: username });
       window.location.href = result.data.redirect;
     } else {
+      logInteraction('register_error', { client: client, username: username, error: result.data.error || 'unknown' });
       alert(result.data.error || 'Registration failed. Please try again.');
     }
   })
   .catch(function() {
+    logInteraction('register_error', { client: client, username: username, error: 'network' });
     alert('Unable to reach the server. Please try again shortly.');
   });
 });

@@ -377,6 +377,7 @@ async function startOver() {
     showToast('divisions, draws, results, and schedules removed. start from the beginning.');
     notifyPortalDataUpdated({ eventId: state.eventId, deleted: true });
     await refreshWheelFromStatus();
+    logInteraction('division_start_over', { eventId: state.eventId });
   } catch (err) {
     showToast(err.message || 'unable to start over.', true);
   }
@@ -384,6 +385,7 @@ async function startOver() {
 
 async function saveDivisionsAndContinue() {
   const count = await saveDivisionsForEvent(state.leaves);
+  logInteraction('divisions_saved', { eventId: state.eventId, count: count });
   showToast(`saved ${count} divisions for this event.`);
   await refreshWheelFromStatus();
 }
@@ -400,7 +402,10 @@ async function regenerateDrawsSession({ silent = false } = {}) {
   state.selectedAthleteIndices = new Set();
   renderDraws();
   notifyPortalDataUpdated({ eventId });
-  if (!silent) showToast('draws saved.');
+  if (!silent) {
+    logInteraction('draws_saved', { eventId });
+    showToast('draws saved.');
+  }
 }
 
 async function ensureDrawsLoadedForEvent() {
@@ -447,6 +452,7 @@ async function downloadEventDrawPdfs() {
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+  logInteraction('draws_pdf_downloaded', { eventId });
 }
 
 function bindEventSelect() {
@@ -465,9 +471,13 @@ async function applySelectedEvent(eventId, { notifyParent = true } = {}) {
     select.value = '';
   }
   if (String(state.eventId || '') === next && state.eventId) return;
+  const previousEventId = state.eventId || null;
   state.eventId = next;
   if (state.eventId) rememberPortalEventId(state.eventId);
   if (notifyParent) notifyPortalEventSelected(state.eventId);
+  if (next !== previousEventId) {
+    logInteraction('division_event_selected', { eventId: next || null, previousEventId: previousEventId });
+  }
   resetSessionData();
   renderDivisionsTable();
   renderDraws();
@@ -510,6 +520,7 @@ function bindWheelActions() {
           applyDescriptiveDivisionNames(state.leaves);
           if (data.failures?.length) showToast(`skipped: ${data.failures.join(', ')}`, true);
           const count = await saveDivisionsForEvent(state.leaves);
+          logInteraction('divisions_defaults_applied', { eventId: state.eventId, count: count });
           showToast(`saved ${count} default divisions for this event.`);
           await refreshWheelFromStatus();
         },
@@ -628,6 +639,7 @@ function bindWheelActions() {
           writeSoloCombinedFlag(false);
           renderDraws();
           showToast('draws created and saved.');
+          logInteraction('draws_created', { eventId: state.eventId });
           notifyPortalDataUpdated({ eventId: state.eventId });
           await refreshWheelFromStatus();
         },
@@ -705,6 +717,7 @@ function bindWheelActions() {
       if (!nickname) return;
       const name = await saveNamedDivisionTemplate(nickname, state.leaves);
       markDivisionTemplateSaved(name);
+      logInteraction('division_template_saved', { eventId: state.eventId, templateName: name });
       showToast(`division template "${name}" saved.`);
     } catch (err) {
       showToast(err.message || 'unable to save division template.', true);
@@ -740,6 +753,7 @@ function bindWheelActions() {
       const { merged, remaining } = combineSoloDivisionsLocally();
       if (merged > 0) {
         await regenerateDrawsSession({ silent: true });
+        logInteraction('draws_solo_combined', { eventId: state.eventId, merged: merged, remaining: remaining });
       }
       markCombineSoloButtonDone();
 
@@ -795,6 +809,7 @@ function bindDivisions() {
       }));
       state.leaves = [...state.leaves, ...added];
       renderDivisionsTable();
+      logInteraction('divisions_pattern_generated', { eventId: state.eventId, count: added.length });
       showToast(`added ${added.length} division leaves.`);
     } catch (err) {
       showToast(err.message, true);

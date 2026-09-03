@@ -1,3 +1,5 @@
+import { logInteraction as portalLog } from '../portal-log.js';
+
 export async function apiFetch(path, options = {}) {
   const res = await fetch(path, {
     credentials: 'same-origin',
@@ -27,11 +29,7 @@ export async function apiFetch(path, options = {}) {
 }
 
 export function logInteraction(action, details) {
-  fetch('/api/log', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ interaction: { action, page: 'division-advanced', ...(details || {}) } })
-  }).catch(() => {});
+  portalLog(action, details, 'division-advanced');
 }
 
 const PORTAL_LAST_EVENT_KEY = 'portal-last-event-id';

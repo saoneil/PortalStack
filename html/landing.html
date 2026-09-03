@@ -7,8 +7,10 @@
   <title>client view</title>
   <link rel="stylesheet" href="css/landing.css">
   <link rel="stylesheet" href="/css/pricing-mobile.css">
+  <link rel="stylesheet" href="/css/paypal-terms.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="/js/pricing-mobile.js"></script>
+  <script src="/js/paypal-terms.js"></script>
   <style>
     /* Larger pricing modal — same layout, bigger type */
     #pricingOverlay table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0; }
@@ -1514,6 +1516,7 @@
 
     document.getElementById('eventRegSelect').addEventListener('change', function() {
       const eventId = this.value;
+      logInteraction('event_registration_event_selected', { eventId: eventId || null });
       if (eventId && eventId !== selectedOrganizerEventId()) {
         setOrganizerEvent(eventId, { skipLocal: true });
       }
@@ -1620,6 +1623,8 @@
 
       formData.append('waiverRequired', document.getElementById('editEventWaiverRequired').checked ? '1' : '0');
       formData.append('waiverText', document.getElementById('editEventWaiverText').value);
+
+      logInteraction('event_edit_submit', { eventId: eventId });
       
       fetch('/api/client-events/' + eventId, {
         method: 'POST',
@@ -1628,9 +1633,11 @@
         .then(res => res.json())
         .then(result => {
           if (result.success) {
+            logInteraction('event_edit_success', { eventId: eventId });
             showEventManagementSuccess();
             loadClientEvents();
           } else {
+            logInteraction('event_edit_error', { eventId: eventId, error: result.error || 'unknown' });
             showAppMessage({
               title: 'update failed',
               message: result.error || 'Unable to update event.'
@@ -1638,6 +1645,7 @@
           }
         })
         .catch(() => {
+          logInteraction('event_edit_error', { eventId: eventId, error: 'network' });
           showAppMessage({
             title: 'update failed',
             message: 'Unable to update event. Please try again.'
@@ -2008,8 +2016,19 @@
             row.dataset.regId = String(result.id);
           }
           syncRegistrationCacheFromTable();
+          logInteraction('registration_row_save', {
+            eventId: eventId,
+            registrationId: row.dataset.regId || null,
+            method: method
+          });
         })
         .catch(function(err) {
+          logInteraction('registration_row_save_error', {
+            eventId: eventId,
+            registrationId: registrationId || null,
+            method: method,
+            error: err.message || 'unknown'
+          });
           showAppMessage({
             title: 'registration save failed',
             message: err.message || 'Unable to save registration.'
@@ -2048,6 +2067,7 @@
         { method: 'DELETE' }
       )
         .then(function() {
+          logInteraction('registration_row_delete', { eventId: eventId, registrationId: registrationId });
           row.remove();
           const table = document.getElementById('regTable');
           const remaining = table ? table.querySelectorAll('tbody tr') : [];
@@ -2056,6 +2076,11 @@
           syncRegistrationCacheFromTable();
         })
         .catch(function(err) {
+          logInteraction('registration_row_delete_error', {
+            eventId: eventId,
+            registrationId: registrationId,
+            error: err.message || 'unknown'
+          });
           showAppMessage({
             title: 'registration delete failed',
             message: err.message || 'Unable to delete registration.'
@@ -2086,6 +2111,7 @@
 
       const row = buildRegistrationRow({});
       tbody.appendChild(row);
+      logInteraction('registration_row_added', { eventId: eventId });
       const firstInput = row.querySelector('input, select');
       if (firstInput) firstInput.focus();
     }
@@ -2154,12 +2180,14 @@
     };
 
     document.getElementById('organizerEventSelect').addEventListener('change', function() {
+      logInteraction('organizer_event_selected', { eventId: this.value || null });
       setOrganizerEvent(this.value);
     });
 
     document.getElementById('organizerDaySelect').addEventListener('change', function() {
       var dayIndex = Number(this.value);
       if (!Number.isFinite(dayIndex) || dayIndex < 0) return;
+      logInteraction('organizer_day_selected', { dayIndex: dayIndex });
       storeFocusDayIndex(dayIndex);
       broadcastToToolFrames({ type: 'portal-focus-day', dayIndex: dayIndex });
     });
@@ -2700,9 +2728,14 @@
         .then(res => res.json())
         .then(result => {
           if (result.success) {
+            logInteraction('event_creation_success', { eventName: formData.get('eventName') });
             document.getElementById('eventCreationForm').hidden = true;
             document.getElementById('eventCreationSuccess').hidden = false;
           } else {
+            logInteraction('event_creation_error', {
+              eventName: formData.get('eventName'),
+              error: result.error || 'unknown'
+            });
             showAppMessage({
               title: 'create failed',
               message: result.error || 'Unable to create event.'
@@ -2710,6 +2743,10 @@
           }
         })
         .catch(() => {
+          logInteraction('event_creation_error', {
+            eventName: formData.get('eventName'),
+            error: 'network'
+          });
           showAppMessage({
             title: 'create failed',
             message: 'Unable to submit event. Please try again.'
