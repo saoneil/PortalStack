@@ -2073,7 +2073,8 @@ html.da-embed .da-split.da-draws-layout.da-custom-division-layout {
   position: fixed;
   z-index: 10002;
   min-width: 240px;
-  max-width: min(360px, calc(100vw - 16px));
+  max-width: min(420px, calc(100vw - 16px));
+  width: max-content;
   padding: 12px 14px;
   border-radius: 10px;
   background: #1a1a1a;
@@ -2090,6 +2091,7 @@ html.da-embed .da-split.da-draws-layout.da-custom-division-layout {
   font-size: 14px;
   font-weight: 700;
   color: #00d4ff;
+  white-space: nowrap;
 }
 
 .da-athlete-details-pop dl {
@@ -2097,6 +2099,7 @@ html.da-embed .da-split.da-draws-layout.da-custom-division-layout {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 4px 12px;
+  align-items: start;
 }
 
 .da-athlete-details-pop dt {
@@ -2104,6 +2107,7 @@ html.da-embed .da-split.da-draws-layout.da-custom-division-layout {
   color: rgba(255, 255, 255, 0.55);
   font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .da-athlete-details-pop dd {
@@ -2111,6 +2115,12 @@ html.da-embed .da-split.da-draws-layout.da-custom-division-layout {
   color: #fff;
   font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
+}
+
+.da-athlete-details-pop dd.is-wrap {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .da-custom-view-bar {

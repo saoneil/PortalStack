@@ -67,6 +67,17 @@ function formatDob(value) {
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
+function ageFromDob(value) {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const monthDiff = now.getMonth() - d.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < d.getDate())) age -= 1;
+  return age >= 0 && age < 130 ? age : null;
+}
+
 function formatMeasure(value, unit) {
   if (value == null || value === '') return '—';
   const n = Number(value);
@@ -110,20 +121,23 @@ function showAthleteDetails(index, clientX, clientY) {
     hideAthleteDetails();
     return;
   }
+  const ageFromField = athlete.age != null && athlete.age !== '' ? Number(athlete.age) : null;
+  const age = Number.isFinite(ageFromField) ? ageFromField : ageFromDob(athlete.dob);
+  const dobText = formatDob(athlete.dob);
+  const dobAge = age != null ? `${dobText} / ${age}` : dobText;
   const rows = [
     ['club', dash(athlete.club || athlete.team)],
-    ['age', athlete.age != null && athlete.age !== '' ? String(athlete.age) : '—'],
-    ['date of birth', formatDob(athlete.dob)],
+    ['D.O.B', dobAge],
     ['rank', dash(athlete.rank)],
     ['gender', dash(athlete.gender)],
     ['weight', formatMeasure(athlete.weight_kg, 'kg')],
     ['height', formatMeasure(athlete.height_cm, 'cm')]
   ];
   const registered = registeredEventNames(athlete);
-  if (registered) rows.push(['events', registered]);
+  if (registered) rows.push(['events', registered, true]);
   nameEl.textContent = athlete.name || `Athlete #${index}`;
-  listEl.innerHTML = rows.map(([label, value]) => (
-    `<dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd>`
+  listEl.innerHTML = rows.map(([label, value, wrap]) => (
+    `<dt>${escapeHtml(label)}</dt><dd${wrap ? ' class="is-wrap"' : ''}>${escapeHtml(value)}</dd>`
   )).join('');
   pop.hidden = false;
   pop.style.left = '0px';

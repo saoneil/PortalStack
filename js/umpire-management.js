@@ -750,7 +750,7 @@ import { logInteraction } from './portal-log.js';
     const dobText = formatDob(umpire.dob);
     const dobAge = age != null ? dobText + ' / ' + age : dobText;
     const rows = [
-      ['date of birth / age', dobAge],
+      ['D.O.B', dobAge],
       ['gender', dash(umpire.gender)],
       ['rank', dash(umpire.rank)],
       ['team', dash(umpire.team_name_or_country)],
