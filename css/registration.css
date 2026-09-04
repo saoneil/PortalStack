@@ -147,6 +147,39 @@ h2 {
   cursor: pointer;
 }
 
+.umpire-only-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  width: 100%;
+}
+
+.select-arrow-field {
+  position: relative;
+}
+
+.select-arrow-field .field-select {
+  padding-right: 42px;
+  background-image: none;
+}
+
+.select-arrow-field .select-arrow-toggle {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  z-index: 3;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  pointer-events: none;
+}
+
 .team-name-picker.is-open .team-picker-toggle {
   color: #00d4ff;
 }

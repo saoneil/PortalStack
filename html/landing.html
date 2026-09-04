@@ -1714,6 +1714,8 @@
       'weight_kg',
       'height_kg',
       'team_name_or_country',
+      'umpire_preferred_role',
+      'umpire_class',
       'individual_patterns',
       'individual_sparring',
       'individual_special_technique',
@@ -1743,6 +1745,16 @@
 
     const REG_ROLE_OPTIONS = ['athlete', 'team', 'coach', 'umpire', 'vip', 'medical', 'volunteer'];
     const REG_GENDER_OPTIONS = ['', 'M', 'F', 'X'];
+    const REG_UMPIRE_PREFERRED_ROLE_OPTIONS = [
+      '',
+      'jury_president',
+      'jury_member',
+      'it_umpire',
+      'center_referee',
+      'referee',
+      'equipment_verifier'
+    ];
+    const REG_UMPIRE_CLASS_OPTIONS = ['', 'Class A', 'Class B', 'Class C', 'Class D'];
 
     function loadRegistrations(eventId) {
       fetch('/api/client-events/' + eventId + '/registrations')
@@ -1875,6 +1887,44 @@
         return select;
       }
 
+      if (field === 'umpire_preferred_role') {
+        const select = document.createElement('select');
+        select.dataset.field = field;
+        select.setAttribute('aria-label', 'umpire preferred role');
+        const current = value == null ? '' : String(value);
+        const options = REG_UMPIRE_PREFERRED_ROLE_OPTIONS.slice();
+        if (current && options.indexOf(current) === -1) {
+          options.push(current);
+        }
+        options.forEach(function(optionValue) {
+          const option = document.createElement('option');
+          option.value = optionValue;
+          option.textContent = optionValue || '';
+          if (optionValue === current) option.selected = true;
+          select.appendChild(option);
+        });
+        return select;
+      }
+
+      if (field === 'umpire_class') {
+        const select = document.createElement('select');
+        select.dataset.field = field;
+        select.setAttribute('aria-label', 'umpire class');
+        const current = value == null ? '' : String(value);
+        const options = REG_UMPIRE_CLASS_OPTIONS.slice();
+        if (current && options.indexOf(current) === -1) {
+          options.push(current);
+        }
+        options.forEach(function(optionValue) {
+          const option = document.createElement('option');
+          option.value = optionValue;
+          option.textContent = optionValue || '';
+          if (optionValue === current) option.selected = true;
+          select.appendChild(option);
+        });
+        return select;
+      }
+
       const input = document.createElement('input');
       input.dataset.field = field;
       input.setAttribute('aria-label', field.replace(/_/g, ' '));
@@ -1971,7 +2021,13 @@
     }
 
     function rowHasRequiredRegistrationFields(payload) {
-      return !!(payload.role && payload.first_name && payload.last_name && payload.contact_email);
+      if (!(payload.role && payload.first_name && payload.last_name && payload.contact_email)) {
+        return false;
+      }
+      if (String(payload.role).toLowerCase() === 'umpire') {
+        return !!(payload.umpire_preferred_role && payload.umpire_class);
+      }
+      return true;
     }
 
     function syncRegistrationCacheFromTable() {

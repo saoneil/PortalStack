@@ -469,6 +469,9 @@ var teamRankSelect = document.getElementById('reg-team-rank');
 var teamGenderSelect = document.getElementById('reg-team-gender');
 var staffRankSelect = document.getElementById('reg-staff-rank');
 var staffGenderSelect = document.getElementById('reg-staff-gender');
+var umpireOnlyFields = document.getElementById('umpireOnlyFields');
+var umpirePreferredRoleSelect = document.getElementById('reg-umpire-preferred-role');
+var umpireClassSelect = document.getElementById('reg-umpire-class');
 var confirmOverlay = document.getElementById('confirmOverlay');
 var confirmSummary = document.getElementById('confirmSummary');
 var confirmSubmitBtn = document.getElementById('confirmSubmitBtn');
@@ -571,6 +574,10 @@ function syncFieldEmptyStates() {
   if (teamGenderSelect) teamGenderSelect.classList.toggle('field-empty', !teamGenderSelect.value);
   if (staffRankSelect) staffRankSelect.classList.toggle('field-empty', !staffRankSelect.value);
   if (staffGenderSelect) staffGenderSelect.classList.toggle('field-empty', !staffGenderSelect.value);
+  if (umpirePreferredRoleSelect) {
+    umpirePreferredRoleSelect.classList.toggle('field-empty', !umpirePreferredRoleSelect.value);
+  }
+  if (umpireClassSelect) umpireClassSelect.classList.toggle('field-empty', !umpireClassSelect.value);
 }
 
 var dobParts = { year: '', month: '', day: '' };
@@ -633,6 +640,10 @@ function dobRenderHtml() {
 function isStaffRole() {
   var role = roleSelect.value;
   return role === 'coach' || role === 'umpire';
+}
+
+function isUmpireRole() {
+  return roleSelect.value === 'umpire';
 }
 
 function getActiveDobInput() {
@@ -818,6 +829,7 @@ function hideRoleFields() {
   athleteFields.hidden = true;
   if (teamFields) teamFields.hidden = true;
   if (staffFields) staffFields.hidden = true;
+  if (umpireOnlyFields) umpireOnlyFields.hidden = true;
   simpleFields.hidden = true;
   submitRow.hidden = true;
   if (reviewWaiverBtn) reviewWaiverBtn.hidden = true;
@@ -845,6 +857,7 @@ function onRoleChange() {
     applyTeamDefaults();
   } else if (isStaffRole()) {
     if (staffFields) staffFields.hidden = false;
+    if (umpireOnlyFields) umpireOnlyFields.hidden = !isUmpireRole();
     applyStaffDefaults();
   } else {
     simpleFields.hidden = false;
@@ -896,6 +909,8 @@ function applyStaffDefaults() {
   if (staffGenderSelect) staffGenderSelect.value = '';
   var teamInput = document.getElementById('reg-staff-team');
   if (teamInput) teamInput.value = '';
+  if (umpirePreferredRoleSelect) umpirePreferredRoleSelect.value = '';
+  if (umpireClassSelect) umpireClassSelect.value = '';
 }
 
 function resetRegistrationForm() {
@@ -971,6 +986,12 @@ function collectRegistrationPayload() {
     payload.rank = scrubFieldValue(staffRankSelect && staffRankSelect.value);
     payload.gender = scrubFieldValue(staffGenderSelect && staffGenderSelect.value);
     payload.teamNameOrCountry = scrubFieldValue(document.getElementById('reg-staff-team').value);
+    if (isUmpireRole()) {
+      payload.umpirePreferredRole = scrubFieldValue(
+        umpirePreferredRoleSelect && umpirePreferredRoleSelect.value
+      );
+      payload.umpireClass = scrubFieldValue(umpireClassSelect && umpireClassSelect.value);
+    }
   } else {
     payload.contactEmail = scrubFieldValue(document.getElementById('reg-simple-email').value);
     payload.firstName = scrubFieldValue(entryForm.simpleFirstName.value);
@@ -1036,6 +1057,14 @@ function validateRegistration() {
     if (!staffGenderSelect || !staffGenderSelect.value) return 'please select your gender.';
     if (!scrubFieldValue(document.getElementById('reg-staff-team').value)) {
       return 'please enter your team name or country.';
+    }
+    if (isUmpireRole()) {
+      if (!umpirePreferredRoleSelect || !umpirePreferredRoleSelect.value) {
+        return 'please select your preferred role.';
+      }
+      if (!umpireClassSelect || !umpireClassSelect.value) {
+        return 'please select your umpire class.';
+      }
     }
     return '';
   }
@@ -1123,6 +1152,10 @@ function buildConfirmSummary(payload) {
     lines.push('rank: ' + payload.rank);
     lines.push('gender: ' + payload.gender);
     lines.push('team/country: ' + payload.teamNameOrCountry);
+    if (payload.role === 'umpire') {
+      if (payload.umpirePreferredRole) lines.push('preferred role: ' + payload.umpirePreferredRole);
+      if (payload.umpireClass) lines.push('umpire class: ' + payload.umpireClass);
+    }
   } else {
     lines.push('name: ' + payload.firstName + ' ' + payload.lastName);
     lines.push('email: ' + payload.contactEmail);
@@ -1651,6 +1684,8 @@ if (teamRankSelect) teamRankSelect.addEventListener('change', syncFieldEmptyStat
 if (teamGenderSelect) teamGenderSelect.addEventListener('change', syncFieldEmptyStates);
 if (staffRankSelect) staffRankSelect.addEventListener('change', syncFieldEmptyStates);
 if (staffGenderSelect) staffGenderSelect.addEventListener('change', syncFieldEmptyStates);
+if (umpirePreferredRoleSelect) umpirePreferredRoleSelect.addEventListener('change', syncFieldEmptyStates);
+if (umpireClassSelect) umpireClassSelect.addEventListener('change', syncFieldEmptyStates);
 initDobField();
 initFieldHints();
 initTeamNamePickers();

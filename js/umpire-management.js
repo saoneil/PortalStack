@@ -48,6 +48,170 @@ import { logInteraction } from './portal-log.js';
 
   const SLOT_CAPACITY = 3;
 
+  const UMPIRE_PREFERRED_ROLE_LABELS = {
+    jury_president: 'Jury President',
+    jury_member: 'Jury Member',
+    it_umpire: 'IT-Umpire',
+    center_referee: 'Center Referee',
+    referee: 'Referee',
+    equipment_verifier: 'Equipment Verifier'
+  };
+
+  const COUNTRY_TO_REGION = {
+    'united states': 'North America',
+    'usa': 'North America',
+    'us': 'North America',
+    'canada': 'North America',
+    'mexico': 'North America',
+    'guatemala': 'North America',
+    'honduras': 'North America',
+    'el salvador': 'North America',
+    'nicaragua': 'North America',
+    'costa rica': 'North America',
+    'panama': 'North America',
+    'cuba': 'North America',
+    'jamaica': 'North America',
+    'haiti': 'North America',
+    'dominican republic': 'North America',
+    'puerto rico': 'North America',
+    'trinidad and tobago': 'North America',
+    'bahamas': 'North America',
+    'barbados': 'North America',
+    'belize': 'North America',
+    'argentina': 'South America',
+    'brazil': 'South America',
+    'chile': 'South America',
+    'colombia': 'South America',
+    'peru': 'South America',
+    'venezuela': 'South America',
+    'ecuador': 'South America',
+    'bolivia': 'South America',
+    'paraguay': 'South America',
+    'uruguay': 'South America',
+    'guyana': 'South America',
+    'suriname': 'South America',
+    'united kingdom': 'Europe',
+    'uk': 'Europe',
+    'england': 'Europe',
+    'scotland': 'Europe',
+    'wales': 'Europe',
+    'ireland': 'Europe',
+    'northern ireland': 'Europe',
+    'france': 'Europe',
+    'germany': 'Europe',
+    'italy': 'Europe',
+    'spain': 'Europe',
+    'portugal': 'Europe',
+    'netherlands': 'Europe',
+    'belgium': 'Europe',
+    'switzerland': 'Europe',
+    'austria': 'Europe',
+    'sweden': 'Europe',
+    'norway': 'Europe',
+    'denmark': 'Europe',
+    'finland': 'Europe',
+    'poland': 'Europe',
+    'czech republic': 'Europe',
+    'czechia': 'Europe',
+    'slovakia': 'Europe',
+    'hungary': 'Europe',
+    'romania': 'Europe',
+    'bulgaria': 'Europe',
+    'greece': 'Europe',
+    'croatia': 'Europe',
+    'serbia': 'Europe',
+    'slovenia': 'Europe',
+    'bosnia and herzegovina': 'Europe',
+    'ukraine': 'Europe',
+    'russia': 'Europe',
+    'iceland': 'Europe',
+    'luxembourg': 'Europe',
+    'malta': 'Europe',
+    'cyprus': 'Europe',
+    'estonia': 'Europe',
+    'latvia': 'Europe',
+    'lithuania': 'Europe',
+    'albania': 'Europe',
+    'north macedonia': 'Europe',
+    'montenegro': 'Europe',
+    'moldova': 'Europe',
+    'belarus': 'Europe',
+    'china': 'Asia',
+    'japan': 'Asia',
+    'south korea': 'Asia',
+    'korea': 'Asia',
+    'north korea': 'Asia',
+    'india': 'Asia',
+    'pakistan': 'Asia',
+    'bangladesh': 'Asia',
+    'sri lanka': 'Asia',
+    'nepal': 'Asia',
+    'thailand': 'Asia',
+    'vietnam': 'Asia',
+    'philippines': 'Asia',
+    'indonesia': 'Asia',
+    'malaysia': 'Asia',
+    'singapore': 'Asia',
+    'taiwan': 'Asia',
+    'hong kong': 'Asia',
+    'macau': 'Asia',
+    'mongolia': 'Asia',
+    'kazakhstan': 'Asia',
+    'uzbekistan': 'Asia',
+    'cambodia': 'Asia',
+    'laos': 'Asia',
+    'myanmar': 'Asia',
+    'iran': 'Asia',
+    'iraq': 'Asia',
+    'israel': 'Asia',
+    'jordan': 'Asia',
+    'lebanon': 'Asia',
+    'saudi arabia': 'Asia',
+    'united arab emirates': 'Asia',
+    'uae': 'Asia',
+    'qatar': 'Asia',
+    'kuwait': 'Asia',
+    'bahrain': 'Asia',
+    'oman': 'Asia',
+    'turkey': 'Asia',
+    'afghanistan': 'Asia',
+    'egypt': 'Africa',
+    'south africa': 'Africa',
+    'nigeria': 'Africa',
+    'kenya': 'Africa',
+    'ghana': 'Africa',
+    'ethiopia': 'Africa',
+    'morocco': 'Africa',
+    'algeria': 'Africa',
+    'tunisia': 'Africa',
+    'libya': 'Africa',
+    'sudan': 'Africa',
+    'uganda': 'Africa',
+    'tanzania': 'Africa',
+    'cameroon': 'Africa',
+    'senegal': 'Africa',
+    'ivory coast': 'Africa',
+    "cote d'ivoire": 'Africa',
+    'zimbabwe': 'Africa',
+    'zambia': 'Africa',
+    'botswana': 'Africa',
+    'namibia': 'Africa',
+    'mozambique': 'Africa',
+    'angola': 'Africa',
+    'rwanda': 'Africa',
+    'somalia': 'Africa',
+    'georgia': 'Asia',
+    'armenia': 'Asia',
+    'azerbaijan': 'Asia',
+    'australia': 'Oceania',
+    'new zealand': 'Oceania',
+    'fiji': 'Oceania',
+    'papua new guinea': 'Oceania',
+    'samoa': 'Oceania',
+    'tonga': 'Oceania',
+    'vanuatu': 'Oceania'
+  };
+
   const RING_SLOTS = RING_SLOT_GROUPS.reduce((list, group) => {
     group.slots.forEach((key) => {
       list.push({ key, label: SLOT_LABELS[key] || key, group: group.id });
@@ -67,7 +231,14 @@ import { logInteraction } from './portal-log.js';
     gridLayout: '1x',
     overlaySchedule: false,
     scheduleOverlay: null,
-    eventDateStart: null
+    eventDateStart: null,
+    filters: {
+      rank: '',
+      team: '',
+      region: '',
+      preferredRole: '',
+      class: ''
+    }
   };
 
   let dragPayload = null;
@@ -496,6 +667,153 @@ import { logInteraction } from './portal-log.js';
     return parts.join(' · ');
   }
 
+  function dash(value) {
+    const text = String(value ?? '').trim();
+    return text || '—';
+  }
+
+  function formatDob(value) {
+    if (!value) return '—';
+    const raw = String(value).trim();
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return raw;
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+
+  function ageFromDob(value) {
+    if (!value) return null;
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return null;
+    const now = new Date();
+    let age = now.getFullYear() - d.getFullYear();
+    const monthDiff = now.getMonth() - d.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < d.getDate())) age -= 1;
+    return age >= 0 && age < 130 ? age : null;
+  }
+
+  function preferredRoleLabel(value) {
+    const key = String(value || '').trim().toLowerCase();
+    return UMPIRE_PREFERRED_ROLE_LABELS[key] || dash(value);
+  }
+
+  function rankFilterBucket(rank) {
+    const text = String(rank || '').trim().toLowerCase();
+    if (!text) return '';
+    if (text.indexOf('gup') !== -1) return 'color_belt';
+    const match = text.match(/(\d+)(?:st|nd|rd|th)?\s*dan/);
+    if (!match) return '';
+    const n = Number(match[1]);
+    if (!Number.isFinite(n) || n < 1) return '';
+    if (n >= 7) return '7th_dan_plus';
+    return n + (n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th') + '_dan';
+  }
+
+  function regionForTeam(team) {
+    const key = String(team || '').trim().toLowerCase();
+    if (!key) return 'Other';
+    return COUNTRY_TO_REGION[key] || 'Other';
+  }
+
+  function umpirePassesFilters(umpire) {
+    const filters = state.filters || {};
+    if (filters.rank && rankFilterBucket(umpire.rank) !== filters.rank) return false;
+    if (filters.team && String(umpire.team_name_or_country || '').trim() !== filters.team) return false;
+    if (filters.region && regionForTeam(umpire.team_name_or_country) !== filters.region) return false;
+    if (filters.preferredRole
+      && String(umpire.umpire_preferred_role || '').trim().toLowerCase() !== filters.preferredRole) {
+      return false;
+    }
+    if (filters.class && String(umpire.umpire_class || '').trim() !== filters.class) return false;
+    return true;
+  }
+
+  function detailsPop() {
+    return document.getElementById('umpireDetailsPop');
+  }
+
+  function hideUmpireDetails() {
+    const pop = detailsPop();
+    if (pop) pop.hidden = true;
+  }
+
+  function showUmpireDetails(id, clientX, clientY) {
+    const umpire = state.umpiresById[String(id || '')];
+    const pop = detailsPop();
+    const nameEl = document.getElementById('umpireDetailsName');
+    const listEl = document.getElementById('umpireDetailsList');
+    if (!pop || !nameEl || !listEl) return;
+    if (!umpire) {
+      hideUmpireDetails();
+      return;
+    }
+    const age = ageFromDob(umpire.dob);
+    const dobText = formatDob(umpire.dob);
+    const dobAge = age != null ? dobText + ' / ' + age : dobText;
+    const rows = [
+      ['date of birth / age', dobAge],
+      ['gender', dash(umpire.gender)],
+      ['rank', dash(umpire.rank)],
+      ['team', dash(umpire.team_name_or_country)],
+      ['preferred role', preferredRoleLabel(umpire.umpire_preferred_role)],
+      ['class', dash(umpire.umpire_class)],
+      ['email', dash(umpire.contact_email)]
+    ];
+    nameEl.textContent = umpireDisplayName(umpire);
+    listEl.innerHTML = rows.map(([label, value]) => (
+      '<dt>' + escapeHtml(label) + '</dt><dd>' + escapeHtml(value) + '</dd>'
+    )).join('');
+    pop.hidden = false;
+    pop.style.left = '0px';
+    pop.style.top = '0px';
+    const pad = 8;
+    const rect = pop.getBoundingClientRect();
+    let left = clientX;
+    let top = clientY;
+    if (left + rect.width > window.innerWidth - pad) {
+      left = Math.max(pad, window.innerWidth - rect.width - pad);
+    }
+    if (top + rect.height > window.innerHeight - pad) {
+      top = Math.max(pad, window.innerHeight - rect.height - pad);
+    }
+    pop.style.left = left + 'px';
+    pop.style.top = top + 'px';
+  }
+
+  function resetFilters() {
+    state.filters = { rank: '', team: '', region: '', preferredRole: '', class: '' };
+    const rankSelect = document.getElementById('umpireFilterRank');
+    const teamSelect = document.getElementById('umpireFilterTeam');
+    const regionSelect = document.getElementById('umpireFilterRegion');
+    const preferredRoleSelect = document.getElementById('umpireFilterPreferredRole');
+    const classSelect = document.getElementById('umpireFilterClass');
+    if (rankSelect) rankSelect.value = '';
+    if (teamSelect) teamSelect.value = '';
+    if (regionSelect) regionSelect.value = '';
+    if (preferredRoleSelect) preferredRoleSelect.value = '';
+    if (classSelect) classSelect.value = '';
+  }
+
+  function rebuildTeamFilterOptions() {
+    const select = document.getElementById('umpireFilterTeam');
+    if (!select) return;
+    const keep = String(state.filters.team || '');
+    const teams = Array.from(new Set(
+      state.umpires
+        .map((umpire) => String(umpire.team_name_or_country || '').trim())
+        .filter(Boolean)
+    )).sort((a, b) => a.localeCompare(b));
+    select.innerHTML = '<option value="">team</option>' + teams.map((team) => (
+      '<option value="' + escapeHtml(team) + '">' + escapeHtml(team) + '</option>'
+    )).join('');
+    if (keep && teams.indexOf(keep) !== -1) {
+      select.value = keep;
+      state.filters.team = keep;
+    } else {
+      select.value = '';
+      state.filters.team = '';
+    }
+  }
+
   function slotLabel(slotKey) {
     const slot = RING_SLOTS.find((item) => item.key === slotKey);
     return slot ? slot.label : slotKey;
@@ -751,20 +1069,25 @@ import { logInteraction } from './portal-log.js';
     const empty = document.getElementById('umpireListEmpty');
     const count = state.umpires.length;
     const unassigned = state.umpires.filter((umpire) => !findAssignment(umpireId(umpire)));
+    const visible = unassigned.filter(umpirePassesFilters);
     if (heading) {
       heading.textContent = count === 1 ? '1 registered umpire' : (count + ' registered umpires');
     }
     if (!list || !empty) return;
-    if (!unassigned.length) {
+    if (!visible.length) {
       list.innerHTML = '';
       empty.hidden = false;
-      empty.textContent = count
-        ? 'All umpires are assigned to rings.'
-        : 'No umpires are registered for this event.';
+      if (!count) {
+        empty.textContent = 'No umpires are registered for this event.';
+      } else if (!unassigned.length) {
+        empty.textContent = 'All umpires are assigned to rings.';
+      } else {
+        empty.textContent = 'No unassigned umpires match the current filters.';
+      }
       return;
     }
     empty.hidden = true;
-    list.innerHTML = unassigned.map((umpire) => {
+    list.innerHTML = visible.map((umpire) => {
       const id = umpireId(umpire);
       const meta = umpireMeta(umpire);
       return (
@@ -1575,6 +1898,9 @@ import { logInteraction } from './portal-log.js';
       state.openRing = 0;
       state.scheduleOverlay = null;
       state.eventDateStart = null;
+      resetFilters();
+      rebuildTeamFilterOptions();
+      hideUmpireDetails();
       showStage(false);
       setStatus('');
       syncOverlayTimer();
@@ -1593,6 +1919,9 @@ import { logInteraction } from './portal-log.js';
       state.selectedIds = [];
       selectionAnchor = null;
       state.openRing = keepOpenRing >= 1 && keepOpenRing <= state.ringCount ? keepOpenRing : 0;
+      if (!preserveView) resetFilters();
+      rebuildTeamFilterOptions();
+      hideUmpireDetails();
       renderAll();
       showStage(true);
       setStatus('');
@@ -1606,6 +1935,9 @@ import { logInteraction } from './portal-log.js';
       state.openRing = 0;
       state.scheduleOverlay = null;
       state.eventDateStart = null;
+      resetFilters();
+      rebuildTeamFilterOptions();
+      hideUmpireDetails();
       showStage(false);
       setStatus(err.message || 'Unable to load umpire data.', true);
       syncOverlayTimer();
@@ -1912,18 +2244,20 @@ import { logInteraction } from './portal-log.js';
     const filledSeat = e.target.closest('.umpire-slot-seat.is-filled');
     const umpireEl = e.target.closest('[data-umpire-id]')
       || (filledSeat ? filledSeat : null);
-    if (umpireEl && !e.target.closest('.umpire-slot-clear') && !e.target.closest('.umpire-ring-card')) {
+    if (umpireEl && !e.target.closest('.umpire-slot-clear') && !e.target.closest('.umpire-ring-roster-clear') && !e.target.closest('.umpire-ring-card')) {
       const scope = umpireEl.closest('#umpirePool')
         ? 'pool'
         : Number(umpireEl.closest('[data-ring]')?.getAttribute('data-ring') || 0);
       applySelectionFromClick(umpireEl.getAttribute('data-umpire-id'), scope, e);
       markSelectedInDom();
+      showUmpireDetails(umpireEl.getAttribute('data-umpire-id'), e.clientX, e.clientY);
       return;
     }
 
     if (!state.openRing) {
       const ringWrap = e.target.closest('.umpire-mgmt-rings .umpire-ring');
       if (ringWrap) {
+        hideUmpireDetails();
         openRingModal(Number(ringWrap.getAttribute('data-ring')));
         return;
       }
@@ -1935,10 +2269,19 @@ import { logInteraction } from './portal-log.js';
         markSelectedInDom();
       }
     }
+
+    const pop = detailsPop();
+    if (pop && !pop.hidden && !pop.contains(e.target) && !e.target.closest('[data-umpire-id]')) {
+      hideUmpireDetails();
+    }
   });
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+      if (detailsPop() && !detailsPop().hidden) {
+        hideUmpireDetails();
+        return;
+      }
       if (state.openRing) {
         closeRingModal();
         return;
@@ -1977,6 +2320,21 @@ import { logInteraction } from './portal-log.js';
   document.getElementById('umpireOverlayScheduleBtn')?.addEventListener('click', function () {
     setOverlaySchedule(!state.overlaySchedule);
   });
+
+  function bindFilterSelect(id, key) {
+    const select = document.getElementById(id);
+    if (!select) return;
+    select.addEventListener('change', function () {
+      state.filters[key] = String(select.value || '');
+      renderUmpires();
+      syncScrollAffordances();
+    });
+  }
+  bindFilterSelect('umpireFilterRank', 'rank');
+  bindFilterSelect('umpireFilterTeam', 'team');
+  bindFilterSelect('umpireFilterRegion', 'region');
+  bindFilterSelect('umpireFilterPreferredRole', 'preferredRole');
+  bindFilterSelect('umpireFilterClass', 'class');
 
   const ringGrid = document.getElementById('umpireRingGrid');
   if (ringGrid && typeof ResizeObserver !== 'undefined') {

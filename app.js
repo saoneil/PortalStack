@@ -283,6 +283,66 @@ function isValidEmail(value) {
 
 const ALLOWED_ROLES = ['athlete', 'team', 'coach', 'umpire', 'vip', 'medical', 'volunteer'];
 
+const UMPIRE_PREFERRED_ROLE_KEYS = [
+  'jury_president',
+  'jury_member',
+  'it_umpire',
+  'center_referee',
+  'referee',
+  'equipment_verifier'
+];
+
+const UMPIRE_PREFERRED_ROLE_LABELS = {
+  jury_president: 'Jury President',
+  jury_member: 'Jury Member',
+  it_umpire: 'IT-Umpire',
+  center_referee: 'Center Referee',
+  referee: 'Referee',
+  equipment_verifier: 'Equipment Verifier'
+};
+
+const UMPIRE_CLASS_OPTIONS = ['Class A', 'Class B', 'Class C', 'Class D'];
+
+function normalizeUmpirePreferredRole(value) {
+  const key = String(value || '').trim().toLowerCase();
+  return UMPIRE_PREFERRED_ROLE_KEYS.includes(key) ? key : null;
+}
+
+function normalizeUmpireClass(value) {
+  const text = String(value || '').trim();
+  return UMPIRE_CLASS_OPTIONS.includes(text) ? text : null;
+}
+
+let registrationUmpireColumnsPromise = null;
+function ensureRegistrationUmpireColumns() {
+  if (!registrationUmpireColumnsPromise) {
+    registrationUmpireColumnsPromise = (async () => {
+      const columns = await queryAsync(
+        `SELECT COLUMN_NAME AS name
+         FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'registration'
+           AND COLUMN_NAME IN ('umpire_preferred_role', 'umpire_class')`
+      );
+      const existing = new Set((columns || []).map((row) => String(row.name)));
+      if (!existing.has('umpire_preferred_role')) {
+        await queryAsync(
+          'ALTER TABLE registration ADD COLUMN umpire_preferred_role VARCHAR(64) NULL'
+        );
+      }
+      if (!existing.has('umpire_class')) {
+        await queryAsync(
+          'ALTER TABLE registration ADD COLUMN umpire_class VARCHAR(16) NULL'
+        );
+      }
+    })().catch((err) => {
+      registrationUmpireColumnsPromise = null;
+      throw err;
+    });
+  }
+  return registrationUmpireColumnsPromise;
+}
+
 const ATHLETE_EVENT_FIELDS = [
   'individualPatterns',
   'individualSparring',
@@ -1169,6 +1229,8 @@ app.post('/api/registration/submit', registrationSubmitLimiter, (req, res) => {
   let weightKg = null;
   let heightKg = null;
   let teamNameOrCountry = null;
+  let umpirePreferredRole = null;
+  let umpireClass = null;
   const eventFlags = {};
   let otherEvents = null;
 
@@ -1297,6 +1359,17 @@ app.post('/api/registration/submit', registrationSubmitLimiter, (req, res) => {
       return res.status(400).json({ error: 'Team name or country is required.' });
     }
 
+    if (roleKey === 'umpire') {
+      umpirePreferredRole = normalizeUmpirePreferredRole(body.umpirePreferredRole);
+      if (!umpirePreferredRole) {
+        return res.status(400).json({ error: 'Preferred role is required.' });
+      }
+      umpireClass = normalizeUmpireClass(body.umpireClass);
+      if (!umpireClass) {
+        return res.status(400).json({ error: 'Umpire class is required.' });
+      }
+    }
+
     ATHLETE_EVENT_FIELDS.forEach((field) => {
       eventFlags[field] = 0;
     });
@@ -1346,7 +1419,7 @@ app.post('/api/registration/submit', registrationSubmitLimiter, (req, res) => {
       // Teams compete — store as athlete so they are included in competition tooling
       const storedRole = isTeam ? 'athlete' : roleKey;
 
-      const sql = 'INSERT INTO registration (event_id, active, role, contact_email, first_name, last_name, dob, `rank`, gender, weight_kg, height_kg, team_name_or_country, individual_patterns, individual_sparring, individual_special_technique, individual_power_test, team_patterns, team_sparring, team_special_technique, team_power_test, pre_arranged_sparring, other_events, waiver_accepted, waiver_accepted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+      const sql = 'INSERT INTO registration (event_id, active, role, contact_email, first_name, last_name, dob, `rank`, gender, weight_kg, height_kg, team_name_or_country, individual_patterns, individual_sparring, individual_special_technique, individual_power_test, team_patterns, team_sparring, team_special_technique, team_power_test, pre_arranged_sparring, other_events, waiver_accepted, waiver_accepted_at, umpire_preferred_role, umpire_class) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
 
       const params = [
         eventId,
@@ -1372,33 +1445,40 @@ app.post('/api/registration/submit', registrationSubmitLimiter, (req, res) => {
         eventFlags.preArrangedSparring,
         otherEvents,
         waiverAccepted,
-        waiverAccepted ? new Date() : null
+        waiverAccepted ? new Date() : null,
+        umpirePreferredRole,
+        umpireClass
       ];
 
-      db.query(sql, params, (insertErr, insertResult) => {
-        if (insertErr) {
-          console.error(insertErr);
-          const sqlMessage = String(insertErr.sqlMessage || '').toLowerCase();
-          if (insertErr.code === 'ER_TRUNCATED_WRONG_VALUE' && sqlMessage.includes('dob')) {
-            return res.status(400).json({ error: 'Please enter a valid date of birth. The day, month, or year is not correct.' });
+      ensureRegistrationUmpireColumns().then(() => {
+        db.query(sql, params, (insertErr, insertResult) => {
+          if (insertErr) {
+            console.error(insertErr);
+            const sqlMessage = String(insertErr.sqlMessage || '').toLowerCase();
+            if (insertErr.code === 'ER_TRUNCATED_WRONG_VALUE' && sqlMessage.includes('dob')) {
+              return res.status(400).json({ error: 'Please enter a valid date of birth. The day, month, or year is not correct.' });
+            }
+            return res.status(500).json({ error: 'Unable to save registration. Please try again shortly.' });
           }
-          return res.status(500).json({ error: 'Unable to save registration. Please try again shortly.' });
-        }
 
-        insertLog(null, {
-          action: 'event_registration_submit',
-          page: 'registration',
-          eventId: eventId,
-          role: storedRole,
-          registrationSourceRole: roleKey,
-          registrationId: insertResult.insertId || null,
-          waiverAccepted: waiverAccepted
-        }, req.ip);
+          insertLog(null, {
+            action: 'event_registration_submit',
+            page: 'registration',
+            eventId: eventId,
+            role: storedRole,
+            registrationSourceRole: roleKey,
+            registrationId: insertResult.insertId || null,
+            waiverAccepted: waiverAccepted
+          }, req.ip);
 
-        res.json({
-          success: true,
-          registrationId: insertResult.insertId || null
+          res.json({
+            success: true,
+            registrationId: insertResult.insertId || null
+          });
         });
+      }).catch((ensureErr) => {
+        console.error(ensureErr);
+        res.status(500).json({ error: 'Unable to save registration. Please try again shortly.' });
       });
     });
   });
@@ -1614,6 +1694,23 @@ function parseOrganizerRegistrationBody(body) {
     ) || new Date();
   }
 
+  let umpirePreferredRole = null;
+  let umpireClass = null;
+  if (role === 'umpire') {
+    umpirePreferredRole = normalizeUmpirePreferredRole(
+      pickRegistrationField(source, 'umpire_preferred_role', 'umpirePreferredRole')
+    );
+    if (!umpirePreferredRole) {
+      return { error: 'Preferred role is required.' };
+    }
+    umpireClass = normalizeUmpireClass(
+      pickRegistrationField(source, 'umpire_class', 'umpireClass')
+    );
+    if (!umpireClass) {
+      return { error: 'Umpire class is required.' };
+    }
+  }
+
   return {
     role: storedRole,
     contactEmail,
@@ -1631,7 +1728,9 @@ function parseOrganizerRegistrationBody(body) {
     eventFlags,
     otherEvents: parsedOtherEvents || null,
     waiverAccepted,
-    waiverAcceptedAt
+    waiverAcceptedAt,
+    umpirePreferredRole,
+    umpireClass
   };
 }
 
@@ -1658,7 +1757,9 @@ function organizerRegistrationWriteParams(parsed) {
     parsed.eventFlags.pre_arranged_sparring,
     parsed.otherEvents,
     parsed.waiverAccepted,
-    parsed.waiverAcceptedAt
+    parsed.waiverAcceptedAt,
+    parsed.umpirePreferredRole || null,
+    parsed.umpireClass || null
   ];
 }
 
@@ -1694,14 +1795,19 @@ app.get('/api/client-events/:eventId/registrations', requireLogin, (req, res) =>
       return res.status(403).json({ error: 'You do not have permission to view registrations for this event.' });
     }
 
-    const sql = 'SELECT id, role, contact_email, first_name, last_name, dob, `rank`, gender, weight_kg, height_kg, team_name_or_country, individual_patterns, individual_sparring, individual_special_technique, individual_power_test, team_patterns, team_sparring, team_special_technique, team_power_test, pre_arranged_sparring, other_events, waiver_accepted, waiver_accepted_at FROM registration WHERE event_id = ?';
+    const sql = 'SELECT id, role, contact_email, first_name, last_name, dob, `rank`, gender, weight_kg, height_kg, team_name_or_country, individual_patterns, individual_sparring, individual_special_technique, individual_power_test, team_patterns, team_sparring, team_special_technique, team_power_test, pre_arranged_sparring, other_events, waiver_accepted, waiver_accepted_at, umpire_preferred_role, umpire_class FROM registration WHERE event_id = ?';
 
-    db.query(sql, [eventId], (queryErr, results) => {
-      if (queryErr) {
-        console.error(queryErr);
-        return res.status(500).json({ error: 'Unable to load registrations. Please try again shortly.' });
-      }
-      res.json(sortRegistrations(results));
+    ensureRegistrationUmpireColumns().then(() => {
+      db.query(sql, [eventId], (queryErr, results) => {
+        if (queryErr) {
+          console.error(queryErr);
+          return res.status(500).json({ error: 'Unable to load registrations. Please try again shortly.' });
+        }
+        res.json(sortRegistrations(results));
+      });
+    }).catch((ensureErr) => {
+      console.error(ensureErr);
+      res.status(500).json({ error: 'Unable to load registrations. Please try again shortly.' });
     });
   });
 });
@@ -1724,26 +1830,31 @@ app.post('/api/client-events/:eventId/registrations', requireLogin, (req, res) =
       return res.status(403).json({ error: 'You do not have permission to add registrations for this event.' });
     }
 
-    const sql = 'INSERT INTO registration (event_id, active, role, contact_email, first_name, last_name, dob, `rank`, gender, weight_kg, height_kg, team_name_or_country, individual_patterns, individual_sparring, individual_special_technique, individual_power_test, team_patterns, team_sparring, team_special_technique, team_power_test, pre_arranged_sparring, other_events, waiver_accepted, waiver_accepted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+    const sql = 'INSERT INTO registration (event_id, active, role, contact_email, first_name, last_name, dob, `rank`, gender, weight_kg, height_kg, team_name_or_country, individual_patterns, individual_sparring, individual_special_technique, individual_power_test, team_patterns, team_sparring, team_special_technique, team_power_test, pre_arranged_sparring, other_events, waiver_accepted, waiver_accepted_at, umpire_preferred_role, umpire_class) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
     const params = [eventId, '1'].concat(organizerRegistrationWriteParams(parsed));
 
-    db.query(sql, params, (insertErr, insertResult) => {
-      if (insertErr) {
-        console.error(insertErr);
-        return res.status(500).json({ error: 'Unable to save registration. Please try again shortly.' });
-      }
+    ensureRegistrationUmpireColumns().then(() => {
+      db.query(sql, params, (insertErr, insertResult) => {
+        if (insertErr) {
+          console.error(insertErr);
+          return res.status(500).json({ error: 'Unable to save registration. Please try again shortly.' });
+        }
 
-      insertLog(req.session.username, {
-        action: 'organizer_registration_create',
-        page: 'landing',
-        eventId: eventId,
-        registrationId: insertResult.insertId || null
-      }, req.ip);
+        insertLog(req.session.username, {
+          action: 'organizer_registration_create',
+          page: 'landing',
+          eventId: eventId,
+          registrationId: insertResult.insertId || null
+        }, req.ip);
 
-      res.json({
-        success: true,
-        id: insertResult.insertId || null
+        res.json({
+          success: true,
+          id: insertResult.insertId || null
+        });
       });
+    }).catch((ensureErr) => {
+      console.error(ensureErr);
+      res.status(500).json({ error: 'Unable to save registration. Please try again shortly.' });
     });
   });
 });
@@ -1771,27 +1882,32 @@ app.put('/api/client-events/:eventId/registrations/:registrationId', requireLogi
       return res.status(403).json({ error: 'You do not have permission to update registrations for this event.' });
     }
 
-    const sql = 'UPDATE registration SET role = ?, contact_email = ?, first_name = ?, last_name = ?, dob = ?, `rank` = ?, gender = ?, weight_kg = ?, height_kg = ?, team_name_or_country = ?, individual_patterns = ?, individual_sparring = ?, individual_special_technique = ?, individual_power_test = ?, team_patterns = ?, team_sparring = ?, team_special_technique = ?, team_power_test = ?, pre_arranged_sparring = ?, other_events = ?, waiver_accepted = ?, waiver_accepted_at = ? WHERE id = ? AND event_id = ?';
+    const sql = 'UPDATE registration SET role = ?, contact_email = ?, first_name = ?, last_name = ?, dob = ?, `rank` = ?, gender = ?, weight_kg = ?, height_kg = ?, team_name_or_country = ?, individual_patterns = ?, individual_sparring = ?, individual_special_technique = ?, individual_power_test = ?, team_patterns = ?, team_sparring = ?, team_special_technique = ?, team_power_test = ?, pre_arranged_sparring = ?, other_events = ?, waiver_accepted = ?, waiver_accepted_at = ?, umpire_preferred_role = ?, umpire_class = ? WHERE id = ? AND event_id = ?';
     const params = organizerRegistrationWriteParams(parsed).concat([registrationId, eventId]);
 
-    db.query(sql, params, (updateErr, updateResult) => {
-      if (updateErr) {
-        console.error(updateErr);
-        return res.status(500).json({ error: 'Unable to update registration. Please try again shortly.' });
-      }
+    ensureRegistrationUmpireColumns().then(() => {
+      db.query(sql, params, (updateErr, updateResult) => {
+        if (updateErr) {
+          console.error(updateErr);
+          return res.status(500).json({ error: 'Unable to update registration. Please try again shortly.' });
+        }
 
-      if (!updateResult || updateResult.affectedRows === 0) {
-        return res.status(404).json({ error: 'Registration not found for this event.' });
-      }
+        if (!updateResult || updateResult.affectedRows === 0) {
+          return res.status(404).json({ error: 'Registration not found for this event.' });
+        }
 
-      insertLog(req.session.username, {
-        action: 'organizer_registration_update',
-        page: 'landing',
-        eventId: eventId,
-        registrationId: registrationId
-      }, req.ip);
+        insertLog(req.session.username, {
+          action: 'organizer_registration_update',
+          page: 'landing',
+          eventId: eventId,
+          registrationId: registrationId
+        }, req.ip);
 
-      res.json({ success: true, id: registrationId });
+        res.json({ success: true, id: registrationId });
+      });
+    }).catch((ensureErr) => {
+      console.error(ensureErr);
+      res.status(500).json({ error: 'Unable to update registration. Please try again shortly.' });
     });
   });
 });
@@ -2147,8 +2263,10 @@ app.get('/api/umpire-management/events/:eventId', requireLogin, requirePrinciple
     }
 
     const eventRow = eventResults[0];
+    await ensureRegistrationUmpireColumns();
     const umpireRows = await queryAsync(
-      `SELECT id, first_name, last_name, contact_email, \`rank\`, gender, team_name_or_country
+      `SELECT id, first_name, last_name, contact_email, dob, \`rank\`, gender, team_name_or_country,
+              umpire_preferred_role, umpire_class
        FROM registration
        WHERE event_id = ? AND LOWER(role) = 'umpire'
        ORDER BY last_name, first_name`,
@@ -2257,6 +2375,9 @@ process.on('unhandledRejection', (reason) => {
 });
 
 const PORT = process.env.PORT || 5000;
+ensureRegistrationUmpireColumns().catch((err) => {
+  console.error('Unable to ensure registration umpire columns:', err);
+});
 const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 server.on('error', (err) => {
   if (err && err.code === 'EADDRINUSE') {

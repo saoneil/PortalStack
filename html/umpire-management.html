@@ -39,6 +39,56 @@
           <span>overlay</span>
           <span>divisions</span>
         </button>
+        <label class="umpire-mgmt-filter-label" for="umpireFilterRank">
+          <select id="umpireFilterRank" class="da-select da-select-sm umpire-mgmt-filter-select" aria-label="Filter by rank">
+            <option value="">rank</option>
+            <option value="color_belt">color belt</option>
+            <option value="1st_dan">1st dan</option>
+            <option value="2nd_dan">2nd dan</option>
+            <option value="3rd_dan">3rd dan</option>
+            <option value="4th_dan">4th dan</option>
+            <option value="5th_dan">5th dan</option>
+            <option value="6th_dan">6th dan</option>
+            <option value="7th_dan_plus">7th dan+</option>
+          </select>
+        </label>
+        <label class="umpire-mgmt-filter-label" for="umpireFilterTeam">
+          <select id="umpireFilterTeam" class="da-select da-select-sm umpire-mgmt-filter-select" aria-label="Filter by team">
+            <option value="">team</option>
+          </select>
+        </label>
+        <label class="umpire-mgmt-filter-label" for="umpireFilterRegion">
+          <select id="umpireFilterRegion" class="da-select da-select-sm umpire-mgmt-filter-select" aria-label="Filter by region">
+            <option value="">region</option>
+            <option value="North America">North America</option>
+            <option value="South America">South America</option>
+            <option value="Europe">Europe</option>
+            <option value="Asia">Asia</option>
+            <option value="Africa">Africa</option>
+            <option value="Oceania">Oceania</option>
+            <option value="Other">Other</option>
+          </select>
+        </label>
+        <label class="umpire-mgmt-filter-label" for="umpireFilterPreferredRole">
+          <select id="umpireFilterPreferredRole" class="da-select da-select-sm umpire-mgmt-filter-select" aria-label="Filter by preferred role">
+            <option value="">preferred role</option>
+            <option value="jury_president">Jury President</option>
+            <option value="jury_member">Jury Member</option>
+            <option value="it_umpire">IT-Umpire</option>
+            <option value="center_referee">Center Referee</option>
+            <option value="referee">Referee</option>
+            <option value="equipment_verifier">Equipment Verifier</option>
+          </select>
+        </label>
+        <label class="umpire-mgmt-filter-label" for="umpireFilterClass">
+          <select id="umpireFilterClass" class="da-select da-select-sm umpire-mgmt-filter-select" aria-label="Filter by class">
+            <option value="">class</option>
+            <option value="Class A">Class A</option>
+            <option value="Class B">Class B</option>
+            <option value="Class C">Class C</option>
+            <option value="Class D">Class D</option>
+          </select>
+        </label>
       </div>
     </header>
 
@@ -73,6 +123,12 @@
       </section>
     </div>
   </main>
+
+  <div id="umpireDetailsPop" class="umpire-details-pop" hidden>
+    <p class="umpire-details-name" id="umpireDetailsName"></p>
+    <dl id="umpireDetailsList"></dl>
+  </div>
+
   <script type="module" src="/js/umpire-management.js"></script>
 </body>
 </html>

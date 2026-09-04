@@ -1,0 +1,11 @@
+-- Reference / documentation for King of PMA V umpire backfill.
+-- Run the Node script instead (handles schema + data safely):
+--
+--   node scripts/seed-king-of-pma-v-umpires.js
+--
+-- That script:
+-- 1. Adds umpire_preferred_role and umpire_class columns if missing
+-- 2. Finds the King of PMA V event
+-- 3. Sets each umpire team_name_or_country to a country (round-robin)
+-- 4. Rotates preferred role and class (A–D)
+-- 5. Fills missing dob / gender / rank only when empty

@@ -93,7 +93,7 @@
               <div class="bg"><div class="bg-inner"></div></div>
             </div>
 
-            <div class="block-cube">
+            <div class="block-cube select-arrow-field">
               <select id="reg-rank" class="field-select field-empty" name="rank" aria-label="rank">
                 <option value="">rank</option>
                 <option value="10th gup">10th gup</option>
@@ -116,17 +116,19 @@
                 <option value="8th dan">8th dan</option>
                 <option value="9th dan">9th dan</option>
               </select>
+              <button type="button" class="select-arrow-toggle" tabindex="-1" aria-hidden="true">▾</button>
               <div class="bg-top"><div class="bg-inner"></div></div>
               <div class="bg-right"><div class="bg-inner"></div></div>
               <div class="bg"><div class="bg-inner"></div></div>
             </div>
 
-            <div class="block-cube">
+            <div class="block-cube select-arrow-field">
               <select id="reg-gender" class="field-select field-empty" name="gender" aria-label="gender">
                 <option value="">gender</option>
                 <option value="M">m</option>
                 <option value="F">f</option>
               </select>
+              <button type="button" class="select-arrow-toggle" tabindex="-1" aria-hidden="true">▾</button>
               <div class="bg-top"><div class="bg-inner"></div></div>
               <div class="bg-right"><div class="bg-inner"></div></div>
               <div class="bg"><div class="bg-inner"></div></div>
@@ -206,24 +208,26 @@
               <div class="bg"><div class="bg-inner"></div></div>
             </div>
 
-            <div class="block-cube">
+            <div class="block-cube select-arrow-field">
               <select id="reg-team-rank" class="field-select field-empty" name="teamRankBand" aria-label="gup or dan">
                 <option value="">gup / dan (optional)</option>
                 <option value="gup">gup</option>
                 <option value="dan">dan</option>
               </select>
+              <button type="button" class="select-arrow-toggle" tabindex="-1" aria-hidden="true">▾</button>
               <div class="bg-top"><div class="bg-inner"></div></div>
               <div class="bg-right"><div class="bg-inner"></div></div>
               <div class="bg"><div class="bg-inner"></div></div>
             </div>
 
-            <div class="block-cube">
+            <div class="block-cube select-arrow-field">
               <select id="reg-team-gender" class="field-select field-empty" name="teamGender" aria-label="gender of the group">
                 <option value="">gender</option>
                 <option value="M">m</option>
                 <option value="F">f</option>
                 <option value="X">mixed</option>
               </select>
+              <button type="button" class="select-arrow-toggle" tabindex="-1" aria-hidden="true">▾</button>
               <div class="bg-top"><div class="bg-inner"></div></div>
               <div class="bg-right"><div class="bg-inner"></div></div>
               <div class="bg"><div class="bg-inner"></div></div>
@@ -270,7 +274,7 @@
               <div class="bg"><div class="bg-inner"></div></div>
             </div>
 
-            <div class="block-cube">
+            <div class="block-cube select-arrow-field">
               <select id="reg-staff-rank" class="field-select field-empty" name="staffRank" aria-label="rank">
                 <option value="">rank</option>
                 <option value="10th gup">10th gup</option>
@@ -293,17 +297,19 @@
                 <option value="8th dan">8th dan</option>
                 <option value="9th dan">9th dan</option>
               </select>
+              <button type="button" class="select-arrow-toggle" tabindex="-1" aria-hidden="true">▾</button>
               <div class="bg-top"><div class="bg-inner"></div></div>
               <div class="bg-right"><div class="bg-inner"></div></div>
               <div class="bg"><div class="bg-inner"></div></div>
             </div>
 
-            <div class="block-cube">
+            <div class="block-cube select-arrow-field">
               <select id="reg-staff-gender" class="field-select field-empty" name="staffGender" aria-label="gender">
                 <option value="">gender</option>
                 <option value="M">m</option>
                 <option value="F">f</option>
               </select>
+              <button type="button" class="select-arrow-toggle" tabindex="-1" aria-hidden="true">▾</button>
               <div class="bg-top"><div class="bg-inner"></div></div>
               <div class="bg-right"><div class="bg-inner"></div></div>
               <div class="bg"><div class="bg-inner"></div></div>
@@ -316,6 +322,38 @@
               <div class="bg-top"><div class="bg-inner"></div></div>
               <div class="bg-right"><div class="bg-inner"></div></div>
               <div class="bg"><div class="bg-inner"></div></div>
+            </div>
+
+            <div id="umpireOnlyFields" class="umpire-only-fields" hidden>
+              <div class="block-cube full-width select-arrow-field">
+                <select id="reg-umpire-preferred-role" class="field-select field-empty" name="umpirePreferredRole" aria-label="preferred role">
+                  <option value="">preferred role</option>
+                  <option value="jury_president">Jury President</option>
+                  <option value="jury_member">Jury Member</option>
+                  <option value="it_umpire">IT-Umpire</option>
+                  <option value="center_referee">Center Referee</option>
+                  <option value="referee">Referee</option>
+                  <option value="equipment_verifier">Equipment Verifier</option>
+                </select>
+                <button type="button" class="select-arrow-toggle" tabindex="-1" aria-hidden="true">▾</button>
+                <div class="bg-top"><div class="bg-inner"></div></div>
+                <div class="bg-right"><div class="bg-inner"></div></div>
+                <div class="bg"><div class="bg-inner"></div></div>
+              </div>
+
+              <div class="block-cube full-width select-arrow-field">
+                <select id="reg-umpire-class" class="field-select field-empty" name="umpireClass" aria-label="umpire class">
+                  <option value="">umpire class</option>
+                  <option value="Class A">Class A</option>
+                  <option value="Class B">Class B</option>
+                  <option value="Class C">Class C</option>
+                  <option value="Class D">Class D</option>
+                </select>
+                <button type="button" class="select-arrow-toggle" tabindex="-1" aria-hidden="true">▾</button>
+                <div class="bg-top"><div class="bg-inner"></div></div>
+                <div class="bg-right"><div class="bg-inner"></div></div>
+                <div class="bg"><div class="bg-inner"></div></div>
+              </div>
             </div>
           </div>
 
