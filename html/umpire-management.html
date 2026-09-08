@@ -25,6 +25,10 @@
             <path fill="currentColor" d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.75 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
           </svg>
         </button>
+        <label class="umpire-mgmt-rings-count-label" for="umpireRingCountInput">
+          <span>rings</span>
+          <input type="number" id="umpireRingCountInput" class="da-select da-select-sm umpire-mgmt-ring-count" min="1" max="32" step="1" value="0" disabled aria-label="Number of rings">
+        </label>
         <label class="umpire-mgmt-layout-label" for="umpireGridLayoutSelect">
           <select id="umpireGridLayoutSelect" class="da-select da-select-sm umpire-mgmt-layout-select" aria-label="Ring grid layout">
             <option value="1x">1 row</option>
@@ -107,7 +111,7 @@
       <section class="umpire-mgmt-boards" aria-label="Schedule rings">
         <p class="umpire-scroll-cue" id="umpireRingsScrollCue" aria-hidden="true">Scroll rings ↓</p>
         <div id="umpireRingGrid" class="umpire-mgmt-rings"></div>
-        <p id="umpireRingsEmpty" class="umpire-mgmt-empty" hidden>No rings yet. Set rings in the Live Event Schedule tool.</p>
+        <p id="umpireRingsEmpty" class="umpire-mgmt-empty" hidden>No rings yet. Set the ring count above.</p>
         <div id="umpireRingModal" class="umpire-ring-modal" hidden>
           <div class="umpire-ring-modal-card" id="umpireRingModalCard">
             <header class="umpire-ring-modal-head">

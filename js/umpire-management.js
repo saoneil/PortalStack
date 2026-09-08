@@ -1437,51 +1437,85 @@ import { logInteraction } from './portal-log.js';
     });
   }
 
-  function namesOverflow(texts) {
-    return Array.from(texts).some((el) => {
-      const cell = el.parentElement;
-      const cellW = cell ? cell.clientWidth : el.clientWidth;
-      const cellH = cell ? cell.clientHeight : el.clientHeight;
-      return el.scrollWidth > cellW + 0.5 || el.scrollHeight > cellH + 0.5;
+  function namePartOverflows(el) {
+    if (!el) return false;
+    return el.scrollWidth > el.clientWidth + 0.5 || el.scrollHeight > el.clientHeight + 0.5;
+  }
+
+  function ringNameListOverflows(list) {
+    if (!list) return false;
+    if (list.scrollHeight > list.clientHeight + 0.5) return true;
+    if (list.scrollWidth > list.clientWidth + 0.5) return true;
+    const rows = list.querySelectorAll('.umpire-ring-name');
+    for (let i = 0; i < rows.length; i += 1) {
+      const row = rows[i];
+      if (namePartOverflows(row)) return true;
+      const parts = row.querySelectorAll('.umpire-ring-name-role, .umpire-ring-name-text');
+      for (let j = 0; j < parts.length; j += 1) {
+        if (namePartOverflows(parts[j])) return true;
+      }
+    }
+    return false;
+  }
+
+  function ringNameMaxPx(list) {
+    const card = list.closest('.umpire-ring-card');
+    const rows = list.querySelectorAll('.umpire-ring-name:not(.is-empty)');
+    const n = Math.max(1, rows.length);
+    const cardW = card && card.clientWidth ? card.clientWidth : list.clientWidth;
+    const cardH = card && card.clientHeight ? card.clientHeight : list.clientHeight;
+    const rowH = rows[0] && rows[0].clientHeight ? rows[0].clientHeight : (cardH / n);
+    return Math.max(5, Math.min(
+      cardW * 0.12,
+      cardH / n * 0.72,
+      rowH * 0.82,
+      22
+    ));
+  }
+
+  function applyRingNameSize(list, px) {
+    list.style.setProperty('--ring-name-px', px + 'px');
+    list.querySelectorAll('.umpire-ring-name-role, .umpire-ring-name-text').forEach((el) => {
+      el.style.fontSize = '';
     });
   }
 
   function fitRingNameFonts() {
     const grid = document.getElementById('umpireRingGrid');
     if (!grid || grid.hidden || state.overlaySchedule) return;
-    grid.querySelectorAll('.umpire-ring-names:not(.is-empty)').forEach((list) => {
-      const texts = list.querySelectorAll('.umpire-ring-name-text');
-      const roles = list.querySelectorAll('.umpire-ring-name-role');
-      if (!texts.length) return;
-      const cell = texts[0].parentElement;
-      const maxPx = Math.max(7, Math.min(
-        (cell && cell.clientHeight ? cell.clientHeight * 0.92 : 14),
-        (cell && cell.clientWidth ? cell.clientWidth : 80),
-        28
-      ));
-      let lo = 6;
-      let hi = maxPx;
-      let best = lo;
-      const applySize = (px) => {
-        texts.forEach((el) => {
-          el.style.fontSize = px + 'px';
-        });
-        roles.forEach((el) => {
-          el.style.fontSize = px + 'px';
-        });
-      };
-      for (let i = 0; i < 16; i += 1) {
-        const mid = (lo + hi) / 2;
-        applySize(mid);
-        if (namesOverflow(texts)) {
-          hi = mid;
-        } else {
-          best = mid;
-          lo = mid;
-        }
-      }
-      applySize(best);
+    const lists = Array.from(grid.querySelectorAll('.umpire-ring-names:not(.is-empty)'));
+    if (!lists.length) return;
+    if (lists.some((list) => list.clientWidth < 4 || list.clientHeight < 4)) {
+      requestAnimationFrame(fitRingNameFonts);
+      return;
+    }
+
+    let sharedMax = 22;
+    lists.forEach((list) => {
+      sharedMax = Math.min(sharedMax, ringNameMaxPx(list));
     });
+    const minPx = 5;
+    let lo = minPx;
+    let hi = Math.max(minPx, sharedMax);
+    let best = minPx;
+    const applyAll = (px) => {
+      lists.forEach((list) => applyRingNameSize(list, px));
+    };
+    applyAll(hi);
+    if (!lists.some(ringNameListOverflows)) {
+      return;
+    }
+    for (let i = 0; i < 18; i += 1) {
+      const mid = (lo + hi) / 2;
+      applyAll(mid);
+      if (lists.some(ringNameListOverflows)) {
+        hi = mid;
+      } else {
+        best = mid;
+        lo = mid;
+      }
+    }
+    applyAll(best);
   }
 
   function scheduleFitRingNames() {
@@ -1581,9 +1615,57 @@ import { logInteraction } from './portal-log.js';
       : 'Click a ring to assign positions. Select referees, then drag onto a ring or into the ring window.';
   }
 
+  function syncRingCountInput() {
+    const input = document.getElementById('umpireRingCountInput');
+    if (!input) return;
+    const hasEvent = Boolean(state.eventId);
+    input.disabled = !hasEvent;
+    const n = Math.max(0, Number(state.ringCount) || 0);
+    if (document.activeElement !== input) input.value = String(n);
+  }
+
+  async function setRingCount(raw) {
+    if (!state.eventId) return;
+    const n = Math.max(1, Math.min(32, Math.floor(Number(raw) || 0)));
+    if (!Number.isFinite(n) || n < 1) {
+      syncRingCountInput();
+      return;
+    }
+    if (n === state.ringCount) {
+      syncRingCountInput();
+      return;
+    }
+    const input = document.getElementById('umpireRingCountInput');
+    if (input) input.disabled = true;
+    try {
+      await persistAssignmentsNow();
+      const data = await apiFetch('/api/umpire-management/events/' + encodeURIComponent(state.eventId) + '/rings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ringCount: n })
+      });
+      state.ringCount = Number(data.ringCount) || n;
+      state.assignments = normalizeAssignments(state.assignments, state.ringCount);
+      if (state.openRing > state.ringCount) state.openRing = 0;
+      logInteraction('umpire_ring_count_changed', {
+        eventId: state.eventId,
+        ringCount: state.ringCount
+      });
+      renderAll();
+      scheduleSave();
+    } catch (err) {
+      setStatus(err.message || 'Unable to update ring count.', true);
+      syncRingCountInput();
+    } finally {
+      const el = document.getElementById('umpireRingCountInput');
+      if (el) el.disabled = !state.eventId;
+    }
+  }
+
   function renderAll() {
     pruneSelection();
     syncMobileHint();
+    syncRingCountInput();
     renderUmpires();
     renderRings();
     syncScrollAffordances();
@@ -1903,6 +1985,7 @@ import { logInteraction } from './portal-log.js';
       hideUmpireDetails();
       showStage(false);
       setStatus('');
+      syncRingCountInput();
       syncOverlayTimer();
       return;
     }
@@ -1940,6 +2023,7 @@ import { logInteraction } from './portal-log.js';
       hideUmpireDetails();
       showStage(false);
       setStatus(err.message || 'Unable to load umpire data.', true);
+      syncRingCountInput();
       syncOverlayTimer();
     }
   }
@@ -2315,6 +2399,10 @@ import { logInteraction } from './portal-log.js';
 
   document.getElementById('umpireGridLayoutSelect')?.addEventListener('change', function (e) {
     applyGridLayout(e.target.value);
+  });
+
+  document.getElementById('umpireRingCountInput')?.addEventListener('change', function (e) {
+    setRingCount(e.target.value);
   });
 
   document.getElementById('umpireOverlayScheduleBtn')?.addEventListener('click', function () {

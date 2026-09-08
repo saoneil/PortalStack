@@ -2059,7 +2059,11 @@ const {
   createRequirePrincipleUserAdvanced
 } = require('./lib/division-tool/routes');
 const { registerLiveScheduleRoutes } = require('./lib/division-tool/live-schedule-routes');
-const { displayDurationMinutes } = require('./lib/division-tool/schedule');
+const {
+  displayDurationMinutes,
+  createEmptyScheduleState,
+  clampScheduleToBounds
+} = require('./lib/division-tool/schedule');
 
 const requirePrincipleUser = createRequirePrincipleUser(lookupUserFlags);
 const requirePrincipleUserAdvanced = createRequirePrincipleUserAdvanced(lookupUserFlags);
@@ -2103,6 +2107,41 @@ function parseScheduleRingCount(stateJson) {
   const n = Number(state.ring_count);
   if (!Number.isFinite(n) || n < 1) return 0;
   return Math.max(1, Math.min(32, Math.floor(n)));
+}
+
+function clampUmpireRingCount(value) {
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n) || n < 1) return 0;
+  return Math.max(1, Math.min(32, n));
+}
+
+async function upsertScheduleRingCount(clientId, eventId, ringCount) {
+  const n = clampUmpireRingCount(ringCount);
+  if (n < 1) throw new Error('Ring count must be between 1 and 32.');
+  const schedRows = await queryAsync(
+    'SELECT state_json FROM schedules WHERE client_id = ? AND event_id = ? LIMIT 1',
+    [clientId, eventId]
+  );
+  let state = schedRows && schedRows[0]
+    ? parseJsonObject(schedRows[0].state_json)
+    : null;
+  if (!state || typeof state !== 'object' || Array.isArray(state) || !Object.keys(state).length) {
+    state = createEmptyScheduleState([], n);
+  } else {
+    state.ring_count = n;
+  }
+  state = clampScheduleToBounds(state);
+  const json = JSON.stringify(state);
+  await queryAsync(
+    `INSERT INTO schedules (client_id, event_id, format_version, state_json)
+     VALUES (?, ?, ?, CAST(? AS JSON))
+     ON DUPLICATE KEY UPDATE
+       state_json = VALUES(state_json),
+       format_version = VALUES(format_version),
+       updated_at = CURRENT_TIMESTAMP`,
+    [clientId, eventId, state.format_version || 5, json]
+  );
+  return parseScheduleRingCount(state);
 }
 
 function buildUmpireScheduleOverlay(stateJson) {
@@ -2357,6 +2396,25 @@ app.put('/api/umpire-management/events/:eventId/assignments', requireLogin, requ
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Unable to save umpire assignments. Please try again shortly.' });
+  }
+});
+
+app.put('/api/umpire-management/events/:eventId/rings', requireLogin, requirePrincipleUserAdvanced, async (req, res) => {
+  const clientId = req.session.clientId;
+  const eventId = req.params.eventId;
+  try {
+    const eventResults = await queryAsync(
+      'SELECT id FROM events WHERE id = ? AND client_id = ?',
+      [eventId, clientId]
+    );
+    if (!eventResults || eventResults.length === 0) {
+      return res.status(403).json({ error: 'You do not have permission to manage umpires for this event.' });
+    }
+    const ringCount = await upsertScheduleRingCount(clientId, eventId, req.body && req.body.ringCount);
+    res.json({ ok: true, ringCount });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message || 'Unable to update ring count. Please try again shortly.' });
   }
 });
 
