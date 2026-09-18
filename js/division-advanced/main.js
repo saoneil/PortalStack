@@ -278,8 +278,8 @@ function flashMissingEventSelect() {
 }
 
 async function applyProfile(profile) {
-  const principleUserAdvanced = Number(profile?.principleUserAdvanced) === 1;
-  if (!principleUserAdvanced) {
+  const principleUser = Number(profile?.principleUser) === 1;
+  if (!principleUser) {
     if (!document.documentElement.classList.contains('da-embed')) {
       window.location.href = '/landing';
     }

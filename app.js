@@ -589,7 +589,7 @@ function normalizeUserFlag(value) {
 }
 
 function lookupUserFlags(username, clientId, callback) {
-  const emptyFlags = { principleUser: 0, principleUserAdvanced: 0 };
+  const emptyFlags = { principleUser: 0 };
   if (!username) {
     callback(emptyFlags);
     return;
@@ -598,15 +598,14 @@ function lookupUserFlags(username, clientId, callback) {
   // Admin accounts can log into any client; their users row may not share that client_id.
   // Prefer an exact client match, otherwise fall back to the admin/username account flag.
   const sql = `
-    SELECT principle_user, principle_user_advanced, admin_flag, client_id
+    SELECT principle_user, admin_flag, client_id
     FROM users
     WHERE username = ?
       AND (client_id = ? OR admin_flag = 1 OR client_id = '0' OR client_id = 0)
     ORDER BY
       CASE WHEN client_id = ? THEN 0 ELSE 1 END,
       admin_flag DESC,
-      principle_user DESC,
-      principle_user_advanced DESC
+      principle_user DESC
     LIMIT 1
   `;
 
@@ -621,8 +620,7 @@ function lookupUserFlags(username, clientId, callback) {
       return;
     }
     callback({
-      principleUser: normalizeUserFlag(rows[0].principle_user),
-      principleUserAdvanced: normalizeUserFlag(rows[0].principle_user_advanced)
+      principleUser: normalizeUserFlag(rows[0].principle_user)
     });
   });
 }
@@ -702,7 +700,6 @@ app.post('/index', loginLimiter, (req, res) => {
         req.session.clientName = client;
         req.session.username = username;
         req.session.principleUser = flags.principleUser;
-        req.session.principleUserAdvanced = flags.principleUserAdvanced;
 
         req.session.save((saveErr) => {
           if (saveErr) {
@@ -781,8 +778,8 @@ app.post('/admin-reset', async (req, res) => {
   try {
     const hash = await bcrypt.hash(String(password), 10);
     db.query(
-      `INSERT INTO users (username, password, client_id, admin_flag, principle_user, principle_user_advanced, date_added)
-       VALUES (?, ?, '1', 1, 1, 1, NOW())`,
+      `INSERT INTO users (username, password, client_id, admin_flag, principle_user, date_added)
+       VALUES (?, ?, '1', 1, 1, NOW())`,
       ['admin', hash],
       (err, result) => {
         if (err) {
@@ -930,13 +927,11 @@ app.get('/api/profile', requireLogin, (req, res) => {
 
   lookupUserFlags(username, clientId, (flags) => {
     req.session.principleUser = flags.principleUser;
-    req.session.principleUserAdvanced = flags.principleUserAdvanced;
     res.json({
       clientName: req.session.clientName || null,
       clientId: clientId || null,
       username: username,
       principleUser: flags.principleUser,
-      principleUserAdvanced: flags.principleUserAdvanced,
       timezone: req.session.timezone || null
     });
   });
@@ -2055,8 +2050,7 @@ app.post('/api/client-events', requireLogin, upload.single('eventPoster'), (req,
 
 const {
   registerDivisionAdvancedRoutes,
-  createRequirePrincipleUser,
-  createRequirePrincipleUserAdvanced
+  createRequirePrincipleUser
 } = require('./lib/division-tool/routes');
 const { registerLiveScheduleRoutes } = require('./lib/division-tool/live-schedule-routes');
 const {
@@ -2066,15 +2060,13 @@ const {
 } = require('./lib/division-tool/schedule');
 
 const requirePrincipleUser = createRequirePrincipleUser(lookupUserFlags);
-const requirePrincipleUserAdvanced = createRequirePrincipleUserAdvanced(lookupUserFlags);
 
-// Page-level Advanced gate: redirects to /landing instead of returning JSON 403.
+// Page-level organizer gate: redirects to /landing instead of returning JSON 403.
 function requireAdvancedPage(req, res, next) {
-  if (Number(req.session.principleUserAdvanced) === 1) return next();
+  if (Number(req.session.principleUser) === 1) return next();
   lookupUserFlags(req.session.username, req.session.clientId, (flags) => {
     req.session.principleUser = flags.principleUser;
-    req.session.principleUserAdvanced = flags.principleUserAdvanced;
-    if (Number(flags.principleUserAdvanced) === 1) return next();
+    if (Number(flags.principleUser) === 1) return next();
     res.redirect('/landing');
   });
 }
@@ -2082,14 +2074,13 @@ function requireAdvancedPage(req, res, next) {
 registerDivisionAdvancedRoutes(app, db, {
   requireLogin,
   requirePrincipleUser,
-  requirePrincipleUserAdvanced,
   lookupUserFlags,
   lookupPrincipleUser
 });
 
 registerLiveScheduleRoutes(app, db, {
   requireLogin,
-  requirePrincipleUserAdvanced,
+  requirePrincipleUser,
   liveScheduleLimiter,
   lookupUserFlags
 });
@@ -2289,7 +2280,7 @@ function parseJsonObject(value) {
   return value;
 }
 
-app.get('/api/umpire-management/events/:eventId', requireLogin, requirePrincipleUserAdvanced, async (req, res) => {
+app.get('/api/umpire-management/events/:eventId', requireLogin, requirePrincipleUser, async (req, res) => {
   const clientId = req.session.clientId;
   const eventId = req.params.eventId;
   try {
@@ -2356,7 +2347,7 @@ app.get('/api/umpire-management/events/:eventId', requireLogin, requirePrinciple
   }
 });
 
-app.put('/api/umpire-management/events/:eventId/assignments', requireLogin, requirePrincipleUserAdvanced, async (req, res) => {
+app.put('/api/umpire-management/events/:eventId/assignments', requireLogin, requirePrincipleUser, async (req, res) => {
   const clientId = req.session.clientId;
   const eventId = req.params.eventId;
   try {
@@ -2399,7 +2390,7 @@ app.put('/api/umpire-management/events/:eventId/assignments', requireLogin, requ
   }
 });
 
-app.put('/api/umpire-management/events/:eventId/rings', requireLogin, requirePrincipleUserAdvanced, async (req, res) => {
+app.put('/api/umpire-management/events/:eventId/rings', requireLogin, requirePrincipleUser, async (req, res) => {
   const clientId = req.session.clientId;
   const eventId = req.params.eventId;
   try {

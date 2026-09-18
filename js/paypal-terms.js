@@ -119,13 +119,14 @@
 
   var CHECKOUT_LABELS = {
     'P-3SX09611CF132153YNDNVW5Y': 'Subscriber ($25/month)',
-    'P-8L961653DD368650MNDNVX5Q': 'Club subscription (yearly)',
-    'P-63D48453377935614NDNVY3Q': 'Organizer subscription (monthly)',
-    'P-2UX54115DY587734SNDNVZ2I': 'Organizer subscription (yearly)',
     'N73R9PNA4ZUSU': 'Small Event ($150)',
-    'KAZVAY7VT6Y9N': 'Large Event ($300)',
-    '6FGYWDMSQSEZ8': 'Large Event + Organizer Tools ($450)',
-    '8TKGTZMNLLD52': 'Extra instance (non-subscribers)'
+    '6FGYWDMSQSEZ8': 'Large Event ($400)',
+    // Legacy PayPal IDs (retired from UI; kept for historical checkout logs)
+    'P-8L961653DD368650MNDNVX5Q': 'Club subscription (yearly) [legacy]',
+    'P-63D48453377935614NDNVY3Q': 'Organizer subscription (monthly) [legacy]',
+    'P-2UX54115DY587734SNDNVZ2I': 'Organizer subscription (yearly) [legacy]',
+    'KAZVAY7VT6Y9N': 'Large Event ($300) [legacy]',
+    '8TKGTZMNLLD52': 'Extra instance (non-subscribers) [legacy]'
   };
 
   function normalizeText(value) {

@@ -500,18 +500,6 @@
     </div>
   </div>
 
-  <div id="advancedAccessDeniedModal" class="confirm-dialog-overlay" hidden>
-    <div class="confirm-dialog-card" role="dialog" aria-labelledby="advancedAccessDeniedTitle" aria-modal="true">
-      <h2 id="advancedAccessDeniedTitle" class="confirm-dialog-title">higher tier required</h2>
-      <div class="confirm-dialog-body">
-        <p>This organizer tool needs the <strong>Organizer Tools</strong> tier (advanced principle user). Your account can use payments and event creation/management. Please email <a href="mailto:performance.ma.can@gmail.com?subject=PMA%20Organizer%20Tools%20access%20request&body=Hello%2C%0A%0AI%20would%20like%20to%20request%20Organizer%20Tools%20(advanced)%20access.%0A%0AName%3A%0AClub%20%2F%20organization%3A%0AEmail%3A%0A%0AThank%20you." style="color: #00d4ff; text-decoration: underline;">PMA</a> to upgrade.</p>
-      </div>
-      <div class="confirm-dialog-actions">
-        <button type="button" id="closeAdvancedAccessDeniedModal" class="confirm-dialog-btn confirm-dialog-btn-primary">ok</button>
-      </div>
-    </div>
-  </div>
-
   <div id="eventCreationConfirmOverlay" class="confirm-dialog-overlay" hidden>
     <div class="confirm-dialog-card" role="dialog" aria-labelledby="eventCreationConfirmTitle" aria-modal="true">
       <h3 id="eventCreationConfirmTitle" class="confirm-dialog-title">confirm event submission</h3>
@@ -548,7 +536,6 @@
     logInteraction('page_view', { description: 'Landing page loaded' });
 
     var hasPrincipleUserAccess = false;
-    var hasPrincipleUserAdvancedAccess = false;
     var principleUserCheckInFlight = null;
     var eventResultsSelectInitialized = false;
     var PRINCIPLE_USER_OVERLAYS = [
@@ -562,7 +549,6 @@
 
     function applyPrincipleUserAccess(profile) {
       hasPrincipleUserAccess = Number(profile && profile.principleUser) === 1;
-      hasPrincipleUserAdvancedAccess = Number(profile && profile.principleUserAdvanced) === 1;
       var organizerSection = document.getElementById('organizerToolsSection');
       if (organizerSection) {
         organizerSection.hidden = !hasPrincipleUserAccess;
@@ -576,18 +562,11 @@
         loadOrganizerEventSelect();
         var resultsSelect = document.getElementById('eventResultsSelect');
         var currentResultsEventId = resultsSelect && resultsSelect.value ? String(resultsSelect.value) : '';
-        if (hasPrincipleUserAdvancedAccess) {
-          // Preserve an in-progress selection — download / auth refresh must not wipe it.
-          loadEventResultsSelect({
-            silent: Boolean(currentResultsEventId || eventResultsSelectInitialized),
-            preserveValue: currentResultsEventId
-          });
-          eventResultsSelectInitialized = true;
-        } else {
-          // Principle users still see the row; advanced tools stay locked until upgrade.
-          lockEventResultsSelectForUpgrade();
-          eventResultsSelectInitialized = true;
-        }
+        loadEventResultsSelect({
+          silent: Boolean(currentResultsEventId || eventResultsSelectInitialized),
+          preserveValue: currentResultsEventId
+        });
+        eventResultsSelectInitialized = true;
       } else {
         eventResultsSelectInitialized = false;
         resetEventResultsSelect();
@@ -599,8 +578,6 @@
         });
         var confirmOverlay = document.getElementById('eventCreationConfirmOverlay');
         if (confirmOverlay) confirmOverlay.hidden = true;
-        var advancedAccessDeniedModal = document.getElementById('advancedAccessDeniedModal');
-        if (advancedAccessDeniedModal) advancedAccessDeniedModal.hidden = true;
         var appMessageOverlay = document.getElementById('appMessageOverlay');
         if (appMessageOverlay) appMessageOverlay.hidden = true;
       }
@@ -638,17 +615,6 @@
       return principleUserCheckInFlight;
     }
 
-    function showAdvancedAccessDeniedModal() {
-      var overlay = document.getElementById('advancedAccessDeniedModal');
-      if (!overlay) return;
-      overlay.hidden = false;
-    }
-
-    function hideAdvancedAccessDeniedModal() {
-      var overlay = document.getElementById('advancedAccessDeniedModal');
-      if (overlay) overlay.hidden = true;
-    }
-
     function requirePrincipleUserAccess(onAllowed) {
       refreshPrincipleUserAccess().then(function(allowed) {
         if (!allowed) {
@@ -656,23 +622,6 @@
             title: 'access denied',
             message: 'You no longer have access to organizer tools.'
           });
-          return;
-        }
-        onAllowed();
-      });
-    }
-
-    function requirePrincipleUserAdvancedAccess(onAllowed) {
-      refreshPrincipleUserAccess().then(function(allowed) {
-        if (!allowed) {
-          showAppMessage({
-            title: 'access denied',
-            message: 'You no longer have access to organizer tools.'
-          });
-          return;
-        }
-        if (!hasPrincipleUserAdvancedAccess) {
-          showAdvancedAccessDeniedModal();
           return;
         }
         onAllowed();
@@ -1292,11 +1241,6 @@
     // Close any open overlay with Escape.
     document.addEventListener('keydown', function(evt) {
       if (evt.key !== 'Escape') return;
-      var advancedAccessDeniedModal = document.getElementById('advancedAccessDeniedModal');
-      if (advancedAccessDeniedModal && !advancedAccessDeniedModal.hidden) {
-        hideAdvancedAccessDeniedModal();
-        return;
-      }
       var confirmOverlay = document.getElementById('eventCreationConfirmOverlay');
       if (confirmOverlay && !confirmOverlay.hidden) {
         hideEventCreationConfirm();
@@ -2251,7 +2195,7 @@
     // ========== ORGANIZER TOOL MODALS ==========
     document.getElementById('openDrawCreationBtn').onclick = function(e) {
       e.preventDefault();
-      requirePrincipleUserAdvancedAccess(function() {
+      requirePrincipleUserAccess(function() {
         logInteraction('open_draw_creation_tool', { description: 'Opened draw creation modal' });
         var overlay = document.getElementById('drawCreationOverlay');
         var frame = document.getElementById('drawCreationFrame');
@@ -2304,7 +2248,7 @@
 
     document.getElementById('openLiveScheduleToolBtn').onclick = function(e) {
       e.preventDefault();
-      requirePrincipleUserAdvancedAccess(function() {
+      requirePrincipleUserAccess(function() {
         logInteraction('open_live_schedule_tool', { description: 'Opened live event schedule tool modal' });
         var overlay = document.getElementById('liveScheduleToolOverlay');
         var frame = document.getElementById('liveScheduleToolFrame');
@@ -2319,7 +2263,7 @@
 
     document.getElementById('openUmpireManagementBtn').onclick = function(e) {
       e.preventDefault();
-      requirePrincipleUserAdvancedAccess(function() {
+      requirePrincipleUserAccess(function() {
         logInteraction('open_umpire_management', { description: 'Opened umpire management tool modal' });
         var overlay = document.getElementById('umpireManagementOverlay');
         var frame = document.getElementById('umpireManagementFrame');
@@ -2433,7 +2377,7 @@
 
     document.getElementById('openLiveScheduleViewerBtn').onclick = function(e) {
       e.preventDefault();
-      requirePrincipleUserAdvancedAccess(function() {
+      requirePrincipleUserAccess(function() {
         if (openSavedSchedulePage('/live-schedule/')) {
           logInteraction('open_live_schedule_viewer', {
             description: 'Opened live event schedule viewer in a new tab',
@@ -2448,7 +2392,7 @@
 
     document.getElementById('openDigitalIdToolBtn').onclick = function(e) {
       e.preventDefault();
-      requirePrincipleUserAdvancedAccess(function() {
+      requirePrincipleUserAccess(function() {
         if (openSavedSchedulePage('/digital-id/')) {
           logInteraction('open_digital_id_tool', {
             description: 'Opened draws/digital ID card page in a new tab',
@@ -2484,11 +2428,6 @@
       var select = document.getElementById('eventResultsSelect');
       var btn = document.getElementById('downloadEventResultsBtn');
       if (!btn) return;
-      if (hasPrincipleUserAccess && !hasPrincipleUserAdvancedAccess) {
-        // Visible but gated — click shows the higher-tier popup.
-        btn.disabled = false;
-        return;
-      }
       btn.disabled = !(select && select.value && eventResultsSelectedMeta && eventResultsSelectedMeta.resultCount > 0);
     }
 
@@ -2504,22 +2443,8 @@
       if (btn) btn.disabled = true;
     }
 
-    function lockEventResultsSelectForUpgrade() {
-      var select = document.getElementById('eventResultsSelect');
-      var btn = document.getElementById('downloadEventResultsBtn');
-      eventResultsSelectedMeta = null;
-      eventResultsMetaRequestId += 1;
-      if (select) {
-        select.innerHTML = '<option value="">— higher tier required —</option>';
-        // Keep enabled so click/focus can show the upgrade popup.
-        select.disabled = false;
-      }
-      // Keep download clickable so principle users get the upgrade popup (not a dead control).
-      if (btn) btn.disabled = false;
-    }
-
-    function requireEventResultsAdvancedAccess(onAllowed) {
-      requirePrincipleUserAdvancedAccess(function() {
+    function requireEventResultsAccess(onAllowed) {
+      requirePrincipleUserAccess(function() {
         onAllowed();
       });
     }
@@ -2704,22 +2629,8 @@
       }
     };
 
-    document.getElementById('eventResultsSelect').addEventListener('mousedown', function(e) {
-      if (hasPrincipleUserAccess && !hasPrincipleUserAdvancedAccess) {
-        e.preventDefault();
-        showAdvancedAccessDeniedModal();
-      }
-    });
-
-    document.getElementById('eventResultsSelect').addEventListener('click', function(e) {
-      if (hasPrincipleUserAccess && !hasPrincipleUserAdvancedAccess) {
-        e.preventDefault();
-        showAdvancedAccessDeniedModal();
-      }
-    });
-
     document.getElementById('eventResultsSelect').addEventListener('focus', function() {
-      if (!hasPrincipleUserAdvancedAccess) return;
+      if (!hasPrincipleUserAccess) return;
       var select = document.getElementById('eventResultsSelect');
       loadEventResultsSelect({ silent: true, preserveValue: select && select.value });
     });
@@ -2728,7 +2639,7 @@
       var select = document.getElementById('eventResultsSelect');
       // Capture before the async access check — that refresh used to wipe the dropdown.
       var eventId = select && select.value ? String(select.value) : '';
-      requireEventResultsAdvancedAccess(function() {
+      requireEventResultsAccess(function() {
         downloadSelectedEventResults(eventId);
       });
     };
@@ -2915,14 +2826,6 @@
         e.preventDefault();
         addCustomEventFromInput('editCustomEventInput', 'editEventEventsCheckboxes', 'editEventType');
       }
-    });
-
-    document.getElementById('closeAdvancedAccessDeniedModal').onclick = function() {
-      hideAdvancedAccessDeniedModal();
-    };
-
-    document.getElementById('advancedAccessDeniedModal').addEventListener('click', function(evt) {
-      if (evt.target === this) hideAdvancedAccessDeniedModal();
     });
 
   </script>
