@@ -31,6 +31,7 @@
         </label>
         <label class="umpire-mgmt-layout-label" for="umpireGridLayoutSelect">
           <select id="umpireGridLayoutSelect" class="da-select da-select-sm umpire-mgmt-layout-select" aria-label="Ring grid layout">
+            <option value="1col" selected>1 column</option>
             <option value="1x">1 row</option>
             <option value="2x2">2x2</option>
             <option value="2x3">2x3</option>
@@ -102,7 +103,8 @@
       <aside class="umpire-mgmt-pool" id="umpirePool" aria-label="Registered umpires">
         <div class="umpire-mgmt-pool-head">
           <h2 id="umpireCountHeading" class="umpire-mgmt-count">0 registered umpires</h2>
-          <p class="umpire-mgmt-hint">Click a ring to assign positions. Select referees, then drag onto a ring or into the ring window.</p>
+          <input type="search" id="umpireFilterName" class="umpire-mgmt-name-filter" placeholder="name" aria-label="Filter by name" autocomplete="off">
+          <p class="umpire-mgmt-hint">Drag an umpire onto a ring or into a seat. Click a name for details.</p>
         </div>
         <p class="umpire-scroll-cue" id="umpirePoolScrollCue" aria-hidden="true">Scroll umpires ↓</p>
         <ul id="umpireList" class="umpire-mgmt-list"></ul>
@@ -115,11 +117,17 @@
         <div id="umpireRingModal" class="umpire-ring-modal" hidden>
           <div class="umpire-ring-modal-card" id="umpireRingModalCard">
             <header class="umpire-ring-modal-head">
+              <button type="button" id="umpireRingBackBtn" class="umpire-ring-modal-back">Back</button>
               <button type="button" id="umpireRingPrevBtn" class="umpire-ring-modal-nav" aria-label="Previous ring">‹</button>
               <h2 id="umpireRingModalTitle" class="umpire-ring-modal-title">Ring 1</h2>
               <button type="button" id="umpireRingClearBtn" class="umpire-ring-modal-clear">Clear Ring</button>
               <button type="button" id="umpireRingNextBtn" class="umpire-ring-modal-nav" aria-label="Next ring">›</button>
               <button type="button" id="umpireRingModalClose" class="umpire-ring-modal-close" aria-label="Close ring">✕</button>
+              <div class="umpire-role-legend" aria-label="Role colors">
+                <span class="umpire-role-legend-item is-officials"><i></i>JP / JM / IT</span>
+                <span class="umpire-role-legend-item is-umpires"><i></i>Umpires</span>
+                <span class="umpire-role-legend-item is-equipment"><i></i>EV1 / EV2</span>
+              </div>
             </header>
             <div id="umpireRingModalCols" class="umpire-ring-modal-cols"></div>
           </div>

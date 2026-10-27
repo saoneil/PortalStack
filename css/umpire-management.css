@@ -231,8 +231,8 @@ body.umpire-mgmt-page {
   flex: 1 1 auto;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: minmax(120px, 0.34fr) minmax(0, 1fr);
+  grid-template-columns: minmax(140px, 11.5rem) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   gap: 8px;
 }
 
@@ -247,7 +247,7 @@ body.umpire-mgmt-page {
 }
 
 .umpire-mgmt-pool {
-  overflow: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -262,27 +262,44 @@ body.umpire-mgmt-page {
 
 .umpire-mgmt-pool-head {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 8px 16px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
   flex: 0 0 auto;
 }
 
 .umpire-mgmt-count {
   margin: 0;
   color: #00d4ff;
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.03em;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.umpire-mgmt-name-filter {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 4px 6px;
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  border-radius: 4px;
+  background: rgba(0, 20, 28, 0.9);
+  color: #fff;
+  font: 12px monospace, serif;
+}
+
+.umpire-mgmt-name-filter::placeholder {
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .umpire-mgmt-hint {
   margin: 0;
   color: rgba(255, 255, 255, 0.48);
-  font-size: 12px;
-  line-height: 1.35;
-  flex: 1 1 240px;
+  font-size: 10px;
+  line-height: 1.3;
 }
 
 .umpire-mgmt-pool.is-drop-target,
@@ -297,21 +314,25 @@ body.umpire-mgmt-page {
   margin: 0;
   padding: 0;
   flex: 1 1 auto;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   align-content: start;
+  overflow: auto;
+  min-height: 0;
+  touch-action: pan-y;
 }
 
 .umpire-mgmt-item {
-  padding: 4px 7px;
-  border-radius: 5px;
+  padding: 3px 6px;
+  border-radius: 3px;
   border: 1px solid rgba(0, 212, 255, 0.22);
   border-left: 3px solid #00d4ff;
   background: rgba(0, 40, 55, 0.72);
   cursor: grab;
   user-select: none;
   min-width: 0;
+  touch-action: pan-y;
 }
 
 .umpire-mgmt-item.is-assigned {
@@ -346,10 +367,29 @@ body.umpire-mgmt-page {
   white-space: nowrap;
 }
 
-.umpire-mgmt-item span {
-  display: block;
-  margin-top: 1px;
-  color: rgba(255, 255, 255, 0.55);
+.umpire-mgmt-item.is-expanded {
+  cursor: default;
+}
+
+.umpire-mgmt-item-details {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1px 6px;
+  margin: 4px 0 2px;
+  padding: 0;
+}
+
+.umpire-mgmt-item-details dt {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: lowercase;
+}
+
+.umpire-mgmt-item-details dd {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.85);
   font-size: 10px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -459,6 +499,25 @@ body.umpire-mgmt-page {
 
 .umpire-ring-card.is-drop-target .umpire-ring-square {
   background: #1e88e5;
+}
+
+.umpire-ring-count {
+  position: absolute;
+  inset: 10%;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  color: #fff;
+  font-size: clamp(28px, 18cqi, 56px);
+  font-weight: 800;
+  line-height: 1;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+
+.umpire-ring-count.is-empty {
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .umpire-ring-overlay {
@@ -659,13 +718,71 @@ body.umpire-mgmt-page {
   outline-offset: -6px;
 }
 
+.umpire-ring-modal-back {
+  display: none;
+  appearance: none;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  border-radius: 6px;
+  background: rgba(0, 40, 55, 0.8);
+  color: #fff;
+  font: 700 12px monospace, serif;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.umpire-ring-modal-back:hover {
+  border-color: #00d4ff;
+  background: rgba(0, 70, 90, 0.9);
+}
+
 .umpire-ring-modal-head {
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr) auto 32px 32px;
+  grid-template-rows: auto auto;
   align-items: center;
   gap: 6px;
   flex: 0 0 auto;
 }
+
+.umpire-ring-modal-head .umpire-ring-modal-back {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.umpire-role-legend {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 0;
+}
+
+.umpire-role-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.umpire-role-legend-item i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 2px;
+}
+
+.umpire-role-legend-item.is-officials i { background: rgba(255, 193, 7, 0.55); }
+.umpire-role-legend-item.is-umpires i { background: rgba(244, 67, 54, 0.55); }
+.umpire-role-legend-item.is-equipment i { background: rgba(171, 71, 188, 0.55); }
 
 .umpire-ring-modal-title {
   margin: 0;
@@ -733,7 +850,7 @@ body.umpire-mgmt-page {
   flex: 1 1 auto;
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -748,42 +865,30 @@ body.umpire-mgmt-page {
   padding: 0;
   display: flex;
   flex-direction: column;
+  gap: 8px;
 }
 
-.umpire-ring-roster-item {
+.umpire-ring-roster-slot {
   display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 8px 4px 8px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  color: #fff;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
 }
 
-.umpire-ring-roster-item.is-primary {
-  background: rgba(0, 70, 90, 0.45);
-  box-shadow: inset 3px 0 0 #00d4ff;
+.umpire-ring-roster-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
-.umpire-ring-roster-item.is-secondary {
-  padding-left: 18px;
-}
-
-.umpire-ring-roster-item.is-secondary .umpire-ring-roster-role,
-.umpire-ring-roster-item.is-secondary .umpire-ring-roster-name {
-  color: rgba(255, 255, 255, 0.55);
-  font-weight: 600;
-}
-
-.umpire-ring-roster-item.is-secondary .umpire-ring-roster-name {
-  font-size: 14px;
-}
-
-.umpire-ring-roster-item.is-selected {
-  background: rgba(0, 80, 100, 0.45);
-}
-
-.umpire-ring-roster-item.is-dragging {
-  opacity: 0.45;
+.umpire-ring-roster-backups {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 2.8em;
 }
 
 .umpire-ring-roster-role {
@@ -794,15 +899,62 @@ body.umpire-mgmt-page {
   letter-spacing: 0.04em;
 }
 
+.umpire-ring-roster-seat {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 36px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+  background: rgba(0, 20, 28, 0.55);
+  box-sizing: border-box;
+}
+
+.umpire-ring-roster-seat.is-filled {
+  cursor: grab;
+}
+
+.umpire-ring-roster-seat.is-empty {
+  border-style: dashed;
+}
+
+.umpire-ring-roster-seat.is-secondary {
+  min-height: 30px;
+  opacity: 0.9;
+}
+
+.umpire-ring-roster-seat.is-selected {
+  box-shadow: 0 0 0 1px #00d4ff;
+}
+
+.umpire-ring-roster-seat.is-dragging {
+  opacity: 0.45;
+}
+
 .umpire-ring-roster-name {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
   font-weight: 700;
   line-height: 1.25;
+  color: #fff;
 }
 
-.umpire-ring-roster-clear {
+.umpire-ring-roster-seat.is-secondary .umpire-ring-roster-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.umpire-ring-roster-seat .umpire-slot-clear {
+  position: static;
   flex: 0 0 auto;
   width: 28px;
   height: 28px;
@@ -816,18 +968,15 @@ body.umpire-mgmt-page {
   cursor: pointer;
 }
 
-.umpire-ring-roster-clear:hover,
-.umpire-ring-roster-clear:active {
+.umpire-ring-roster-seat .umpire-slot-clear:hover,
+.umpire-ring-roster-seat .umpire-slot-clear:active {
   background: rgba(255, 80, 80, 0.35);
   color: #fff;
 }
 
-.umpire-ring-roster-empty {
-  margin: 24px 8px;
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 15px;
-  font-style: italic;
-  text-align: center;
+.umpire-ring-roster-seat .umpire-slot-placeholder {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 14px;
 }
 
 .umpire-ring-col {
@@ -885,6 +1034,51 @@ body.umpire-mgmt-page {
   border-style: solid;
   border-color: rgba(0, 212, 255, 0.4);
   background: rgba(0, 50, 68, 0.72);
+}
+
+.umpire-slot.is-role-officials,
+.umpire-ring-roster-item.is-role-officials {
+  background: rgba(255, 193, 7, 0.14);
+  border-color: rgba(255, 193, 7, 0.45);
+}
+.umpire-slot.is-role-officials.is-filled,
+.umpire-ring-roster-item.is-role-officials.is-filled {
+  background: rgba(255, 193, 7, 0.28);
+  border-color: rgba(255, 193, 7, 0.65);
+}
+.umpire-slot.is-role-officials .umpire-slot-seat.is-primary.is-filled {
+  box-shadow: inset 3px 0 0 rgba(255, 193, 7, 0.9);
+  border-color: rgba(255, 193, 7, 0.75);
+}
+
+.umpire-slot.is-role-umpires,
+.umpire-ring-roster-item.is-role-umpires {
+  background: rgba(244, 67, 54, 0.14);
+  border-color: rgba(244, 67, 54, 0.45);
+}
+.umpire-slot.is-role-umpires.is-filled,
+.umpire-ring-roster-item.is-role-umpires.is-filled {
+  background: rgba(244, 67, 54, 0.28);
+  border-color: rgba(244, 67, 54, 0.65);
+}
+.umpire-slot.is-role-umpires .umpire-slot-seat.is-primary.is-filled {
+  box-shadow: inset 3px 0 0 rgba(244, 67, 54, 0.9);
+  border-color: rgba(244, 67, 54, 0.75);
+}
+
+.umpire-slot.is-role-equipment,
+.umpire-ring-roster-item.is-role-equipment {
+  background: rgba(171, 71, 188, 0.14);
+  border-color: rgba(171, 71, 188, 0.45);
+}
+.umpire-slot.is-role-equipment.is-filled,
+.umpire-ring-roster-item.is-role-equipment.is-filled {
+  background: rgba(171, 71, 188, 0.28);
+  border-color: rgba(171, 71, 188, 0.65);
+}
+.umpire-slot.is-role-equipment .umpire-slot-seat.is-primary.is-filled {
+  box-shadow: inset 3px 0 0 rgba(171, 71, 188, 0.9);
+  border-color: rgba(171, 71, 188, 0.75);
 }
 
 .umpire-slot-row {
@@ -1198,33 +1392,28 @@ body.umpire-mgmt-page {
     gap: 8px;
   }
 
-  .umpire-mgmt-top {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
+  html.umpire-mgmt-mobile .umpire-mgmt-top {
+    display: none;
   }
 
-  .umpire-mgmt-event-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
+  html.umpire-mgmt-mobile .umpire-mgmt-pool-head .umpire-mgmt-event-label {
+    display: block;
     width: 100%;
   }
 
-  .umpire-mgmt-select {
+  html.umpire-mgmt-mobile .umpire-mgmt-pool-head .umpire-mgmt-select {
     min-width: 0;
-    flex: 1 1 auto;
     max-width: none;
     width: 100%;
   }
 
-  html.umpire-mgmt-mobile .umpire-mgmt-layout-label {
+  html.umpire-mgmt-mobile .umpire-mgmt-count,
+  html.umpire-mgmt-mobile .umpire-mgmt-hint {
     display: none;
   }
 
   .umpire-mgmt-pool-head {
-    display: none;
+    display: flex;
   }
 
   .umpire-mgmt-pool,
@@ -1234,22 +1423,6 @@ body.umpire-mgmt-page {
 
   .umpire-scroll-cue {
     display: none;
-    margin: 0 0 6px;
-    padding: 4px 8px;
-    border-radius: 999px;
-    border: 1px solid rgba(0, 212, 255, 0.35);
-    background: rgba(0, 40, 55, 0.75);
-    color: rgba(0, 212, 255, 0.9);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-align: center;
-    text-transform: uppercase;
-    flex: 0 0 auto;
-  }
-
-  .umpire-scroll-cue.is-visible {
-    display: block;
   }
 
   .umpire-mgmt-pool.has-scroll:not(.at-scroll-end)::after,
@@ -1266,11 +1439,8 @@ body.umpire-mgmt-page {
   }
 
   .umpire-mgmt-stage {
-    grid-template-rows: minmax(0, 0.48fr) minmax(0, 1fr);
-  }
-
-  .umpire-mgmt-list {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(120px, 10rem) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
   }
 
   .umpire-mgmt-boards {
@@ -1288,7 +1458,7 @@ body.umpire-mgmt-page {
     max-height: 100%;
     width: 100%;
     height: auto;
-    gap: 14px;
+    gap: 12px;
     overflow-x: hidden;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -1327,8 +1497,17 @@ body.umpire-mgmt-page {
     height: 100%;
   }
 
+  .umpire-mgmt-rings.is-mobile-list .umpire-ring-overlay {
+    display: none;
+  }
+
+  .umpire-mgmt-rings.is-mobile-list .umpire-ring-count {
+    display: flex;
+  }
+
   .umpire-mgmt-rings.is-mobile-list .umpire-ring-title {
     font-size: 14px;
+    text-align: center;
   }
 
   .umpire-mgmt-rings.is-mobile-list .umpire-ring:active .umpire-ring-card,
@@ -1340,50 +1519,79 @@ body.umpire-mgmt-page {
   .umpire-ring-modal {
     position: absolute;
     inset: 0;
-    padding: 4px;
-    background: rgba(0, 0, 0, 0.55);
+    padding: 0;
+    background: rgba(8, 12, 16, 0.98);
   }
 
-  .umpire-ring-modal-card {
+  .umpire-ring-modal-card.is-mobile-roster {
     max-height: 100%;
+    height: 100%;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
   }
 
-  .umpire-ring-modal-head {
-    grid-template-columns: 32px minmax(0, 1fr) auto 32px 32px;
-    gap: 4px;
+  html.umpire-mgmt-mobile.umpire-mgmt-ring-detail .umpire-mgmt-pool {
+    display: none;
   }
 
-  .umpire-ring-modal-clear {
+  html.umpire-mgmt-mobile.umpire-mgmt-ring-detail .umpire-mgmt-stage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  html.umpire-mgmt-mobile .umpire-ring-modal-head {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto;
+    gap: 8px;
+  }
+
+  html.umpire-mgmt-mobile .umpire-ring-modal-back {
+    display: inline-flex;
+    align-items: center;
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  html.umpire-mgmt-mobile .umpire-ring-modal-title {
+    grid-column: 2;
+    grid-row: 1;
+    text-align: center;
+  }
+
+  html.umpire-mgmt-mobile .umpire-ring-modal-clear {
+    display: inline-flex;
+    align-items: center;
+    grid-column: 3;
+    grid-row: 1;
     font-size: 11px;
-    padding: 0 8px;
+    padding: 0 10px;
   }
 
-  .umpire-slot.is-empty,
-  .umpire-slot-seat.is-empty {
-    cursor: pointer;
+  html.umpire-mgmt-mobile .umpire-ring-modal-nav,
+  html.umpire-mgmt-mobile .umpire-ring-modal-close,
+  html.umpire-mgmt-mobile .umpire-role-legend {
+    display: none;
   }
 
-  .umpire-slot.is-empty:active,
-  .umpire-slot-seat.is-empty:active {
-    background: rgba(0, 212, 255, 0.1);
+  .umpire-ring-modal-cols.is-mobile-roster {
+    display: block;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 4px 2px 8px;
   }
 
-  .umpire-slot {
-    padding: 5px 6px;
+  .umpire-slot.umpire-ring-roster-slot {
+    padding: 8px;
+    min-height: 0;
+    flex: 0 0 auto;
   }
 }
 
 @media (max-width: 720px) {
   .umpire-mgmt-stage {
-    grid-template-rows: minmax(0, 0.4fr) minmax(0, 1fr);
-  }
-
-  .umpire-mgmt-list {
-    grid-template-columns: 1fr;
-  }
-
-  .umpire-ring-modal-cols {
-    grid-template-columns: 1fr;
-    overflow: auto;
+    grid-template-columns: minmax(110px, 9rem) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
   }
 }

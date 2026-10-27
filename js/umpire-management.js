@@ -6,17 +6,18 @@ import { logInteraction } from './portal-log.js';
     {
       id: 'officials',
       title: 'Jury / IT',
-      slots: ['jury_president', 'jury_member', 'it_umpire']
+      slots: [
+        'jury_president',
+        'jury_member',
+        'it_umpire',
+        'equipment_verifier_1',
+        'equipment_verifier_2'
+      ]
     },
     {
       id: 'umpires',
       title: 'Umpires',
       slots: ['umpire_1', 'umpire_2', 'umpire_3', 'umpire_4', 'umpire_5']
-    },
-    {
-      id: 'equipment',
-      title: 'Equipment Verifiers',
-      slots: ['equipment_verifier_1', 'equipment_verifier_2']
     }
   ];
 
@@ -42,8 +43,8 @@ import { logInteraction } from './portal-log.js';
     umpire_3: 'R',
     umpire_4: 'R',
     umpire_5: 'R',
-    equipment_verifier_1: 'EV',
-    equipment_verifier_2: 'EV'
+    equipment_verifier_1: 'EV1',
+    equipment_verifier_2: 'EV2'
   };
 
   const SLOT_CAPACITY = 3;
@@ -228,21 +229,24 @@ import { logInteraction } from './portal-log.js';
     assignments: {},
     selectedIds: [],
     openRing: 0,
-    gridLayout: '1x',
+    gridLayout: '1col',
     overlaySchedule: false,
     scheduleOverlay: null,
     eventDateStart: null,
     filters: {
+      name: '',
       rank: '',
       team: '',
       region: '',
       preferredRole: '',
       class: ''
-    }
+    },
+    expandedIds: {}
   };
 
   let dragPayload = null;
   let dragGhostEl = null;
+  let suppressClickUntil = 0;
   let saveDirty = false;
   let saveChain = Promise.resolve();
   let saveSeq = 0;
@@ -254,7 +258,37 @@ import { logInteraction } from './portal-log.js';
   }
 
   function syncMobileLayoutClass() {
-    document.documentElement.classList.toggle('umpire-mgmt-mobile', isMobileView());
+    const mobile = isMobileView();
+    document.documentElement.classList.toggle('umpire-mgmt-mobile', mobile);
+    document.documentElement.classList.toggle(
+      'umpire-mgmt-ring-detail',
+      mobile && Boolean(state.openRing)
+    );
+    syncMobileEventPlacement(mobile);
+    if (mobile && state.overlaySchedule) {
+      state.overlaySchedule = false;
+      const btn = document.getElementById('umpireOverlayScheduleBtn');
+      if (btn) {
+        btn.classList.remove('is-active');
+        btn.setAttribute('aria-pressed', 'false');
+      }
+    }
+  }
+
+  function syncMobileEventPlacement(mobile) {
+    const eventLabel = document.querySelector('.umpire-mgmt-event-label');
+    const headerRow = document.querySelector('.umpire-mgmt-event-row');
+    const poolHead = document.querySelector('.umpire-mgmt-pool-head');
+    if (!eventLabel || !headerRow || !poolHead) return;
+    if (mobile) {
+      if (eventLabel.parentElement !== poolHead) {
+        poolHead.insertBefore(eventLabel, poolHead.firstChild);
+      }
+      return;
+    }
+    if (eventLabel.parentElement !== headerRow) {
+      headerRow.insertBefore(eventLabel, headerRow.firstChild);
+    }
   }
 
   function ringAssignedEntries(ring) {
@@ -288,6 +322,7 @@ import { logInteraction } from './portal-log.js';
           id: String(id),
           name: umpireDisplayName(umpire),
           abbrev,
+          slotKey: slot.key,
           primary: i === 0
         });
       }
@@ -297,6 +332,7 @@ import { logInteraction } from './portal-log.js';
 
   function renderRingCard(ring, mobile) {
     const hideNames = Boolean(mobile);
+    const assignedCount = ringAssignedIds(ring).length;
     const entries = hideNames ? [] : ringAssignedEntries(ring);
     const names = entries.map((entry) => entry.name);
     const nameList = entries.length
@@ -310,7 +346,12 @@ import { logInteraction } from './portal-log.js';
     const overlayHtml = state.overlaySchedule
       ? renderScheduleOverlay(ring)
       : hideNames
-        ? ''
+        ? (
+          '<div class="umpire-ring-count' + (assignedCount ? '' : ' is-empty') + '" aria-label="' +
+            assignedCount + (assignedCount === 1 ? ' umpire' : ' umpires') + ' assigned">' +
+            assignedCount +
+          '</div>'
+        )
         : (
         '<div class="umpire-ring-overlay">' +
           '<div class="umpire-ring-names' + (names.length ? '' : ' is-empty') + '">' + nameList + '</div>' +
@@ -327,15 +368,6 @@ import { logInteraction } from './portal-log.js';
         '</div>' +
       '</div>'
     );
-  }
-
-  function assignSelectedToSlot(ring, slotKey, seatIndex) {
-    const ids = uniqueIds(state.selectedIds);
-    if (!ids.length) return false;
-    if (ids.length === 1) return placeUmpire(ids[0], ring, slotKey, seatIndex);
-    const group = RING_SLOT_GROUPS.find((item) => item.slots.indexOf(slotKey) !== -1);
-    const slots = group ? group.slots.slice(group.slots.indexOf(slotKey)) : [slotKey];
-    return assignToSlotsTopDown(ids, ring, slots);
   }
 
   function escapeHtml(text) {
@@ -402,6 +434,7 @@ import { logInteraction } from './portal-log.js';
     return index;
   }
   const RING_GRID_LAYOUTS = {
+    '1col': { rows: 0, cols: 1 },
     '1x': { rows: 1, cols: 0 },
     '2x2': { rows: 2, cols: 2 },
     '2x3': { rows: 2, cols: 3 },
@@ -417,15 +450,18 @@ import { logInteraction } from './portal-log.js';
     } catch (_) {
       /* ignore */
     }
-    return '1x';
+    return '1col';
   }
 
   function ringGridDims(count) {
     const n = Math.max(0, Number(count) || 0);
-    const layout = RING_GRID_LAYOUTS[state.gridLayout] || RING_GRID_LAYOUTS['1x'];
+    const layout = RING_GRID_LAYOUTS[state.gridLayout] || RING_GRID_LAYOUTS['1col'];
     if (n <= 0) return { cols: 1, rows: 1 };
     if (!layout.cols) {
       return { cols: Math.max(1, n), rows: 1 };
+    }
+    if (!layout.rows) {
+      return { cols: Math.max(1, layout.cols), rows: Math.max(1, n) };
     }
     const cols = layout.cols;
     const rows = Math.max(layout.rows, Math.ceil(n / cols));
@@ -433,7 +469,7 @@ import { logInteraction } from './portal-log.js';
   }
 
   function applyGridLayout(value, options) {
-    const next = RING_GRID_LAYOUTS[value] ? value : '1x';
+    const next = RING_GRID_LAYOUTS[value] ? value : '1col';
     state.gridLayout = next;
     const select = document.getElementById('umpireGridLayoutSelect');
     if (select && select.value !== next) select.value = next;
@@ -660,11 +696,43 @@ import { logInteraction } from './portal-log.js';
     return name || umpire.contact_email || 'Unnamed umpire';
   }
 
-  function umpireMeta(umpire) {
-    const parts = [];
-    if (umpire.rank) parts.push(String(umpire.rank));
-    if (umpire.team_name_or_country) parts.push(String(umpire.team_name_or_country));
-    return parts.join(' · ');
+  function umpireListName(umpire) {
+    if (!umpire) return '';
+    const first = String(umpire.first_name || '').trim();
+    const last = String(umpire.last_name || '').trim();
+    if (last && first) return last + ', ' + first;
+    return last || first || umpire.contact_email || 'Unnamed umpire';
+  }
+
+  function sortUmpiresByLastName(a, b) {
+    const lastCmp = String(a.last_name || '').localeCompare(String(b.last_name || ''), undefined, { sensitivity: 'base' });
+    if (lastCmp) return lastCmp;
+    return String(a.first_name || '').localeCompare(String(b.first_name || ''), undefined, { sensitivity: 'base' });
+  }
+
+  function umpireDetailRows(umpire) {
+    const age = ageFromDob(umpire.dob);
+    const dobText = formatDob(umpire.dob);
+    const dobAge = age != null ? dobText + ' / ' + age : dobText;
+    return [
+      ['D.O.B', dobAge],
+      ['gender', dash(umpire.gender)],
+      ['rank', dash(umpire.rank)],
+      ['team', dash(umpire.team_name_or_country)],
+      ['preferred role', preferredRoleLabel(umpire.umpire_preferred_role)],
+      ['class', dash(umpire.umpire_class)],
+      ['email', dash(umpire.contact_email)]
+    ];
+  }
+
+  function roleFamilyClass(slotKey) {
+    const key = String(slotKey || '');
+    if (key === 'jury_president' || key === 'jury_member' || key === 'it_umpire') {
+      return 'is-role-officials';
+    }
+    if (key.indexOf('equipment_verifier') === 0) return 'is-role-equipment';
+    if (key.indexOf('umpire_') === 0) return 'is-role-umpires';
+    return 'is-role-officials';
   }
 
   function dash(value) {
@@ -716,6 +784,19 @@ import { logInteraction } from './portal-log.js';
 
   function umpirePassesFilters(umpire) {
     const filters = state.filters || {};
+    if (filters.name) {
+      const needle = String(filters.name).trim().toLowerCase();
+      if (needle) {
+        const first = String(umpire.first_name || '').toLowerCase();
+        const last = String(umpire.last_name || '').toLowerCase();
+        const listName = umpireListName(umpire).toLowerCase();
+        if (first.indexOf(needle) === -1
+          && last.indexOf(needle) === -1
+          && listName.indexOf(needle) === -1) {
+          return false;
+        }
+      }
+    }
     if (filters.rank && rankFilterBucket(umpire.rank) !== filters.rank) return false;
     if (filters.team && String(umpire.team_name_or_country || '').trim() !== filters.team) return false;
     if (filters.region && regionForTeam(umpire.team_name_or_country) !== filters.region) return false;
@@ -746,18 +827,7 @@ import { logInteraction } from './portal-log.js';
       hideUmpireDetails();
       return;
     }
-    const age = ageFromDob(umpire.dob);
-    const dobText = formatDob(umpire.dob);
-    const dobAge = age != null ? dobText + ' / ' + age : dobText;
-    const rows = [
-      ['D.O.B', dobAge],
-      ['gender', dash(umpire.gender)],
-      ['rank', dash(umpire.rank)],
-      ['team', dash(umpire.team_name_or_country)],
-      ['preferred role', preferredRoleLabel(umpire.umpire_preferred_role)],
-      ['class', dash(umpire.umpire_class)],
-      ['email', dash(umpire.contact_email)]
-    ];
+    const rows = umpireDetailRows(umpire);
     nameEl.textContent = umpireDisplayName(umpire);
     listEl.innerHTML = rows.map(([label, value]) => (
       '<dt>' + escapeHtml(label) + '</dt><dd>' + escapeHtml(value) + '</dd>'
@@ -779,13 +849,22 @@ import { logInteraction } from './portal-log.js';
     pop.style.top = top + 'px';
   }
 
+  function togglePoolExpand(id) {
+    const key = String(id || '');
+    if (!key) return;
+    if (state.expandedIds[key]) delete state.expandedIds[key];
+    else state.expandedIds[key] = true;
+  }
+
   function resetFilters() {
-    state.filters = { rank: '', team: '', region: '', preferredRole: '', class: '' };
+    state.filters = { name: '', rank: '', team: '', region: '', preferredRole: '', class: '' };
+    const nameInput = document.getElementById('umpireFilterName');
     const rankSelect = document.getElementById('umpireFilterRank');
     const teamSelect = document.getElementById('umpireFilterTeam');
     const regionSelect = document.getElementById('umpireFilterRegion');
     const preferredRoleSelect = document.getElementById('umpireFilterPreferredRole');
     const classSelect = document.getElementById('umpireFilterClass');
+    if (nameInput) nameInput.value = '';
     if (rankSelect) rankSelect.value = '';
     if (teamSelect) teamSelect.value = '';
     if (regionSelect) regionSelect.value = '';
@@ -1069,7 +1148,7 @@ import { logInteraction } from './portal-log.js';
     const empty = document.getElementById('umpireListEmpty');
     const count = state.umpires.length;
     const unassigned = state.umpires.filter((umpire) => !findAssignment(umpireId(umpire)));
-    const visible = unassigned.filter(umpirePassesFilters);
+    const visible = unassigned.filter(umpirePassesFilters).slice().sort(sortUmpiresByLastName);
     if (heading) {
       heading.textContent = count === 1 ? '1 registered umpire' : (count + ' registered umpires');
     }
@@ -1089,11 +1168,23 @@ import { logInteraction } from './portal-log.js';
     empty.hidden = true;
     list.innerHTML = visible.map((umpire) => {
       const id = umpireId(umpire);
-      const meta = umpireMeta(umpire);
+      const expanded = Boolean(state.expandedIds[id]);
+      const detailHtml = expanded
+        ? (
+          '<dl class="umpire-mgmt-item-details">' +
+            umpireDetailRows(umpire).map(([label, value]) => (
+              '<dt>' + escapeHtml(label) + '</dt><dd>' + escapeHtml(value) + '</dd>'
+            )).join('') +
+          '</dl>'
+        )
+        : '';
       return (
-        '<li class="umpire-mgmt-item' + (isSelected(id) ? ' is-selected' : '') + '" draggable="true" data-umpire-id="' + escapeHtml(id) + '">' +
-          '<strong>' + escapeHtml(umpireDisplayName(umpire)) + '</strong>' +
-          (meta ? '<span>' + escapeHtml(meta) + '</span>' : '') +
+        '<li class="umpire-mgmt-item' +
+          (isSelected(id) ? ' is-selected' : '') +
+          (expanded ? ' is-expanded' : '') +
+          '" draggable="true" data-umpire-id="' + escapeHtml(id) + '">' +
+          '<strong>' + escapeHtml(umpireListName(umpire)) + '</strong>' +
+          detailHtml +
         '</li>'
       );
     }).join('');
@@ -1135,9 +1226,6 @@ import { logInteraction } from './portal-log.js';
   }
 
   function seatLayoutHtml(colId, seats) {
-    if (colId === 'equipment') {
-      return seats[0] + '<div class="umpire-slot-seat-row">' + seats[1] + seats[2] + '</div>';
-    }
     if (colId === 'officials' || colId === 'umpires') {
       return seats[0] + '<div class="umpire-slot-seat-stack">' + seats[1] + seats[2] + '</div>';
     }
@@ -1145,7 +1233,6 @@ import { logInteraction } from './portal-log.js';
   }
 
   function seatLayoutClass(colId) {
-    if (colId === 'equipment') return ' is-stack-over-row';
     if (colId === 'officials' || colId === 'umpires') return ' is-split-stack';
     return '';
   }
@@ -1159,8 +1246,9 @@ import { logInteraction } from './portal-log.js';
     }
     const layoutClass = seatLayoutClass(colId);
     const filled = seats.some(Boolean);
+    const roleClass = roleFamilyClass(slot.key);
     return (
-      '<div class="umpire-slot' + (filled ? ' is-filled' : ' is-empty') + '"' +
+      '<div class="umpire-slot' + (filled ? ' is-filled' : ' is-empty') + ' ' + roleClass + '"' +
         ' data-ring="' + ring + '" data-slot="' + escapeHtml(slot.key) + '">' +
         '<div class="umpire-slot-row">' +
           '<span class="umpire-slot-role">' + escapeHtml(abbrev) + '</span>' +
@@ -1524,24 +1612,55 @@ import { logInteraction } from './portal-log.js';
     });
   }
 
-  function renderMobileRingRoster(ring) {
-    const entries = ringCouncilEntries(ring);
-    if (!entries.length) {
-      return '<p class="umpire-ring-roster-empty">No umpires assigned</p>';
-    }
+  function renderMobileRosterSeat(ring, slot, id, index) {
+    const umpire = id ? state.umpiresById[String(id)] : null;
+    const filled = Boolean(umpire);
+    const selected = filled && isSelected(umpireId(umpire));
+    const name = filled ? umpireListName(umpire) : '';
+    const primary = index === 0;
     return (
-      '<ul class="umpire-ring-roster">' +
-        entries.map((entry) => (
-          '<li class="umpire-ring-roster-item' +
-            (entry.primary ? ' is-primary' : ' is-secondary') +
-            (isSelected(entry.id) ? ' is-selected' : '') + '"' +
-            ' draggable="true" data-umpire-id="' + escapeHtml(entry.id) + '" data-ring="' + ring + '">' +
-            '<span class="umpire-ring-roster-role">' + escapeHtml(entry.abbrev) + '</span>' +
-            '<span class="umpire-ring-roster-name">' + escapeHtml(entry.name) + '</span>' +
-            '<button type="button" class="umpire-ring-roster-clear" data-clear="1" aria-label="Remove ' + escapeHtml(entry.name) + '">×</button>' +
-          '</li>'
-        )).join('') +
-      '</ul>'
+      '<div class="umpire-slot-seat umpire-ring-roster-seat' +
+        (filled ? ' is-filled' : ' is-empty') +
+        (primary ? ' is-primary' : ' is-secondary') +
+        (selected ? ' is-selected' : '') + '"' +
+        (filled ? ' draggable="true" data-umpire-id="' + escapeHtml(umpireId(umpire)) + '"' : '') +
+        ' data-ring="' + ring + '" data-slot="' + escapeHtml(slot.key) + '" data-seat="' + index + '"' +
+        ' title="' + escapeHtml(filled ? name : slot.label) + '">' +
+        (filled
+          ? (
+            '<span class="umpire-ring-roster-name">' + escapeHtml(name) + '</span>' +
+            '<button type="button" class="umpire-slot-clear" data-clear="1" aria-label="Remove ' + escapeHtml(name) + '">×</button>'
+          )
+          : '<span class="umpire-slot-placeholder">—</span>') +
+      '</div>'
+    );
+  }
+
+  function renderMobileRingRoster(ring) {
+    return (
+      '<div class="umpire-ring-roster">' +
+        RING_SLOTS.map((slot) => {
+          const seats = seatArray(state.assignments[String(ring)], slot.key);
+          const abbrev = SLOT_ABBREV[slot.key] || '';
+          const roleClass = roleFamilyClass(slot.key);
+          const primaryHtml = renderMobileRosterSeat(ring, slot, seats[0] || '', 0);
+          const backupHtml = [];
+          for (let i = 1; i < SLOT_CAPACITY; i += 1) {
+            backupHtml.push(renderMobileRosterSeat(ring, slot, seats[i] || '', i));
+          }
+          return (
+            '<div class="umpire-slot umpire-ring-roster-slot ' + roleClass +
+              (seats.some(Boolean) ? ' is-filled' : ' is-empty') + '"' +
+              ' data-ring="' + ring + '" data-slot="' + escapeHtml(slot.key) + '">' +
+              '<div class="umpire-ring-roster-row is-primary">' +
+                '<span class="umpire-ring-roster-role">' + escapeHtml(abbrev) + ':</span>' +
+                primaryHtml +
+              '</div>' +
+              '<div class="umpire-ring-roster-backups">' + backupHtml.join('') + '</div>' +
+            '</div>'
+          );
+        }).join('') +
+      '</div>'
     );
   }
 
@@ -1553,6 +1672,8 @@ import { logInteraction } from './portal-log.js';
     const prevBtn = document.getElementById('umpireRingPrevBtn');
     const nextBtn = document.getElementById('umpireRingNextBtn');
     const clearBtn = document.getElementById('umpireRingClearBtn');
+    const backBtn = document.getElementById('umpireRingBackBtn');
+    const closeBtn = document.getElementById('umpireRingModalClose');
     if (!modal || !cols) return;
     const ring = Number(state.openRing) || 0;
     if (ring < 1 || ring > state.ringCount) {
@@ -1567,9 +1688,21 @@ import { logInteraction } from './portal-log.js';
     }
     cols.classList.toggle('is-mobile-roster', mobile);
     if (title) title.textContent = 'Ring ' + ring;
-    if (prevBtn) prevBtn.disabled = ring <= 1;
-    if (nextBtn) nextBtn.disabled = ring >= state.ringCount;
-    if (clearBtn) clearBtn.disabled = !ringHasAssignments(ring);
+    if (prevBtn) {
+      prevBtn.hidden = mobile;
+      prevBtn.disabled = ring <= 1;
+    }
+    if (nextBtn) {
+      nextBtn.hidden = mobile;
+      nextBtn.disabled = ring >= state.ringCount;
+    }
+    if (clearBtn) {
+      clearBtn.hidden = false;
+      clearBtn.textContent = mobile ? 'Clear' : 'Clear Ring';
+      clearBtn.disabled = !ringHasAssignments(ring);
+    }
+    if (closeBtn) closeBtn.hidden = mobile;
+    if (backBtn) backBtn.hidden = !mobile;
     if (mobile) {
       cols.innerHTML = renderMobileRingRoster(ring);
       return;
@@ -1610,9 +1743,7 @@ import { logInteraction } from './portal-log.js';
   function syncMobileHint() {
     const hint = document.querySelector('.umpire-mgmt-hint');
     if (!hint) return;
-    hint.textContent = isMobileView()
-      ? 'Long-press an umpire to drag. Tap a ring to assign, or to see who is on that ring.'
-      : 'Click a ring to assign positions. Select referees, then drag onto a ring or into the ring window.';
+    hint.textContent = 'Drag an umpire onto a ring or into a seat. Click a name for details.';
   }
 
   function syncRingCountInput() {
@@ -2140,82 +2271,19 @@ import { logInteraction } from './portal-log.js';
   }
 
   document.addEventListener('dragstart', (e) => {
-    const item = e.target.closest('[draggable="true"][data-umpire-id]');
-    if (!item || !e.dataTransfer) return;
-    const id = item.getAttribute('data-umpire-id');
-    if (!id) return;
-    let ids = isSelected(id) ? state.selectedIds.slice() : [id];
-    ids = uniqueIds(ids);
-    if (!ids.length) return;
-    if (!isSelected(id)) setSelection(ids, id, item.closest('#umpirePool') ? 'pool' : Number(item.closest('[data-ring]')?.getAttribute('data-ring') || 0) || 'pool');
-    dragPayload = { ids };
-    ids.forEach((selectedId) => {
-      document.querySelectorAll('[data-umpire-id="' + CSS.escape(selectedId) + '"]').forEach((el) => {
-        el.classList.add('is-dragging');
-      });
-    });
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', ids.join(','));
-    removeDragGhost();
-    if (ids.length > 1) {
-      dragGhostEl = document.createElement('div');
-      dragGhostEl.className = 'umpire-drag-ghost';
-      dragGhostEl.textContent = ids.length + ' umpires';
-      document.body.appendChild(dragGhostEl);
-      try {
-        e.dataTransfer.setDragImage(dragGhostEl, 24, 16);
-      } catch (_) {
-        /* some browsers reject custom drag images */
-      }
-    }
-  });
-
-  document.addEventListener('dragend', () => {
-    document.querySelectorAll('.is-dragging').forEach((el) => el.classList.remove('is-dragging'));
-    clearDropHighlights();
-    removeDragGhost();
-    dragPayload = null;
-  });
-
-  document.addEventListener('dragover', (e) => {
-    if (!dragPayload) return;
-    const seat = e.target.closest('#umpireRingModal .umpire-slot-seat');
-    const slot = seat ? seat.closest('.umpire-slot') : e.target.closest('#umpireRingModal .umpire-slot');
-    const col = e.target.closest('.umpire-ring-col');
-    const modalCard = e.target.closest('#umpireRingModalCard');
-    const ringWrap = e.target.closest('.umpire-mgmt-rings .umpire-ring');
-    const ringCard = e.target.closest('.umpire-ring-card') || (ringWrap ? ringWrap.querySelector('.umpire-ring-card') : null);
-    const pool = e.target.closest('#umpirePool');
-    const canDropOnPool = Boolean(pool && dragIdsHasAssigned(dragPayload.ids));
-    const target = seat || slot || col || modalCard || ringCard || (canDropOnPool ? pool : null);
-    if (target) {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      if (!target.classList.contains('is-drop-target')) {
-        clearDropHighlights();
-        target.classList.add('is-drop-target');
-      }
-      return;
-    }
-    clearDropHighlights();
-  });
-
-  document.addEventListener('drop', (e) => {
-    if (!dragPayload) return;
-    const payload = dragPayload;
-    dragPayload = null;
-    clearDropHighlights();
-    document.querySelectorAll('.is-dragging').forEach((el) => el.classList.remove('is-dragging'));
-    removeDragGhost();
+    const item = e.target.closest('#umpireMgmtStage [draggable="true"][data-umpire-id]');
+    if (!item) return;
     e.preventDefault();
-    if (executeUmpireDrop(payload.ids, e.target)) {
-      renderAll();
-      scheduleSave();
-    }
   });
 
   bindTouchDnD(document, {
-    selector: '[draggable="true"][data-umpire-id]',
+    selector: '#umpireMgmtStage [draggable="true"][data-umpire-id]',
+    activation: 'move',
+    moveThreshold: 8,
+    canActivate(el, dx, dy) {
+      if (el.closest('#umpirePool')) return Math.abs(dx) > Math.abs(dy);
+      return true;
+    },
     onDragStart(item) {
       return beginUmpireDrag(item) || false;
     },
@@ -2225,6 +2293,7 @@ import { logInteraction } from './portal-log.js';
       highlightUmpireDropTarget(under);
     },
     onDragEnd(_touch, payload, under) {
+      suppressClickUntil = Date.now() + 400;
       if (!payload) {
         clearUmpireDragVisuals();
         return;
@@ -2240,21 +2309,35 @@ import { logInteraction } from './portal-log.js';
       }
     },
     onDragCancel() {
+      suppressClickUntil = Date.now() + 400;
       clearUmpireDragVisuals();
     },
     dragImage(item) {
       const ghost = document.createElement('div');
       ghost.className = 'umpire-drag-ghost touch-dnd-follower';
-      const count = isSelected(item.getAttribute('data-umpire-id'))
-        ? state.selectedIds.length
-        : 1;
-      ghost.textContent = count > 1 ? count + ' umpires' : umpireDisplayName(state.umpiresById[item.getAttribute('data-umpire-id')] || {}) || 'Umpire';
+      const id = item.getAttribute('data-umpire-id');
+      const count = isSelected(id) ? state.selectedIds.length : 1;
+      const umpire = state.umpiresById[id] || {};
+      ghost.textContent = count > 1
+        ? count + ' umpires'
+        : (umpireListName(umpire) || umpireDisplayName(umpire) || 'Umpire');
       return ghost;
     }
   });
 
   document.addEventListener('click', (e) => {
-    if (e.target.closest('#umpireRingModalClose') || e.target.id === 'umpireRingModal') {
+    const ringWrapClick = e.target.closest('.umpire-mgmt-rings .umpire-ring');
+    if (Date.now() < suppressClickUntil) {
+      // Still allow opening a ring drill-down; only suppress leftover drag clicks.
+      if (!ringWrapClick || state.openRing) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+    }
+    if (e.target.closest('#umpireRingModalClose')
+      || e.target.closest('#umpireRingBackBtn')
+      || e.target.id === 'umpireRingModal') {
       closeRingModal();
       return;
     }
@@ -2268,17 +2351,6 @@ import { logInteraction } from './portal-log.js';
     }
     if (e.target.closest('#umpireRingClearBtn')) {
       if (clearRing(state.openRing)) {
-        renderAll();
-        scheduleSave();
-      }
-      return;
-    }
-
-    const rosterClear = e.target.closest('.umpire-ring-roster-clear');
-    if (rosterClear) {
-      const row = rosterClear.closest('[data-umpire-id]');
-      const id = row && row.getAttribute('data-umpire-id');
-      if (id && unassignUmpire(id)) {
         renderAll();
         scheduleSave();
       }
@@ -2309,42 +2381,33 @@ import { logInteraction } from './portal-log.js';
       return;
     }
 
-    const emptySeat = e.target.closest('#umpireRingModal .umpire-slot-seat.is-empty');
-    const emptySlot = emptySeat || e.target.closest('#umpireRingModal .umpire-slot.is-empty');
-    if (emptySlot && state.selectedIds.length) {
-      const slotEl = emptySeat ? emptySeat.closest('.umpire-slot') : emptySlot;
-      const ring = Number(slotEl.getAttribute('data-ring'));
-      const slotKey = slotEl.getAttribute('data-slot');
-      const seatIndex = emptySeat && emptySeat.getAttribute('data-seat') != null
-        ? Number(emptySeat.getAttribute('data-seat'))
-        : null;
-      if (assignSelectedToSlot(ring, slotKey, Number.isFinite(seatIndex) ? seatIndex : null)) {
-        renderAll();
-        scheduleSave();
-      }
-      return;
-    }
-
     const filledSeat = e.target.closest('.umpire-slot-seat.is-filled');
     const umpireEl = e.target.closest('[data-umpire-id]')
       || (filledSeat ? filledSeat : null);
     if (umpireEl && !e.target.closest('.umpire-slot-clear') && !e.target.closest('.umpire-ring-roster-clear') && !e.target.closest('.umpire-ring-card')) {
-      const scope = umpireEl.closest('#umpirePool')
+      const id = umpireEl.getAttribute('data-umpire-id');
+      const inPool = Boolean(umpireEl.closest('#umpirePool'));
+      const scope = inPool
         ? 'pool'
         : Number(umpireEl.closest('[data-ring]')?.getAttribute('data-ring') || 0);
-      applySelectionFromClick(umpireEl.getAttribute('data-umpire-id'), scope, e);
+      applySelectionFromClick(id, scope, e);
       markSelectedInDom();
-      showUmpireDetails(umpireEl.getAttribute('data-umpire-id'), e.clientX, e.clientY);
+      if (inPool && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+        togglePoolExpand(id);
+        hideUmpireDetails();
+        renderUmpires();
+        markSelectedInDom();
+        syncScrollAffordances();
+      } else if (!inPool) {
+        showUmpireDetails(id, e.clientX, e.clientY);
+      }
       return;
     }
 
-    if (!state.openRing) {
-      const ringWrap = e.target.closest('.umpire-mgmt-rings .umpire-ring');
-      if (ringWrap) {
-        hideUmpireDetails();
-        openRingModal(Number(ringWrap.getAttribute('data-ring')));
-        return;
-      }
+    if (!state.openRing && ringWrapClick) {
+      hideUmpireDetails();
+      openRingModal(Number(ringWrapClick.getAttribute('data-ring')));
+      return;
     }
 
     if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.target.closest('#umpireMgmtStage') && !e.target.closest('.umpire-slot, .umpire-ring, .umpire-ring-modal')) {
@@ -2423,6 +2486,15 @@ import { logInteraction } from './portal-log.js';
   bindFilterSelect('umpireFilterRegion', 'region');
   bindFilterSelect('umpireFilterPreferredRole', 'preferredRole');
   bindFilterSelect('umpireFilterClass', 'class');
+
+  const nameFilter = document.getElementById('umpireFilterName');
+  if (nameFilter) {
+    nameFilter.addEventListener('input', function () {
+      state.filters.name = String(nameFilter.value || '');
+      renderUmpires();
+      syncScrollAffordances();
+    });
+  }
 
   const ringGrid = document.getElementById('umpireRingGrid');
   if (ringGrid && typeof ResizeObserver !== 'undefined') {

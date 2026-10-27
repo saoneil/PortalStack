@@ -885,10 +885,37 @@ table button:hover {
   width: 96vw;
   height: 94vh;
   min-height: 94vh;
-  padding: 16px;
+  padding: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.draw-creation-modal-chrome {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 10px;
+  box-sizing: border-box;
+  border-bottom: 1px solid rgba(0, 212, 255, 0.22);
+  background: rgba(18, 22, 26, 0.98);
+}
+
+.draw-creation-modal-content .modal-close-btn {
+  position: static;
+  top: auto;
+  right: auto;
+  width: 36px;
+  height: 36px;
+  font-size: 24px;
+  transform: none;
+}
+
+.draw-creation-modal-content .modal-close-btn:hover {
+  transform: none;
 }
 
 .draw-creation-frame {
@@ -896,7 +923,7 @@ table button:hover {
   width: 100%;
   min-height: 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: 0;
   background: #222;
 }
 
@@ -1861,18 +1888,27 @@ table button:hover {
     height: min(94dvh, 94vh);
     min-height: min(94dvh, 94vh);
     max-height: min(94dvh, 94vh);
-    padding: 44px 12px 12px;
+    padding: 0;
     margin: 0 auto;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     box-sizing: border-box;
   }
 
+  .draw-creation-modal-chrome {
+    min-height: 48px;
+    padding: 8px 10px;
+    padding-top: max(8px, env(safe-area-inset-top));
+  }
+
   .draw-creation-modal-content .modal-close-btn {
-    top: 6px;
-    right: 6px;
+    position: static;
+    top: auto;
+    right: auto;
+    width: 40px;
+    height: 40px;
     font-size: 26px;
     z-index: 2;
   }
