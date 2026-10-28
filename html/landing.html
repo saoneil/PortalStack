@@ -1017,7 +1017,8 @@
       var name = (event && event.event_name) || ('event ' + ((event && event.id) || ''));
       var raw = event && event.event_date_start;
       if (!raw) return name;
-      var d = new Date(raw);
+      var parts = String(raw).split('T')[0].split('-');
+      var d = parts.length === 3 ? new Date(+parts[0], +parts[1] - 1, +parts[2]) : new Date(raw);
       if (Number.isNaN(d.getTime())) return name;
       return name + ' (' + d.toLocaleDateString() + ')';
     }
