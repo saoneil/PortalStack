@@ -980,6 +980,86 @@ function bindDraws() {
   window.addEventListener('scroll', hideDrawsAthletesMenu, true);
   window.addEventListener('resize', hideDrawsAthletesMenu);
 
+  function escapeHtml(text) {
+    return String(text ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function formatDobAge(dob, age) {
+    if (!dob) return '—';
+    const d = new Date(dob);
+    if (Number.isNaN(d.getTime())) return String(dob);
+    const dobText = d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    return age != null ? `${dobText} / ${age}` : dobText;
+  }
+
+  function dash(v) {
+    const t = String(v ?? '').trim();
+    return t || '—';
+  }
+
+  function hideAthleteDetailsPop() {
+    const pop = document.getElementById('daAthleteDetailsPop');
+    if (pop) pop.hidden = true;
+  }
+
+  function showAthleteDetailsPop(athlete, clientX, clientY) {
+    const pop = document.getElementById('daAthleteDetailsPop');
+    const nameEl = document.getElementById('daAthleteDetailsName');
+    const listEl = document.getElementById('daAthleteDetailsList');
+    if (!pop || !nameEl || !listEl) return;
+    nameEl.textContent = athlete.name || '—';
+    const rows = [
+      ['D.O.B / age', formatDobAge(athlete.dob, athlete.age)],
+      ['club', dash(athlete.club || athlete.team)],
+      ['rank', dash(athlete.rank)],
+      ['height', athlete.height_cm != null ? `${athlete.height_cm} cm` : '—'],
+      ['weight', athlete.weight_kg != null ? `${athlete.weight_kg} kg` : '—'],
+    ];
+    listEl.innerHTML = rows.map(([label, value]) => (
+      `<dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd>`
+    )).join('');
+    pop.hidden = false;
+    pop.style.left = '0px';
+    pop.style.top = '0px';
+    const pad = 8;
+    const rect = pop.getBoundingClientRect();
+    let left = clientX;
+    let top = clientY;
+    if (left + rect.width > window.innerWidth - pad) {
+      left = Math.max(pad, window.innerWidth - rect.width - pad);
+    }
+    if (top + rect.height > window.innerHeight - pad) {
+      top = Math.max(pad, window.innerHeight - rect.height - pad);
+    }
+    pop.style.left = `${left}px`;
+    pop.style.top = `${top}px`;
+  }
+
+  document.getElementById('drawAthletesList')?.addEventListener('contextmenu', (e) => {
+    const chip = e.target.closest('[data-index]');
+    if (!chip || chip.dataset.index === '') return;
+    e.preventDefault();
+    const idx = Number(chip.dataset.index);
+    if (Number.isNaN(idx)) return;
+    const entry = selectedDrawEntry();
+    const athlete = (entry?.athletes || []).find((a) => Number(a.index) === idx);
+    if (!athlete) return;
+    showAthleteDetailsPop(athlete, e.clientX, e.clientY);
+  });
+
+  document.addEventListener('click', (e) => {
+    const pop = document.getElementById('daAthleteDetailsPop');
+    if (pop && !pop.hidden && !pop.contains(e.target)) hideAthleteDetailsPop();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hideAthleteDetailsPop();
+  });
+
   document.getElementById('drawAthletesList')?.addEventListener('click', (e) => {
     const chip = e.target.closest('[data-index]');
     if (!chip || chip.dataset.index === '') return;

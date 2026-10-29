@@ -675,6 +675,12 @@ export function moveAthletesBetweenDrawsLocally(fromId, toId, indices) {
     targetAthletes: targetAthletesBefore
   });
 
+  const fromType = String(from.division_type || '').trim();
+  const toType = String(to.division_type || '').trim();
+  if (fromType && toType && fromType !== toType) {
+    to.division_type = 'Single Elimination';
+  }
+
   from.preserve_structure = false;
   to.preserve_structure = false;
   delete from._draw_slot_list;
